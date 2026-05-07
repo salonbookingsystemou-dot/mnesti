@@ -1639,6 +1639,15 @@
     color: var(--accent);
     margin-bottom: 6px;
   }
+  .q-correct-answer-body {
+    max-height: 260px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  .q-correct-answer-body::-webkit-scrollbar { width: 4px; }
+  .q-correct-answer-body::-webkit-scrollbar-track { background: transparent; }
+  .q-correct-answer-body::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--accent) 35%, var(--border) 65%); border-radius: 2px; }
+  .q-correct-answer-body { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--accent) 35%, var(--border) 65%) transparent; }
   /* Sources-consulted badge in rating row */
   .q-srcs-badge {
     margin-left: auto;
@@ -1671,7 +1680,14 @@
     font-size: 12px;
     line-height: 1.65;
     color: var(--text);
+    max-height: 260px;
+    overflow-y: auto;
+    padding-right: 4px;
   }
+  .q-review-text::-webkit-scrollbar { width: 4px; }
+  .q-review-text::-webkit-scrollbar-track { background: transparent; }
+  .q-review-text::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .q-review-text { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
 
   /* ── Session-based question UX ────────────────────────────── */
 
@@ -2581,7 +2597,14 @@
     margin-bottom: 14px;
     border: 1px solid var(--accent);
     background: var(--accent-bg);
+    max-height: 220px;
+    overflow-y: auto;
+    padding-right: 8px;
   }
+  .quiz-explanation::-webkit-scrollbar { width: 4px; }
+  .quiz-explanation::-webkit-scrollbar-track { background: transparent; }
+  .quiz-explanation::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 2px; opacity: 0.5; }
+  .quiz-explanation { scrollbar-width: thin; scrollbar-color: var(--accent) transparent; }
   .quiz-explanation.wrong-exp {
     border-color: var(--skip-text);
     background: var(--skip-bg);
@@ -9716,7 +9739,7 @@ Sii come un professore esigente ma dalla parte dello studente: onesto, preciso, 
   try {
     const data = await _callClaude({
       model: 'claude-sonnet-4-6',
-      max_tokens: 1000,
+      max_tokens: 1800,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }]
     });
@@ -9861,7 +9884,7 @@ async function showCorrectAnswer(dayId, qIdx, questionText, qType, context) {
   try {
     const data = await _callClaude({
       model: 'claude-sonnet-4-6',
-      max_tokens: 800,
+      max_tokens: 1500,
       system: `Sei un docente universitario di Psicologia Cognitiva. Fornisci una risposta modello completa, chiara e accademica alla domanda dello studente. Usa le fonti disponibili come riferimento principale. Scrivi in italiano. Rispondi direttamente, senza preamboli.`,
       messages: [{
         role: 'user',
@@ -9873,7 +9896,7 @@ async function showCorrectAnswer(dayId, qIdx, questionText, qType, context) {
     panel.innerHTML =
       `<div class="q-correct-answer-panel">` +
         `<div class="q-correct-answer-label"><i data-lucide="lightbulb" style="width:10px;height:10px;display:inline-block;vertical-align:middle;margin-right:4px"></i>Risposta Corretta</div>` +
-        `<div>${answerText.replace(/\n/g, '<br>')}</div>` +
+        `<div class="q-correct-answer-body">${answerText.replace(/\n/g, '<br>')}</div>` +
       `</div>`;
 
     if (window.lucide) lucide.createIcons({ nodes: [panel] });
@@ -9916,7 +9939,7 @@ Tono da mantenere:
 
   try {
     const data = await _callClaude({
-      model: 'claude-sonnet-4-6', max_tokens: 400,
+      model: 'claude-sonnet-4-6', max_tokens: 800,
       system: systemPrompt,
       messages: [{ role: 'user', content: `Domanda (tipo: ${qType}): ${questionText}\n\nRisposta dello studente: ${answer}` }]
     });
