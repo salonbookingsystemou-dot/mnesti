@@ -10408,6 +10408,17 @@ Dove "ans" è l'indice 0-3 dell'opzione corretta. Usa solo italiano.`;
     const questions = _repairAndParseQuiz(raw);
     if (!Array.isArray(questions) || questions.length === 0) throw new Error('Risposta non valida');
 
+    // Shuffle options so the correct answer is never predictably in position 0
+    questions.forEach(q => {
+      const order = [0, 1, 2, 3];
+      for (let i = order.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [order[i], order[j]] = [order[j], order[i]];
+      }
+      q.opts = order.map(i => q.opts[i]);
+      q.ans  = order.indexOf(q.ans);
+    });
+
     _quiz = {
       dayId, topic, questions,
       current: 0, score: 0, correctCount: 0,
