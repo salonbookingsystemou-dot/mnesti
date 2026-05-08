@@ -10447,52 +10447,76 @@ function _ocrFileSelected(input) {
   _el('ocrPreviewWrap').classList.add('visible');
   _el('ocrProgressWrap').classList.add('visible');
   _el('ocrResultWrap').classList.remove('visible');
-  _el('ocrProgressFill').style.width = '5%';
-  _el('ocrProgressLabel').textContent = 'Analisi in corso…';
+  _el('ocrProgressFill').style.width = '15%';
+  _el('ocrProgressLabel').textContent = 'Trascrizione AI in corso…';
   if (typeof lucide !== 'undefined') lucide.createIcons();
 
-  _ocrRunTesseract(file);
+  _ocrRunVision(file);
 }
 
-async function _ocrRunTesseract(file) {
-  try {
-    const progressFill = _el('ocrProgressFill');
-    const progressLabel = _el('ocrProgressLabel');
-
-    // Terminate any existing worker
-    if (_ocr && _ocr.worker) {
-      try { await _ocr.worker.terminate(); } catch(e) {}
-      _ocr.worker = null;
-    }
-
-    const worker = await Tesseract.createWorker('ita', 1, {
-      logger: m => {
-        if (m.status === 'recognizing text') {
-          const pct = Math.round((m.progress || 0) * 100);
-          progressFill.style.width = Math.max(5, pct) + '%';
-          progressLabel.textContent = 'Analisi in corso… ' + pct + '%';
-        } else if (m.status === 'loading tesseract core') {
-          progressLabel.textContent = 'Caricamento motore OCR…';
-        } else if (m.status === 'initializing tesseract') {
-          progressLabel.textContent = 'Inizializzazione…';
-        } else if (m.status === 'loading language traineddata') {
-          progressLabel.textContent = 'Caricamento dizionario italiano…';
-        } else if (m.status === 'initializing api') {
-          progressLabel.textContent = 'Preparazione…';
+/** Ridimensiona l'immagine a max maxPx sul lato lungo e restituisce { base64, mediaType } */
+async function _ocrResizeImage(file, maxPx) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        let { width: w, height: h } = img;
+        if (w > maxPx || h > maxPx) {
+          if (w >= h) { h = Math.round(h * maxPx / w); w = maxPx; }
+          else        { w = Math.round(w * maxPx / h); h = maxPx; }
         }
-      }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+        resolve({
+          base64: dataUrl.split(',')[1],
+          mediaType: 'image/jpeg'
+        });
+      };
+      img.onerror = reject;
+      img.src = ev.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function _ocrRunVision(file) {
+  const progressFill  = _el('ocrProgressFill');
+  const progressLabel = _el('ocrProgressLabel');
+
+  try {
+    progressFill.style.width = '30%';
+    progressLabel.textContent = 'Elaborazione immagine…';
+
+    const { base64, mediaType } = await _ocrResizeImage(file, 1568);
+
+    progressFill.style.width = '55%';
+    progressLabel.textContent = 'Lettura testo con AI…';
+
+    const data = await _callClaude({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1200,
+      messages: [{
+        role: 'user',
+        content: [
+          {
+            type: 'image',
+            source: { type: 'base64', media_type: mediaType, data: base64 }
+          },
+          {
+            type: 'text',
+            text: 'Trascrivi fedelmente tutto il testo scritto a mano in questa immagine, mantenendo la struttura dei paragrafi. Restituisci solo il testo trascritto, senza spiegazioni o commenti aggiuntivi.'
+          }
+        ]
+      }]
     });
 
-    if (_ocr) _ocr.worker = worker;
-
-    const { data } = await worker.recognize(file);
-    await worker.terminate();
-    if (_ocr) _ocr.worker = null;
-
-    const rawText = (data.text || '').trim();
-
-    // Show result
     progressFill.style.width = '100%';
+    const rawText = (data?.content?.[0]?.text || '').trim();
+
     _el('ocrProgressWrap').classList.remove('visible');
     _el('ocrResultWrap').classList.add('visible');
 
@@ -10505,18 +10529,17 @@ async function _ocrRunTesseract(file) {
       _el('ocrResultEmpty').style.display = '';
       _el('ocrApplyBtn').disabled = true;
     }
-    if (typeof lucide !== 'undefined') lucide.createIcons();
 
   } catch(err) {
-    console.error('[OCR]', err);
+    console.error('[OCR Vision]', err);
     _el('ocrProgressWrap').classList.remove('visible');
     _el('ocrResultWrap').classList.add('visible');
     _el('ocrResultTa').value = '';
     _el('ocrResultEmpty').style.display = '';
-    _el('ocrResultEmpty').textContent = 'Errore durante il riconoscimento. Riprova con una foto più nitida.';
+    _el('ocrResultEmpty').textContent = 'Errore durante la trascrizione. Controlla la connessione e riprova.';
     _el('ocrApplyBtn').disabled = true;
-    if (typeof lucide !== 'undefined') lucide.createIcons();
   }
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function closeOcrModal(apply) {
@@ -10527,11 +10550,6 @@ function closeOcrModal(apply) {
       _ocr.textarea.value = base + (base && extracted ? '\n' : '') + extracted;
       _ocr.textarea.dispatchEvent(new Event('input'));
     }
-  }
-  // Terminate worker if still running
-  if (_ocr && _ocr.worker) {
-    _ocr.worker.terminate().catch(() => {});
-    _ocr.worker = null;
   }
   _ocr = null;
   document.getElementById('ocrModal').classList.remove('open');
@@ -13169,7 +13187,7 @@ updateSourcesBtn();
       </div>
       <div class="ocr-pick-text">
         Scatta una foto del foglio su cui hai scritto la risposta.<br>
-        Il testo verrà estratto automaticamente.
+        L'AI trascriverà il testo scritto a mano, anche in corsiva.
       </div>
       <div class="ocr-pick-btns">
         <button class="ocr-pick-btn" onclick="_ocrTriggerCamera()">
