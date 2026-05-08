@@ -1445,6 +1445,138 @@
   /* Hide mic buttons when not on HTTPS — set by JS on DOMContentLoaded */
   body.no-secure-context .q-mic-btn,
   body.no-secure-context .bd-mic-btn { display: none !important; }
+  /* ── Camera / OCR button ─────────────────────────────────── */
+  .q-cam-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-3);
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .q-cam-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .q-cam-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  /* ── OCR modal ──────────────────────────────────────────── */
+  .ocr-modal-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,0.55);
+    align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  .ocr-modal-overlay.open { display: flex; }
+  .ocr-modal-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px 20px 20px;
+    width: 100%; max-width: 480px;
+    display: flex; flex-direction: column; gap: 14px;
+    animation: mic-modal-in 0.18s ease-out;
+    max-height: 90vh; overflow-y: auto;
+  }
+  .ocr-modal-label {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--text-3);
+  }
+  .ocr-pick-area {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 14px; padding: 18px 0;
+  }
+  .ocr-pick-icon {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: var(--accent-bg); border: 1.5px solid var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--accent);
+  }
+  .ocr-pick-text {
+    font-size: 13px; color: var(--text-2); text-align: center; line-height: 1.5;
+  }
+  .ocr-pick-btns {
+    display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+  }
+  .ocr-pick-btn {
+    font-family: 'Inter', monospace; font-size: 11px; font-weight: 600;
+    padding: 9px 16px; border-radius: 5px;
+    border: 1px solid var(--accent); background: var(--accent-bg);
+    color: var(--accent); cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: background 0.15s;
+  }
+  .ocr-pick-btn:hover { background: rgba(217,119,87,0.18); }
+  .ocr-pick-btn.secondary {
+    border-color: var(--border); background: transparent; color: var(--text-2);
+  }
+  .ocr-pick-btn.secondary:hover { border-color: var(--text-3); }
+  .ocr-preview-wrap {
+    display: none; flex-direction: column; gap: 12px;
+  }
+  .ocr-preview-wrap.visible { display: flex; }
+  .ocr-preview-img {
+    width: 100%; max-height: 240px; object-fit: contain;
+    border-radius: 6px; border: 1px solid var(--border);
+    background: var(--bg-2);
+  }
+  .ocr-progress-wrap {
+    display: none; flex-direction: column; gap: 6px;
+  }
+  .ocr-progress-wrap.visible { display: flex; }
+  .ocr-progress-label {
+    font-size: 11px; color: var(--text-3); text-align: center;
+  }
+  .ocr-progress-bar-track {
+    height: 4px; background: var(--border); border-radius: 2px; overflow: hidden;
+  }
+  .ocr-progress-bar-fill {
+    height: 100%; background: var(--accent); border-radius: 2px;
+    width: 0%; transition: width 0.2s;
+  }
+  .ocr-result-wrap {
+    display: none; flex-direction: column; gap: 8px;
+  }
+  .ocr-result-wrap.visible { display: flex; }
+  .ocr-result-label {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.07em;
+    text-transform: uppercase; color: var(--text-3);
+  }
+  .ocr-result-ta {
+    width: 100%; min-height: 90px; max-height: 180px;
+    font-family: 'Inter', monospace; font-size: 13px; line-height: 1.6;
+    color: var(--text-1); background: var(--bg-2);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 10px 12px; resize: vertical; box-sizing: border-box;
+  }
+  .ocr-result-ta:focus { outline: none; border-color: var(--accent); }
+  .ocr-result-empty {
+    font-size: 12px; color: var(--text-3); font-style: italic; text-align: center; padding: 8px 0;
+  }
+  .ocr-modal-actions {
+    display: flex; gap: 8px; justify-content: flex-end;
+  }
+  .ocr-modal-cancel {
+    font-family: 'Inter', monospace; font-size: 11px;
+    padding: 8px 14px; border-radius: 5px;
+    border: 1px solid var(--border); background: transparent;
+    color: var(--text-3); cursor: pointer; transition: all 0.15s;
+  }
+  .ocr-modal-cancel:hover { border-color: var(--text-2); color: var(--text-2); }
+  .ocr-modal-apply {
+    font-family: 'Inter', monospace; font-size: 11px; font-weight: 600;
+    padding: 8px 16px; border-radius: 5px;
+    border: 1px solid var(--accent); background: var(--accent-bg);
+    color: var(--accent); cursor: pointer; transition: all 0.15s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .ocr-modal-apply:hover:not(:disabled) { background: rgba(217,119,87,0.18); }
+  .ocr-modal-apply:disabled { opacity: 0.35; cursor: not-allowed; }
+  .ocr-retry-link {
+    font-size: 11px; color: var(--accent); cursor: pointer;
+    text-align: center; text-decoration: underline;
+  }
   .q-verify-btn {
     flex: 1;
     font-family: 'Inter', monospace;
@@ -4606,6 +4738,7 @@
     .q-answer-input { font-size: 16px; min-height: 120px; } /* 16px prevents iOS zoom */
     .q-answer-bar { flex-direction: row; gap: 10px; align-items: center; }
     .q-mic-btn { width: 44px; height: 44px; flex-shrink: 0; }
+    .q-cam-btn { width: 44px; height: 44px; flex-shrink: 0; }
     .q-verify-btn { flex: 1; padding: 12px 8px; font-size: 12px; min-height: 44px; }
 
     /* ────────────────────────────────────────────────────────
@@ -7697,6 +7830,10 @@ function _renderQsPanel(dayId) {
         <div class="q-answer-bar">
           <button class="q-mic-btn" id="mic-${dayId}-${activeIdx}"
             onclick="startVoiceDictation('${dayId}', ${activeIdx})" title="Trascrivi con voce">${_MIC_SVG}</button>
+          <button class="q-cam-btn" id="cam-${dayId}-${activeIdx}"
+            onclick="startPhotoOcr('${dayId}', ${activeIdx})" title="Scatta foto del foglio scritto a mano">
+            <i data-lucide="camera" style="width:14px;height:14px;stroke-width:2.2;pointer-events:none"></i>
+          </button>
           <button class="q-skip-btn"
             onclick="skipQuestion('${dayId}', ${activeIdx})" title="Salta questa domanda e riprendi dopo">
             <i data-lucide="skip-forward" style="width:11px;height:11px;stroke-width:2.2;flex-shrink:0"></i> Salta
@@ -10258,6 +10395,148 @@ function _setMicPauseIcon(isPlaying) {
   if (!el) return;
   el.setAttribute('data-lucide', isPlaying ? 'play' : 'pause');
   lucide.createIcons({ nodes: [el] });
+}
+
+// ── Photo OCR ────────────────────────────────────────────────
+let _ocr = null; // { textarea, dayId, qIdx, worker }
+
+function startPhotoOcr(dayId, qIdx) {
+  const textarea = document.getElementById('answer-' + dayId + '-' + qIdx);
+  if (!textarea) return;
+  _ocr = { textarea, dayId, qIdx, worker: null };
+  _ocrResetModal();
+  document.getElementById('ocrModal').classList.add('open');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function _ocrResetModal() {
+  _el('ocrPickArea').style.display = '';
+  _el('ocrPreviewWrap').classList.remove('visible');
+  _el('ocrProgressWrap').classList.remove('visible');
+  _el('ocrResultWrap').classList.remove('visible');
+  _el('ocrResultEmpty').style.display = 'none';
+  _el('ocrResultTa').value = '';
+  _el('ocrProgressFill').style.width = '0%';
+  _el('ocrApplyBtn').disabled = true;
+  // Reset file inputs so same file can be reselected
+  _el('ocrInputCamera').value = '';
+  _el('ocrInputGallery').value = '';
+}
+
+function _ocrRetry() {
+  _ocrResetModal();
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function _ocrTriggerCamera() { _el('ocrInputCamera').click(); }
+function _ocrGallery() { _el('ocrInputGallery').click(); }
+function _ocrTriggerGallery() { _ocrGallery(); }
+
+function _el(id) { return document.getElementById(id); }
+
+function _ocrFileSelected(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+
+  // Show preview
+  const url = URL.createObjectURL(file);
+  _el('ocrPreviewImg').src = url;
+  _el('ocrPickArea').style.display = 'none';
+  _el('ocrPreviewWrap').classList.add('visible');
+  _el('ocrProgressWrap').classList.add('visible');
+  _el('ocrResultWrap').classList.remove('visible');
+  _el('ocrProgressFill').style.width = '5%';
+  _el('ocrProgressLabel').textContent = 'Analisi in corso…';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+
+  _ocrRunTesseract(file);
+}
+
+async function _ocrRunTesseract(file) {
+  try {
+    const progressFill = _el('ocrProgressFill');
+    const progressLabel = _el('ocrProgressLabel');
+
+    // Terminate any existing worker
+    if (_ocr && _ocr.worker) {
+      try { await _ocr.worker.terminate(); } catch(e) {}
+      _ocr.worker = null;
+    }
+
+    const worker = await Tesseract.createWorker('ita', 1, {
+      logger: m => {
+        if (m.status === 'recognizing text') {
+          const pct = Math.round((m.progress || 0) * 100);
+          progressFill.style.width = Math.max(5, pct) + '%';
+          progressLabel.textContent = 'Analisi in corso… ' + pct + '%';
+        } else if (m.status === 'loading tesseract core') {
+          progressLabel.textContent = 'Caricamento motore OCR…';
+        } else if (m.status === 'initializing tesseract') {
+          progressLabel.textContent = 'Inizializzazione…';
+        } else if (m.status === 'loading language traineddata') {
+          progressLabel.textContent = 'Caricamento dizionario italiano…';
+        } else if (m.status === 'initializing api') {
+          progressLabel.textContent = 'Preparazione…';
+        }
+      }
+    });
+
+    if (_ocr) _ocr.worker = worker;
+
+    const { data } = await worker.recognize(file);
+    await worker.terminate();
+    if (_ocr) _ocr.worker = null;
+
+    const rawText = (data.text || '').trim();
+
+    // Show result
+    progressFill.style.width = '100%';
+    _el('ocrProgressWrap').classList.remove('visible');
+    _el('ocrResultWrap').classList.add('visible');
+
+    if (rawText) {
+      _el('ocrResultTa').value = rawText;
+      _el('ocrResultEmpty').style.display = 'none';
+      _el('ocrApplyBtn').disabled = false;
+    } else {
+      _el('ocrResultTa').value = '';
+      _el('ocrResultEmpty').style.display = '';
+      _el('ocrApplyBtn').disabled = true;
+    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+  } catch(err) {
+    console.error('[OCR]', err);
+    _el('ocrProgressWrap').classList.remove('visible');
+    _el('ocrResultWrap').classList.add('visible');
+    _el('ocrResultTa').value = '';
+    _el('ocrResultEmpty').style.display = '';
+    _el('ocrResultEmpty').textContent = 'Errore durante il riconoscimento. Riprova con una foto più nitida.';
+    _el('ocrApplyBtn').disabled = true;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+}
+
+function closeOcrModal(apply) {
+  if (apply && _ocr) {
+    const extracted = (_el('ocrResultTa').value || '').trim();
+    if (extracted && _ocr.textarea) {
+      const base = _ocr.textarea.value;
+      _ocr.textarea.value = base + (base && extracted ? '\n' : '') + extracted;
+      _ocr.textarea.dispatchEvent(new Event('input'));
+    }
+  }
+  // Terminate worker if still running
+  if (_ocr && _ocr.worker) {
+    _ocr.worker.terminate().catch(() => {});
+    _ocr.worker = null;
+  }
+  _ocr = null;
+  document.getElementById('ocrModal').classList.remove('open');
+}
+
+function _ocrOverlayClick(e) {
+  if (e.target === document.getElementById('ocrModal')) closeOcrModal(false);
 }
 
 // ── Quiz ────────────────────────────────────────────────────
@@ -12875,6 +13154,75 @@ updateSourcesBtn();
     <div class="mic-modal-hint">Parla in italiano &middot; ✓ per applicare &middot; ✕ per annullare</div>
   </div>
 </div>
+
+<!-- ── OCR photo modal ────────────────────────────────────── -->
+<div id="ocrModal" class="ocr-modal-overlay" onclick="_ocrOverlayClick(event)">
+  <div class="ocr-modal-box">
+    <div class="ocr-modal-label">SCANSIONE RISPOSTA SCRITTA A MANO</div>
+
+    <!-- Step 1: pick image -->
+    <div class="ocr-pick-area" id="ocrPickArea">
+      <div class="ocr-pick-icon">
+        <i data-lucide="camera" style="width:24px;height:24px;stroke-width:1.8"></i>
+      </div>
+      <div class="ocr-pick-text">
+        Scatta una foto del foglio su cui hai scritto la risposta.<br>
+        Il testo verrà estratto automaticamente.
+      </div>
+      <div class="ocr-pick-btns">
+        <button class="ocr-pick-btn" onclick="_ocrTriggerCamera()">
+          <i data-lucide="camera" style="width:13px;height:13px;stroke-width:2.2"></i>
+          Usa fotocamera
+        </button>
+        <button class="ocr-pick-btn secondary" onclick="_ocrTriggerGallery()">
+          <i data-lucide="image" style="width:13px;height:13px;stroke-width:2.2"></i>
+          Scegli immagine
+        </button>
+      </div>
+    </div>
+
+    <!-- Hidden file inputs -->
+    <input type="file" id="ocrInputCamera" accept="image/*" capture="environment"
+      style="display:none" onchange="_ocrFileSelected(this)">
+    <input type="file" id="ocrInputGallery" accept="image/*"
+      style="display:none" onchange="_ocrFileSelected(this)">
+
+    <!-- Step 2: preview + progress -->
+    <div class="ocr-preview-wrap" id="ocrPreviewWrap">
+      <img id="ocrPreviewImg" class="ocr-preview-img" src="" alt="Anteprima foto">
+      <div class="ocr-progress-wrap" id="ocrProgressWrap">
+        <div class="ocr-progress-label" id="ocrProgressLabel">Analisi in corso…</div>
+        <div class="ocr-progress-bar-track">
+          <div class="ocr-progress-bar-fill" id="ocrProgressFill"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: result -->
+    <div class="ocr-result-wrap" id="ocrResultWrap">
+      <div class="ocr-result-label">Testo riconosciuto — modifica se necessario</div>
+      <textarea class="ocr-result-ta" id="ocrResultTa" rows="5"
+        placeholder="Il testo riconosciuto apparirà qui…"></textarea>
+      <div class="ocr-result-empty" id="ocrResultEmpty" style="display:none">
+        Nessun testo riconosciuto. Riprova con una foto più nitida.
+      </div>
+      <div class="ocr-retry-link" onclick="_ocrRetry()">
+        <i data-lucide="refresh-cw" style="width:11px;height:11px;stroke-width:2.2"></i>
+        Scatta un'altra foto
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="ocr-modal-actions">
+      <button class="ocr-modal-cancel" onclick="closeOcrModal(false)">Annulla</button>
+      <button class="ocr-modal-apply" id="ocrApplyBtn" disabled onclick="closeOcrModal(true)">
+        <i data-lucide="check-circle" style="width:13px;height:13px;stroke-width:2.2"></i>
+        Applica risposta
+      </button>
+    </div>
+  </div>
+</div>
+
 <script>
 // Register service worker for PWA / offline support
 if ('serviceWorker' in navigator) {
