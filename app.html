@@ -11141,47 +11141,79 @@ async function _tutorSend(userText) {
 }
 
 // ── Text-to-Speech ─────────────────────────────────────────
+// Cache voices as soon as they are available (Chrome loads them async)
+let _ttsVoices = [];
+function _ttsLoadVoices() {
+  const v = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+  if (v.length) _ttsVoices = v;
+  return _ttsVoices;
+}
+function _ttsBestItalianVoice() {
+  const v = _ttsLoadVoices();
+  // Prefer a non-Compact Italian voice (higher quality on macOS/iOS)
+  return v.find(x => x.lang.startsWith('it') && !x.name.includes('Compact'))
+      || v.find(x => x.lang.startsWith('it'))
+      || null;
+}
+if (window.speechSynthesis) {
+  // Chrome fires voiceschanged once the list is ready
+  speechSynthesis.onvoiceschanged = _ttsLoadVoices;
+  // Attempt immediate load (works in Firefox and Safari)
+  _ttsLoadVoices();
+}
+
 function _tutorSpeak(text) {
-  if (!window.speechSynthesis) return;
+  if (!window.speechSynthesis || !text) return;
   _tutorStopSpeaking();
 
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.lang = 'it-IT';
-  utter.rate = 1.05;
-  utter.pitch = 1;
+  function _doSpeak() {
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang  = 'it-IT';
+    utter.rate  = 1.0;
+    utter.pitch = 1;
 
-  // Prefer an Italian voice if available
-  const voices = speechSynthesis.getVoices();
-  const itVoice = voices.find(v => v.lang.startsWith('it') && !v.name.includes('Compact'))
-               || voices.find(v => v.lang.startsWith('it'));
-  if (itVoice) utter.voice = itVoice;
+    const voice = _ttsBestItalianVoice();
+    if (voice) utter.voice = voice;
 
-  utter.onstart = () => {
-    _tutor.speaking = true;
-    const stopBtn = document.getElementById('tutorStopBtn');
-    if (stopBtn) stopBtn.style.display = '';
-    _tutorRender();
-  };
-  utter.onend = utter.onerror = () => {
-    _tutor.speaking = false;
-    const stopBtn = document.getElementById('tutorStopBtn');
-    if (stopBtn) stopBtn.style.display = 'none';
-    _tutorRender();
-  };
+    utter.onstart = () => {
+      _tutor.speaking = true;
+      const btn = document.getElementById('tutorStopBtn');
+      if (btn) btn.style.display = '';
+      _tutorRender();
+    };
+    utter.onend = utter.onerror = () => {
+      _tutor.speaking = false;
+      const btn = document.getElementById('tutorStopBtn');
+      if (btn) btn.style.display = 'none';
+      _tutorRender();
+    };
 
-  speechSynthesis.speak(utter);
+    // Small delay: Chrome sometimes drops speak() called immediately
+    // after a long async gap; cancel+rescheduled speak works reliably.
+    speechSynthesis.cancel();
+    setTimeout(() => {
+      if (window.speechSynthesis) speechSynthesis.speak(utter);
+    }, 80);
+  }
+
+  if (_ttsVoices.length) {
+    _doSpeak();
+  } else {
+    // Voices not ready yet — wait for them then speak
+    const prevHandler = speechSynthesis.onvoiceschanged;
+    speechSynthesis.onvoiceschanged = function() {
+      _ttsLoadVoices();
+      speechSynthesis.onvoiceschanged = prevHandler;
+      _doSpeak();
+    };
+  }
 }
 
 function _tutorStopSpeaking() {
   if (window.speechSynthesis) speechSynthesis.cancel();
   _tutor.speaking = false;
-  const stopBtn = document.getElementById('tutorStopBtn');
-  if (stopBtn) stopBtn.style.display = 'none';
-}
-
-// Reload voices after they load (required on Chrome)
-if (window.speechSynthesis) {
-  speechSynthesis.onvoiceschanged = () => {};
+  const btn = document.getElementById('tutorStopBtn');
+  if (btn) btn.style.display = 'none';
 }
 
 // ── Quiz ────────────────────────────────────────────────────
