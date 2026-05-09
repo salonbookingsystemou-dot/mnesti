@@ -1642,7 +1642,18 @@
     padding: 12px 14px; border-bottom: 1px solid var(--border);
     background: var(--surface2); flex-shrink: 0;
   }
-  .tutor-header-icon { width: 26px; height: 26px; flex-shrink: 0; color: var(--accent); }
+  /* Logo nel pannello: inverte in dark mode (logo è nero su sfondo trasparente) */
+  .tutor-header-logo {
+    width: 26px; height: auto; flex-shrink: 0;
+    filter: invert(1); /* dark mode default */
+    opacity: 0.9;
+  }
+  [data-theme="light"] .tutor-header-logo { filter: none; }
+  .tutor-empty-logo {
+    width: 42px; height: auto;
+    filter: invert(1); opacity: 0.35;
+  }
+  [data-theme="light"] .tutor-empty-logo { filter: none; }
   .tutor-header-info { flex: 1; min-width: 0; }
   .tutor-header-title {
     font-size: 11px; font-weight: 700; color: var(--text-1);
@@ -13736,18 +13747,14 @@ updateSourcesBtn();
 <!-- FAB button -->
 <button class="tutor-fab" id="tutorFab" onclick="toggleTutor()" title="Chiedi all'assistente Mnesti" aria-label="Apri assistente di studio">
   <span class="tutor-fab-pulse" aria-hidden="true"></span>
-  <svg viewBox="0 0 64 64" width="26" height="26" fill="none" aria-hidden="true">
-    <path d="M32 6 C48 8 58 20 54 34 C50 44 42 50 36 48 C34 46 33 40 32 36 C31 40 30 46 28 48 C22 50 14 44 10 34 C6 20 16 8 32 6 Z" fill="currentColor"/>
-  </svg>
+  <img src="logo-mark.png" alt="" aria-hidden="true" style="width:26px;height:auto;filter:brightness(0) invert(1)">
 </button>
 
 <!-- Panel -->
 <div id="tutorPanel" class="tutor-panel" role="dialog" aria-label="Assistente Mnesti">
   <!-- Header -->
   <div class="tutor-header">
-    <svg class="tutor-header-icon" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-      <path d="M32 6 C48 8 58 20 54 34 C50 44 42 50 36 48 C34 46 33 40 32 36 C31 40 30 46 28 48 C22 50 14 44 10 34 C6 20 16 8 32 6 Z" fill="currentColor"/>
-    </svg>
+    <img src="logo-mark.png" alt="" aria-hidden="true" class="tutor-header-logo">
     <div class="tutor-header-info">
       <div class="tutor-header-title">Assistente Mnesti</div>
       <div class="tutor-header-sub" id="tutorHeaderSub">Chiedi un chiarimento sull'esame</div>
@@ -13761,9 +13768,7 @@ updateSourcesBtn();
   <div class="tutor-messages" id="tutorMessages">
     <div class="tutor-empty" id="tutorEmpty">
       <div class="tutor-empty-icon">
-        <svg viewBox="0 0 64 64" width="40" height="40" fill="none" aria-hidden="true">
-          <path d="M32 6 C48 8 58 20 54 34 C50 44 42 50 36 48 C34 46 33 40 32 36 C31 40 30 46 28 48 C22 50 14 44 10 34 C6 20 16 8 32 6 Z" fill="currentColor"/>
-        </svg>
+        <img src="logo-mark.png" alt="" aria-hidden="true" class="tutor-empty-logo">
       </div>
       <div class="tutor-empty-text">Premi il microfono e fai una domanda sull'esame — rispondo a voce.</div>
     </div>
