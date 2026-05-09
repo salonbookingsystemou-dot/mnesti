@@ -6159,6 +6159,9 @@ const _ACCENT_PRESETS = [
     });
   });
 
+  // Expose pull function so the cross-tab sync layer can call it
+  window._loadFromSupabase = _loadFromSupabase;
+
 })();
 // ── App reinit after cloud data load ─────────────────────────
 // Self-healing: fix plan exam date if it doesn't match psico_exam_info
@@ -7057,7 +7060,92 @@ function saveState() {
   updateProgress();
   renderReadinessPanel();
   _debouncedSync();
+  _pwaNotifyStateChange();
 }
+
+// ══════════════════════════════════════════════════════════
+// PWA CROSS-TAB / CROSS-WINDOW REAL-TIME SYNC
+// ══════════════════════════════════════════════════════════
+(function() {
+  // ── BroadcastChannel (same browser, any tab/window same origin) ──
+  const _bc = window.BroadcastChannel ? new BroadcastChannel('mnesti_sync') : null;
+  let _ignoreNextStorage = false; // avoid echo when WE write localStorage
+  let _lastPull = 0;
+  const PULL_THROTTLE_MS = 45_000; // max 1 Supabase pull per 45s
+
+  // Rebuild in-memory state + UI from current localStorage (no network)
+  function _applyLocalState() {
+    try {
+      const remote = JSON.parse(localStorage.getItem('psico_state') || '{}');
+      Object.keys(state).forEach(k => delete state[k]);
+      Object.assign(state, remote);
+    } catch(e) {}
+    if (typeof updateProgress       === 'function') updateProgress();
+    if (typeof renderReadinessPanel === 'function') renderReadinessPanel();
+    if (typeof getActiveDays === 'function' && typeof renderDayReadiness === 'function') {
+      getActiveDays().forEach(d => renderDayReadiness(d.id));
+    }
+    if (typeof _autoSetStatus === 'function') {
+      getActiveDays().forEach(d => { if (d.type !== 'rest' && d.type !== 'exam') _autoSetStatus(d.id); });
+    }
+  }
+
+  // Pull fresh data from Supabase then reinit
+  async function _pullAndReinit() {
+    if (!window._loadFromSupabase || !window._currentUserId) return;
+    if (Date.now() - _lastPull < PULL_THROTTLE_MS) { _applyLocalState(); return; }
+    _lastPull = Date.now();
+    try {
+      const loaded = await window._loadFromSupabase(window._currentUserId);
+      if (loaded && typeof window._reinitApp === 'function') window._reinitApp();
+      else _applyLocalState();
+    } catch(e) {
+      console.warn('[PWASync] pull error', e);
+      _applyLocalState();
+    }
+  }
+
+  // Called by saveState() to notify other contexts
+  window._pwaNotifyStateChange = function() {
+    if (_bc) {
+      try { _bc.postMessage({ type: 'state_changed', ts: Date.now() }); } catch(e) {}
+    }
+  };
+
+  // Receive notifications from other tabs (same browser, same origin)
+  if (_bc) {
+    _bc.onmessage = function(e) {
+      if (e.data?.type === 'state_changed') {
+        // Another tab saved — pull from localStorage (already written there by the other tab)
+        _applyLocalState();
+      }
+    };
+  }
+
+  // Fallback: localStorage 'storage' event fires in tabs that did NOT write the key
+  window.addEventListener('storage', function(e) {
+    if (e.key === 'psico_state' || e.key === 'psico_sources') {
+      _applyLocalState();
+    }
+  });
+
+  // On visibility restored: pull from Supabase (handles multi-device scenario)
+  document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState !== 'visible') return;
+    _pullAndReinit();
+  });
+
+  // On window focus (PWA brought to foreground on desktop)
+  window.addEventListener('focus', function() {
+    _pullAndReinit();
+  });
+
+  // On coming back online after connectivity loss
+  window.addEventListener('online', function() {
+    _lastPull = 0; // force fresh pull
+    _pullAndReinit();
+  });
+})();
 
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
