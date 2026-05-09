@@ -10993,6 +10993,62 @@ function _tutorEsc(str) {
                     .replace(/\n/g,'<br>');
 }
 
+// ── Audio visualizer (same logic as voice dictation modal) ──
+const _tutorViz = { stream: null, ctx: null, rafId: null };
+
+async function _tutorStartVisualizer() {
+  _tutorStopVisualizer();
+  const waveEl = document.getElementById('tutorWave');
+  if (waveEl) waveEl.style.display = 'flex';
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    if (!_tutor.listening) { stream.getTracks().forEach(t => t.stop()); return; }
+
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const ctx      = new AudioCtx();
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.75;
+    ctx.createMediaStreamSource(stream).connect(analyser);
+
+    const dataArray  = new Uint8Array(analyser.frequencyBinCount);
+    const bars       = waveEl ? waveEl.querySelectorAll('span') : [];
+    const bandEdges  = [1, 2, 4, 6, 9, 13, 18, 24];
+    const MAX_H = 28, MIN_H = 3;
+
+    function draw() {
+      if (!_tutor.listening) return;
+      _tutorViz.rafId = requestAnimationFrame(draw);
+      analyser.getByteFrequencyData(dataArray);
+      bars.forEach((bar, i) => {
+        const lo = bandEdges[i], hi = bandEdges[i + 1] || lo + 6;
+        let sum = 0;
+        for (let b = lo; b < hi; b++) sum += dataArray[b];
+        const ratio  = (sum / (hi - lo)) / 255;
+        bar.style.height  = (MIN_H + ratio * (MAX_H - MIN_H)).toFixed(1) + 'px';
+        bar.style.opacity = (0.25 + ratio * 0.75).toFixed(2);
+      });
+    }
+
+    _tutorViz.stream = stream;
+    _tutorViz.ctx    = ctx;
+    draw();
+  } catch(e) {
+    console.warn('[TutorViz]', e.message);
+  }
+}
+
+function _tutorStopVisualizer() {
+  if (_tutorViz.rafId) { cancelAnimationFrame(_tutorViz.rafId); _tutorViz.rafId = null; }
+  if (_tutorViz.stream) { _tutorViz.stream.getTracks().forEach(t => t.stop()); _tutorViz.stream = null; }
+  if (_tutorViz.ctx)   { _tutorViz.ctx.close().catch(() => {}); _tutorViz.ctx = null; }
+  const waveEl = document.getElementById('tutorWave');
+  if (waveEl) {
+    waveEl.style.display = 'none';
+    waveEl.querySelectorAll('span').forEach(b => { b.style.height = '3px'; b.style.opacity = '0.3'; });
+  }
+}
+
 // ── Microphone ─────────────────────────────────────────────
 function _tutorToggleMic() {
   if (_tutor.listening) {
@@ -11021,6 +11077,7 @@ function _tutorStartListening() {
   _tutor.listening     = true;
   _tutor.liveTranscript = '';
   _tutorSetMicState(true);
+  _tutorStartVisualizer();
 
   const transcriptEl = document.getElementById('tutorTranscript');
   if (transcriptEl) {
@@ -11067,6 +11124,7 @@ function _tutorStopListening(commit) {
   }
   _tutor.listening = false;
   _tutorSetMicState(false);
+  _tutorStopVisualizer();
   if (!commit) {
     const transcriptEl = document.getElementById('tutorTranscript');
     if (transcriptEl) {
@@ -13933,6 +13991,10 @@ updateSourcesBtn();
 
   <!-- Input -->
   <div class="tutor-input-area">
+    <!-- Audio level visualizer — visible only while listening -->
+    <div class="tutor-wave mic-indicator" id="tutorWave" style="display:none;margin-bottom:4px;height:36px">
+      <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+    </div>
     <div class="tutor-transcript-row placeholder" id="tutorTranscript">Premi il microfono per parlare…</div>
     <div class="tutor-input-row">
       <button class="tutor-mic-btn" id="tutorMicBtn" onclick="_tutorToggleMic()" title="Parla">
