@@ -10040,16 +10040,19 @@ async function verifyAnswer(dayId, qIdx, questionText, qType) {
   const _verifySrcsWithText = _verifySrcs.filter(s => (s.content || '').trim().length > 100);
   const _hasSrcs = _verifySrcsWithText.length > 0;
   // Order: text/syllabus first (compass), then PDFs, then textbook-ref (secondary AI)
-  const _orderedSrcs = [
-    ..._verifySrcsWithText.filter(s => s.type === 'text'),
-    ..._verifySrcsWithText.filter(s => s.type !== 'text' && s.type !== 'textbook-ref'),
-    ..._verifySrcsWithText.filter(s => s.type === 'textbook-ref')
-  ];
+  const _primarySrcs   = _verifySrcsWithText.filter(s => s.type !== 'textbook-ref');
+  const _secondarySrcs = _verifySrcsWithText.filter(s => s.type === 'textbook-ref');
+  const _orderedSrcs   = [..._primarySrcs, ..._secondarySrcs];
+  // Primary sources get 12 000 chars each; secondary (AI textbook summaries) only 2 000
   const _srcContext = _hasSrcs
     ? '\n\nFONTI DI STUDIO DISPONIBILI:\n' +
       _orderedSrcs.map((s, i) => {
-        const priority = s.type === 'textbook-ref' ? '[FONTE SECONDARIA — riferimento libro AI]' : '[FONTE PRIMARIA]';
-        return `${priority} [Fonte ${i+1} — ${s.title || 'senza titolo'}]:\n${(s.content || '').slice(0, 8000)}`;
+        const isPrimary = s.type !== 'textbook-ref';
+        const label     = isPrimary
+          ? '[FONTE PRIMARIA — contenuto caricato dallo studente]'
+          : '[FONTE SECONDARIA — riepilogo AI del libro di testo, peso orientativo]';
+        const charLimit = isPrimary ? 12000 : 2000;
+        return `${label}\n[Fonte ${i+1} — ${s.title || 'senza titolo'}]:\n${(s.content || '').slice(0, charLimit)}`;
       }).join('\n\n---\n\n')
     : '';
   console.log(`[verify] Fonti disponibili: ${_verifySrcs.length} totali, ${_verifySrcsWithText.length} con contenuto`, _verifySrcsWithText.map(s => s.title + ' (' + Math.round((s.content||'').length/1000) + 'k chars)'));
@@ -10063,6 +10066,11 @@ Struttura la risposta così:
 2. 2-4 frasi di feedback chirurgico: cosa è corretto (con precisione), cosa manca (specifica il concetto esatto), cosa è impreciso (perché è sbagliato).
 3. Se mancano concetti chiave, elencali in modo conciso.
 ${_hasSrcs ? `4. Per giudizi PARZIALE o INSUFFICIENTE: OBBLIGATORIO. Dopo il feedback, aggiungi un blocco che inizia ESATTAMENTE con "📖 Rivedi:" su una nuova riga. Indica le sezioni delle fonti fornite dove lo studente può trovare i concetti mancanti. Usa il riferimento più specifico disponibile: numero di pagina, titolo di slide, titolo di capitolo o sezione. Se nelle fonti non ci sono pagine esplicite usa il titolo della slide o del paragrafo. Formato: "📖 Rivedi: [Fonte 1] — [titolo sezione o pag. N]". Più sezioni = più righe, ognuna con "📖 Rivedi:". Non inventare: cita solo ciò che è nelle fonti.` : ''}
+
+GERARCHIA DELLE FONTI (rispettala rigorosamente):
+- FONTI PRIMARIE (contenuto caricato dallo studente — dispense, slide, PDF): sono il riferimento PRINCIPALE e DETERMINANTE per la valutazione. Se la risposta è coerente con queste fonti, il giudizio deve premiarlo. Cita le fonti primarie nel feedback quando pertinente.
+- FONTI SECONDARIE (riepiloghi AI di libri di testo): hanno valore ORIENTATIVO. Usale solo per integrare concetti non coperti dalle fonti primarie, mai per contraddirle. Non usarle come criterio per penalizzare una risposta.
+- Se esistono solo fonti primarie, basa la valutazione esclusivamente su quelle.
 
 Tono da mantenere:
 - Per OTTIMO: riconosci l'eccellenza in modo specifico — non essere vago. Indica cosa rende la risposta davvero buona.
@@ -10213,10 +10221,17 @@ async function showCorrectAnswer(dayId, qIdx, questionText, qType, context) {
   if (btn) { btn.disabled = true; btn.textContent = 'Recupero risposta…'; }
 
   const sourcesCtx = (() => {
-    const srcs = getSources();
-    const srcsWithContent = srcs.filter(s => (s.content || '').trim().length > 100);
-    if (!srcsWithContent.length) return '';
-    return '\n\nFONTI DISPONIBILI:\n' + srcsWithContent.map((s,i) => `[${i+1}] ${s.title || 'Fonte'}: ${(s.content||'').slice(0,4000)}`).join('\n\n---\n\n');
+    const srcs = getSources().filter(s => (s.content || '').trim().length > 100);
+    if (!srcs.length) return '';
+    const primary   = srcs.filter(s => s.type !== 'textbook-ref');
+    const secondary = srcs.filter(s => s.type === 'textbook-ref');
+    const ordered   = [...primary, ...secondary];
+    return '\n\nFONTI DISPONIBILI (usa le PRIMARIE come riferimento principale):\n' +
+      ordered.map((s, i) => {
+        const isPrimary = s.type !== 'textbook-ref';
+        const label = isPrimary ? '[FONTE PRIMARIA]' : '[FONTE SECONDARIA — orientativa]';
+        return `${label} [${i+1}] ${s.title || 'Fonte'}:\n${(s.content||'').slice(0, isPrimary ? 8000 : 2000)}`;
+      }).join('\n\n---\n\n');
   })();
 
   try {
@@ -10260,6 +10275,23 @@ async function reverifyAnswer(dayId, qIdx, questionText, qType) {
   fbEl.className = 'q-feedback loading visible';
   fbEl.innerHTML = '<div class="q-feedback-label">Claude sta valutando…</div>';
 
+  // Build source context with the same priority logic as verifyAnswer
+  const _rvAllSrcs     = getSources().filter(s => (s.content || '').trim().length > 100);
+  const _rvPrimary     = _rvAllSrcs.filter(s => s.type !== 'textbook-ref');
+  const _rvSecondary   = _rvAllSrcs.filter(s => s.type === 'textbook-ref');
+  const _rvOrdered     = [..._rvPrimary, ..._rvSecondary];
+  const _rvHasSrcs     = _rvOrdered.length > 0;
+  const _rvSrcCtx      = _rvHasSrcs
+    ? '\n\nFONTI DI STUDIO DISPONIBILI:\n' +
+      _rvOrdered.map((s, i) => {
+        const isPrimary = s.type !== 'textbook-ref';
+        const label     = isPrimary
+          ? '[FONTE PRIMARIA — contenuto caricato dallo studente]'
+          : '[FONTE SECONDARIA — riepilogo AI libro, peso orientativo]';
+        return `${label}\n[Fonte ${i+1} — ${s.title || 'senza titolo'}]:\n${(s.content || '').slice(0, isPrimary ? 10000 : 1500)}`;
+      }).join('\n\n---\n\n')
+    : '';
+
   const systemPrompt = `Sei un coach universitario esperto di Psicologia Cognitiva. Il tuo ruolo non è solo valutare — è far crescere lo studente.
 Il corso è "Psicologia Cognitiva" della Prof. Laura Serra (UNINETTUNO).
 Rispondi SEMPRE in italiano.
@@ -10268,6 +10300,11 @@ Struttura la risposta così:
 1. Prima riga: SOLO il giudizio: OTTIMO / BUONO / PARZIALE / INSUFFICIENTE
 2. 2-4 frasi di feedback chirurgico: cosa è corretto, cosa manca, cosa è impreciso.
 3. Se mancano concetti chiave, elencali in modo conciso.
+${_rvHasSrcs ? '4. Per PARZIALE o INSUFFICIENTE: OBBLIGATORIO. Aggiungi un blocco "📖 Rivedi:" con le sezioni delle FONTI PRIMARIE dove trovare i concetti mancanti.' : ''}
+
+GERARCHIA DELLE FONTI:
+- FONTI PRIMARIE: riferimento principale e determinante per la valutazione.
+- FONTI SECONDARIE: solo orientamento integrativo — non usarle per penalizzare.
 
 Tono da mantenere:
 - Per OTTIMO: riconosci l'eccellenza in modo specifico.
@@ -10277,9 +10314,9 @@ Tono da mantenere:
 
   try {
     const data = await _callClaude({
-      model: 'claude-sonnet-4-6', max_tokens: 800,
+      model: 'claude-sonnet-4-6', max_tokens: 1000,
       system: systemPrompt,
-      messages: [{ role: 'user', content: `Domanda (tipo: ${qType}): ${questionText}\n\nRisposta dello studente: ${answer}` }]
+      messages: [{ role: 'user', content: `Domanda (tipo: ${qType}): ${questionText}\n\nRisposta dello studente: ${answer}${_rvSrcCtx}` }]
     });
     const text = data.content[0].text.trim();
     const firstLine = text.split('\n')[0].toUpperCase();
