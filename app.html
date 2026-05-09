@@ -11054,8 +11054,26 @@ function _tutorToggleMic() {
   if (_tutor.listening) {
     _tutorStopListening(true);
   } else {
+    // Unlock speechSynthesis on iOS/Android: must be called inside
+    // a direct user-gesture handler. We speak a zero-volume empty
+    // utterance here so the audio session is already open when the
+    // AI response arrives (after the async Claude call).
+    _tutorUnlockTts();
     _tutorStartListening();
   }
+}
+
+function _tutorUnlockTts() {
+  if (!window.speechSynthesis) return;
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance('');
+    u.volume = 0;
+    u.lang   = 'it-IT';
+    speechSynthesis.speak(u);
+    // Also resume in case iOS put synthesis in paused state
+    if (speechSynthesis.paused) speechSynthesis.resume();
+  } catch(e) {}
 }
 
 function _tutorStartListening() {
@@ -11216,8 +11234,12 @@ function _ttsBestItalianVoice() {
 if (window.speechSynthesis) {
   // Chrome fires voiceschanged once the list is ready
   speechSynthesis.onvoiceschanged = _ttsLoadVoices;
-  // Attempt immediate load (works in Firefox and Safari)
+  // Immediate attempt (Firefox, Safari)
   _ttsLoadVoices();
+  // Fallback for iOS Safari where onvoiceschanged may never fire:
+  // retry a few times after page load
+  setTimeout(_ttsLoadVoices, 500);
+  setTimeout(_ttsLoadVoices, 1500);
 }
 
 function _tutorSpeak(text) {
@@ -11246,12 +11268,15 @@ function _tutorSpeak(text) {
       _tutorRender();
     };
 
-    // Small delay: Chrome sometimes drops speak() called immediately
-    // after a long async gap; cancel+rescheduled speak works reliably.
-    speechSynthesis.cancel();
+    // iOS may put synthesis in paused state — always resume first.
+    if (speechSynthesis.paused) speechSynthesis.resume();
+    // Small delay: Chrome/Android sometimes drops speak() called
+    // immediately after a long async gap; rescheduling is reliable.
     setTimeout(() => {
-      if (window.speechSynthesis) speechSynthesis.speak(utter);
-    }, 80);
+      if (!window.speechSynthesis) return;
+      if (speechSynthesis.paused) speechSynthesis.resume();
+      speechSynthesis.speak(utter);
+    }, 100);
   }
 
   if (_ttsVoices.length) {
