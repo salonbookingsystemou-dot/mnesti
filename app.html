@@ -8291,7 +8291,7 @@ function closeWelcomeModal() {
 
 // ── Claude API proxy helper ───────────────────────────────────
 // All AI calls go through this function. The API key lives server-side.
-async function _callClaude(payload) {
+async function _callClaude(payload, signal) {
   const token = window._getSBToken ? await window._getSBToken() : null;
   if (!token) throw new Error('Sessione scaduta — effettua di nuovo il login.');
 
@@ -8304,9 +8304,10 @@ async function _callClaude(payload) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),
+      ...(signal ? { signal } : {}),
     });
   } catch (netErr) {
-    throw new Error(`Errore di rete — controlla la connessione. (${netErr.message})`);
+    throw netErr; // preserve AbortError name so callers can detect timeouts
   }
 
   try {
@@ -11391,35 +11392,80 @@ async function _ocrRunVision(file) {
   const progressFill  = _el('ocrProgressFill');
   const progressLabel = _el('ocrProgressLabel');
 
+  // Animated progress: while waiting for the API the bar pulses between 55% and 85%
+  let _progressAnim = null;
+  function _startProgressPulse() {
+    let pct = 55; let dir = 1;
+    _progressAnim = setInterval(() => {
+      pct += dir * 2;
+      if (pct >= 85) dir = -1;
+      if (pct <= 55) dir = 1;
+      progressFill.style.width = pct + '%';
+    }, 200);
+  }
+  function _stopProgressPulse() {
+    if (_progressAnim) { clearInterval(_progressAnim); _progressAnim = null; }
+  }
+
+  function _ocrShowError(msg) {
+    _stopProgressPulse();
+    _el('ocrProgressWrap').classList.remove('visible');
+    _el('ocrResultWrap').classList.add('visible');
+    _el('ocrResultTa').value = '';
+    _el('ocrResultEmpty').style.display = '';
+    _el('ocrResultEmpty').textContent = msg || 'Errore durante la trascrizione. Riprova.';
+    _el('ocrApplyBtn').disabled = true;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+
   try {
     progressFill.style.width = '30%';
     progressLabel.textContent = 'Elaborazione immagine…';
 
-    const { base64, mediaType } = await _ocrResizeImage(file, 1568);
+    // Resize to 1024px max — sufficient for OCR, significantly faster than 1568px
+    const { base64, mediaType } = await _ocrResizeImage(file, 1024);
 
     progressFill.style.width = '55%';
-    progressLabel.textContent = 'Lettura testo con AI…';
+    progressLabel.textContent = 'Lettura testo con AI… (può richiedere 15–30s)';
 
-    const data = await _callClaude({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1200,
-      messages: [{
-        role: 'user',
-        content: [
-          {
-            type: 'image',
-            source: { type: 'base64', media_type: mediaType, data: base64 }
-          },
-          {
-            type: 'text',
-            text: 'Trascrivi fedelmente tutto il testo scritto a mano in questa immagine, mantenendo la struttura dei paragrafi. Restituisci solo il testo trascritto, senza spiegazioni o commenti aggiuntivi.'
-          }
-        ]
-      }]
-    });
+    _startProgressPulse();
 
+    // AbortController with 90-second timeout
+    const _ocrAbort = new AbortController();
+    const _ocrTimeout = setTimeout(() => _ocrAbort.abort(), 90_000);
+
+    let data;
+    try {
+      data = await _callClaude({
+        model: 'claude-haiku-4-5',   // faster model — OCR doesn't need heavy reasoning
+        max_tokens: 2000,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: { type: 'base64', media_type: mediaType, data: base64 }
+            },
+            {
+              type: 'text',
+              text: 'Trascrivi fedelmente tutto il testo scritto a mano in questa immagine, mantenendo la struttura dei paragrafi. Restituisci solo il testo trascritto, senza spiegazioni o commenti aggiuntivi.'
+            }
+          ]
+        }]
+      }, _ocrAbort.signal);
+    } finally {
+      clearTimeout(_ocrTimeout);
+    }
+
+    _stopProgressPulse();
     progressFill.style.width = '100%';
-    const rawText = (data?.content?.[0]?.text || '').trim();
+
+    // Extract text — handle both standard and error response shapes
+    const rawText = (
+      data?.content?.[0]?.text ||
+      data?.content?.find?.(c => c.type === 'text')?.text ||
+      ''
+    ).trim();
 
     _el('ocrProgressWrap').classList.remove('visible');
     _el('ocrResultWrap').classList.add('visible');
@@ -11429,19 +11475,24 @@ async function _ocrRunVision(file) {
       _el('ocrResultEmpty').style.display = 'none';
       _el('ocrApplyBtn').disabled = false;
     } else {
+      // If API returned but no text — possible content policy or blank image
+      const stopReason = data?.stop_reason || data?.stop_sequence || '';
       _el('ocrResultTa').value = '';
       _el('ocrResultEmpty').style.display = '';
+      _el('ocrResultEmpty').textContent = stopReason
+        ? `Nessun testo rilevato (stop: ${stopReason}). Assicurati che la foto sia nitida e ben illuminata.`
+        : 'Nessun testo rilevato. Assicurati che la foto sia nitida e ben illuminata.';
       _el('ocrApplyBtn').disabled = true;
     }
 
   } catch(err) {
     console.error('[OCR Vision]', err);
-    _el('ocrProgressWrap').classList.remove('visible');
-    _el('ocrResultWrap').classList.add('visible');
-    _el('ocrResultTa').value = '';
-    _el('ocrResultEmpty').style.display = '';
-    _el('ocrResultEmpty').textContent = 'Errore durante la trascrizione. Controlla la connessione e riprova.';
-    _el('ocrApplyBtn').disabled = true;
+    const isTimeout = err.name === 'AbortError';
+    _ocrShowError(isTimeout
+      ? 'Timeout: la trascrizione ha impiegato troppo. Prova con una foto più piccola o con migliore illuminazione.'
+      : `Errore: ${err.message || 'controlla la connessione e riprova.'}`
+    );
+    return;
   }
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
