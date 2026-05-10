@@ -19,20 +19,14 @@ CREATE OR REPLACE FUNCTION notify_new_user_registration()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, extensions
+SET search_path = public, net, extensions
 AS $$
 DECLARE
-  fn_url      TEXT    := 'https://olagntawajefdjrkkvcc.supabase.co/functions/v1/notify-new-user';
-  wh_secret   TEXT    := current_setting('app.webhook_secret', true);
-  request_id  BIGINT;
+  fn_url     TEXT := 'https://olagntawajefdjrkkvcc.supabase.co/functions/v1/notify-new-user';
+  wh_secret  TEXT := 'mnesti_wh_a9f3c2e8b14d57a03e6f9c1d2b47e5f8';
+  request_id BIGINT;
 BEGIN
-  -- Silently skip if the secret has not been configured yet
-  IF wh_secret IS NULL OR wh_secret = '' THEN
-    RAISE WARNING '[notify_new_user] app.webhook_secret not set — skipping notification';
-    RETURN NEW;
-  END IF;
-
-  SELECT INTO request_id extensions.http_post(
+  SELECT INTO request_id net.http_post(
     url     := fn_url,
     headers := jsonb_build_object(
       'Content-Type',     'application/json',
