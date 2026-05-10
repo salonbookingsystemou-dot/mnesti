@@ -11804,33 +11804,78 @@ function _ttsLoadVoices() {
   if (v.length) _ttsVoices = v;
   return _ttsVoices;
 }
+
+/**
+ * Seleziona la migliore voce italiana disponibile.
+ * Priorità: voci neurali native (Alice/Federica/Luca su macOS/iOS) →
+ *           Google italiano (Chrome) → qualsiasi voce it non-Compact → fallback.
+ */
 function _ttsBestItalianVoice() {
-  const v = _ttsLoadVoices();
-  // Prefer a non-Compact Italian voice (higher quality on macOS/iOS)
-  return v.find(x => x.lang.startsWith('it') && !x.name.includes('Compact'))
-      || v.find(x => x.lang.startsWith('it'))
-      || null;
+  const voices = _ttsLoadVoices();
+  const it = voices.filter(v => v.lang.startsWith('it'));
+  if (!it.length) return null;
+
+  // Voci neurali di alta qualità, in ordine di preferenza
+  const PREFERRED = ['Alice', 'Federica', 'Luca', 'Google italiano', 'Google Italian'];
+  for (const name of PREFERRED) {
+    const match = it.find(v => v.name.includes(name));
+    if (match) return match;
+  }
+  // Evita voci "Compact" (bassa qualità) e scegli la prima disponibile
+  return it.find(v => !v.name.includes('Compact')) || it[0];
 }
+
+/**
+ * Pulisce il testo prima della sintesi vocale:
+ * rimuove emoji, simboli markdown, virgolette tipografiche, token speciali.
+ */
+function _ttsClean(text) {
+  return (text || '')
+    // Rimuovi token interni dell'app
+    .replace(/\[SUPPORTO_UMANO\]/g, '')
+    // Rimuovi emoji (Unicode ranges principali)
+    .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
+    .replace(/[\u{2600}-\u{27BF}]/gu, ' ')
+    .replace(/[\u{FE00}-\u{FEFF}]/gu, '')
+    // Rimuovi simboli markdown
+    .replace(/[*_`#~|\\]/g, '')
+    // Rimuovi virgolette tipografiche e angolari
+    .replace(/[«»""„‟‹›''‚]/g, '')
+    // Rimuovi frecce, pallini, segni di spunta e simili
+    .replace(/[•·→←↑↓⇒⇐►◄▸▹▶▷◆◇■□●○✓✗✘✔✕✖]/g, '')
+    // [testo] → testo
+    .replace(/\[([^\]]*)\]/g, '$1')
+    // Abbrevia sequenze di punteggiatura
+    .replace(/\.{2,}/g, '.')
+    .replace(/[!?]{2,}/g, m => m[0])
+    // Normalizza spazi
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 if (window.speechSynthesis) {
   // Chrome fires voiceschanged once the list is ready
   speechSynthesis.onvoiceschanged = _ttsLoadVoices;
   // Immediate attempt (Firefox, Safari)
   _ttsLoadVoices();
-  // Fallback for iOS Safari where onvoiceschanged may never fire:
-  // retry a few times after page load
+  // Fallback per iOS Safari dove onvoiceschanged potrebbe non scattare mai
   setTimeout(_ttsLoadVoices, 500);
   setTimeout(_ttsLoadVoices, 1500);
+  setTimeout(_ttsLoadVoices, 3000);
 }
 
 function _tutorSpeak(text) {
   if (!window.speechSynthesis || !text) return;
   _tutorStopSpeaking();
 
+  const cleanText = _ttsClean(text);
+  if (!cleanText) return;
+
   function _doSpeak() {
-    const utter = new SpeechSynthesisUtterance(text);
+    const utter = new SpeechSynthesisUtterance(cleanText);
     utter.lang  = 'it-IT';
-    utter.rate  = 1.0;
-    utter.pitch = 1;
+    utter.rate  = 0.95;  // leggermente più lento = più naturale
+    utter.pitch = 1.0;
 
     const voice = _ttsBestItalianVoice();
     if (voice) utter.voice = voice;
