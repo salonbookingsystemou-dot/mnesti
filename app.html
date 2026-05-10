@@ -1823,6 +1823,45 @@
   .tutor-msg-time {
     font-size: 9px; color: var(--text-3); padding: 0 5px;
   }
+  /* Support escalation inside bubble */
+  .tutor-support-wrap {
+    margin-top: 10px; padding-top: 10px;
+    border-top: 1px solid var(--border);
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .tutor-support-note {
+    font-size: 11px; color: var(--text-3); line-height: 1.45;
+  }
+  .tutor-support-btn {
+    align-self: flex-start;
+    background: none; border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px 12px;
+    font-size: 12px; font-weight: 600; color: var(--text-1);
+    cursor: pointer; display: flex; align-items: center; gap: 6px;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .tutor-support-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .tutor-support-form {
+    display: flex; flex-direction: column; gap: 8px; margin-top: 4px;
+  }
+  .tutor-support-textarea {
+    width: 100%; min-height: 70px; resize: vertical;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px;
+    font-size: 12px; color: var(--text-1); font-family: inherit;
+    box-sizing: border-box;
+  }
+  .tutor-support-textarea:focus { outline: none; border-color: var(--accent); }
+  .tutor-support-send {
+    align-self: flex-end;
+    background: var(--accent); color: #fff;
+    border: none; border-radius: 8px; padding: 7px 16px;
+    font-size: 12px; font-weight: 700; cursor: pointer;
+  }
+  .tutor-support-send:disabled { opacity: 0.5; cursor: not-allowed; }
+  .tutor-support-sent {
+    font-size: 12px; color: #27ae60; font-weight: 600;
+  }
 
   /* Input area */
   .tutor-input-area {
@@ -11367,11 +11406,13 @@ Il tuo ruolo è aiutare lo studente a chiarire dubbi e capire meglio gli argomen
 
 REGOLE ASSOLUTE:
 1. Rispondi SOLO a domande pertinenti all'esame di "${subject}" e ai suoi argomenti.
-2. Se la domanda è fuori tema, rispondi SEMPRE: "Posso aiutarti solo sugli argomenti dell'esame di ${subject}."
-3. Rispondi in italiano, in modo chiaro e conciso — massimo 4-5 frasi.
-4. Usa le fonti di studio disponibili quando pertinenti.
-5. Parla come un tutor universitario esperto: preciso, diretto, incoraggiante.
-6. Non generare liste lunghe o testo accademico pesante — risposte conversazionali e brevi.${srcCtx}`;
+2. Se la domanda riguarda il FUNZIONAMENTO DELL'APP Mnesti (es. bug, problemi tecnici, come usare una funzione, account, pagamenti, suggerimenti di miglioramento), rispondi brevemente con quello che sai e aggiungi ESATTAMENTE questa stringa su una nuova riga alla fine: [SUPPORTO_UMANO]
+3. Se la domanda è completamente fuori tema (né esame né app), rispondi: "Posso aiutarti sugli argomenti dell'esame di ${subject} o su come usare Mnesti."
+4. Rispondi in italiano, in modo chiaro e conciso — massimo 4-5 frasi.
+5. Usa le fonti di studio disponibili quando pertinenti.
+6. Parla come un tutor universitario esperto: preciso, diretto, incoraggiante.
+7. Non generare liste lunghe o testo accademico pesante — risposte conversazionali e brevi.
+8. Non aggiungere mai [SUPPORTO_UMANO] per domande sull'esame o sul suo contenuto.${srcCtx}`;
 }
 
 // ── Render ─────────────────────────────────────────────────
@@ -11397,9 +11438,36 @@ function _tutorRender() {
     const time = new Date(msg.ts).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
     const isSpeaking = _tutor.speaking && i === _tutor.messages.length - 1 && msg.role === 'ai';
 
-    div.innerHTML = `
-      <div class="tutor-bubble${isSpeaking ? ' speaking' : ''}">${_tutorEsc(msg.text)}</div>
-      <div class="tutor-msg-time">${time}</div>`;
+    const SUPPORT_TOKEN = '[SUPPORTO_UMANO]';
+    if (msg.role === 'ai' && msg.text.includes(SUPPORT_TOKEN)) {
+      const cleanText = msg.text.replace(SUPPORT_TOKEN, '').trim();
+      const msgId = `tsup-${i}`;
+      div.innerHTML = `
+        <div class="tutor-bubble${isSpeaking ? ' speaking' : ''}">
+          ${_tutorEsc(cleanText)}
+          <div class="tutor-support-wrap" id="${msgId}-wrap">
+            <div class="tutor-support-note">Nessun problema — puoi scrivere direttamente al team Mnesti.</div>
+            <button class="tutor-support-btn" id="${msgId}-btn" onclick="_tutorShowSupportForm('${msgId}', ${i})">
+              <i data-lucide="mail" style="width:12px;height:12px;stroke-width:2.2;pointer-events:none"></i>
+              Scrivi al team Mnesti
+            </button>
+            <div class="tutor-support-form" id="${msgId}-form" style="display:none">
+              <textarea class="tutor-support-textarea" id="${msgId}-ta"
+                placeholder="Descrivi il problema o la tua domanda…">${_tutorEsc(msg.userQuestion || '')}</textarea>
+              <button class="tutor-support-send" id="${msgId}-send"
+                onclick="_tutorSubmitSupport('${msgId}', ${i})">Invia messaggio</button>
+            </div>
+            <div class="tutor-support-sent" id="${msgId}-sent" style="display:none">
+              ✓ Messaggio inviato — ti risponderemo via email.
+            </div>
+          </div>
+        </div>
+        <div class="tutor-msg-time">${time}</div>`;
+    } else {
+      div.innerHTML = `
+        <div class="tutor-bubble${isSpeaking ? ' speaking' : ''}">${_tutorEsc(msg.text)}</div>
+        <div class="tutor-msg-time">${time}</div>`;
+    }
     container.appendChild(div);
   });
 
@@ -11412,6 +11480,53 @@ function _tutorRender() {
   }
 
   container.scrollTop = container.scrollHeight;
+  lucide.createIcons();
+}
+
+// ── Support escalation ──────────────────────────────────────
+function _tutorShowSupportForm(msgId, msgIdx) {
+  // Pre-fill with the user's question that triggered this response
+  const userQ = _tutor.messages[msgIdx - 1]?.text || '';
+  const ta = document.getElementById(`${msgId}-ta`);
+  if (ta && !ta.value) ta.value = userQ;
+
+  document.getElementById(`${msgId}-btn`).style.display  = 'none';
+  document.getElementById(`${msgId}-form`).style.display = 'flex';
+  ta?.focus();
+}
+
+async function _tutorSubmitSupport(msgId, msgIdx) {
+  const ta   = document.getElementById(`${msgId}-ta`);
+  const send = document.getElementById(`${msgId}-send`);
+  const msg  = (ta?.value || '').trim();
+  if (!msg) return;
+
+  send.disabled    = true;
+  send.textContent = 'Invio…';
+
+  try {
+    const SB_URL  = 'https://olagntawajefdjrkkvcc.supabase.co';
+    const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYWdudGF3YWplZmRqcmtrdmNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU2NTYwNTAsImV4cCI6MjA2MTIzMjA1MH0.ePDFMBNJMtCBSanKdxGJLDIs3GCJKMOmTnvAJOJJBww';
+    const session  = (await _sb?.auth?.getSession())?.data?.session;
+    const token    = session?.access_token || SB_ANON;
+
+    const res = await fetch(`${SB_URL}/functions/v1/support-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ message: msg }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+
+    document.getElementById(`${msgId}-form`).style.display = 'none';
+    document.getElementById(`${msgId}-sent`).style.display = '';
+  } catch(e) {
+    console.error('[support-email]', e);
+    send.disabled    = false;
+    send.textContent = 'Riprova';
+  }
 }
 
 function _tutorEsc(str) {
