@@ -8466,7 +8466,12 @@ function _renderQsPanel(dayId) {
             <textarea class="q-done-edit-textarea" id="done-edit-ta-${dayId}-${i}"
               oninput="_syncReverifyBtn('${dayId}', ${i}, this.value)">${escHtml(ans)}</textarea>
             <div class="q-done-edit-bar">
-              <button class="q-mic-btn" onclick="startVoiceDictationInto('done-edit-ta-${dayId}-${i}')" title="Trascrivi con voce">${_MIC_SVG}</button>
+              <div class="q-tool-btns">
+                <button class="q-mic-btn" onclick="startVoiceDictationInto('done-edit-ta-${dayId}-${i}')" title="Trascrivi con voce">${_MIC_SVG}</button>
+                <button class="q-cam-btn" onclick="startPhotoOcr('${dayId}', ${i}, 'done-edit-ta-${dayId}-${i}')" title="Scatta foto del foglio scritto a mano">
+                  <i data-lucide="camera" style="width:14px;height:14px;stroke-width:2.2;pointer-events:none"></i>
+                </button>
+              </div>
               <button class="q-done-reverify-btn" id="done-reverify-btn-${dayId}-${i}"
                 onclick="reverifyAnswer('${dayId}', ${i}, '${qTextEscaped}', '${qTypeEscaped}')">
                 Riverifica →
@@ -11238,8 +11243,9 @@ function _setMicPauseIcon(isPlaying) {
 // ── Photo OCR ────────────────────────────────────────────────
 let _ocr = null; // { textarea, dayId, qIdx, worker }
 
-function startPhotoOcr(dayId, qIdx) {
-  const textarea = document.getElementById('answer-' + dayId + '-' + qIdx);
+function startPhotoOcr(dayId, qIdx, targetId) {
+  const taId = targetId || ('answer-' + dayId + '-' + qIdx);
+  const textarea = document.getElementById(taId);
   if (!textarea) return;
   _ocr = { textarea, dayId, qIdx, worker: null };
   _ocrResetModal();
