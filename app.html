@@ -1476,6 +1476,62 @@
   }
   .q-cam-btn:hover { border-color: var(--accent); color: var(--accent); }
   .q-cam-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  /* ── Answer-hint modal ──────────────────────────────────── */
+  .ahint-overlay {
+    display: none; position: fixed; inset: 0; z-index: 10200;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .ahint-overlay.open { display: flex; }
+  .ahint-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 28px 24px 24px;
+    width: 100%; max-width: 420px;
+    display: flex; flex-direction: column; gap: 20px;
+    animation: mic-modal-in 0.2s ease-out;
+  }
+  .ahint-header { display: flex; flex-direction: column; gap: 6px; }
+  .ahint-eyebrow {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--accent); opacity: 0.85;
+  }
+  .ahint-title {
+    font-size: 18px; font-weight: 700; color: var(--text-1);
+    letter-spacing: -0.02em; line-height: 1.25;
+  }
+  .ahint-subtitle {
+    font-size: 13px; color: var(--text-3); line-height: 1.55; margin-top: 2px;
+  }
+  .ahint-methods {
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .ahint-method {
+    display: flex; align-items: flex-start; gap: 14px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 14px;
+  }
+  .ahint-method-icon {
+    width: 34px; height: 34px; flex-shrink: 0;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; display: flex; align-items: center;
+    justify-content: center; color: var(--accent);
+  }
+  .ahint-method-body { display: flex; flex-direction: column; gap: 2px; }
+  .ahint-method-name {
+    font-size: 13px; font-weight: 600; color: var(--text-1);
+  }
+  .ahint-method-desc {
+    font-size: 12px; color: var(--text-3); line-height: 1.5;
+  }
+  .ahint-cta {
+    background: var(--accent); color: #fff;
+    border: none; border-radius: 10px; padding: 13px 0;
+    font-size: 14px; font-weight: 700; cursor: pointer;
+    letter-spacing: -0.01em; width: 100%;
+    transition: opacity 0.15s;
+  }
+  .ahint-cta:hover { opacity: 0.88; }
+
   /* ── OCR modal ──────────────────────────────────────────── */
   .ocr-modal-overlay {
     display: none;
@@ -8391,6 +8447,25 @@ function _renderQsPanel(dayId) {
 
   container.innerHTML = activeHtml + _skippedHtml + doneHtml;
   lucide.createIcons();
+
+  // ── First-time answer-hint modal ─────────────────────────
+  if (activeIdx !== -1 && !localStorage.getItem('psico_answer_hint_shown')) {
+    setTimeout(() => {
+      const modal = document.getElementById('ahintModal');
+      if (modal) {
+        modal.classList.add('open');
+        lucide.createIcons();
+        localStorage.setItem('psico_answer_hint_shown', '1');
+      }
+    }, 600);
+  }
+}
+
+function closeAnswerHint() {
+  document.getElementById('ahintModal')?.classList.remove('open');
+}
+function _ahintOverlayClick(e) {
+  if (e.target === document.getElementById('ahintModal')) closeAnswerHint();
 }
 
 // Returns true if day at given id is accessible (all preceding non-rest days have a status)
@@ -14144,6 +14219,47 @@ updateSourcesBtn();
       </button>
     </div>
     <div class="mic-modal-hint">Parla in italiano &middot; ✓ per applicare &middot; ✕ per annullare</div>
+  </div>
+</div>
+
+<!-- ── Answer-hint modal ─────────────────────────────────── -->
+<div id="ahintModal" class="ahint-overlay" onclick="_ahintOverlayClick(event)" role="dialog" aria-modal="true" aria-labelledby="ahintTitle">
+  <div class="ahint-box">
+    <div class="ahint-header">
+      <div class="ahint-eyebrow">Come rispondere</div>
+      <div class="ahint-title" id="ahintTitle">Hai 3 modi per rispondere alle domande</div>
+      <div class="ahint-subtitle">Scegli quello più comodo per il momento.</div>
+    </div>
+    <div class="ahint-methods">
+      <div class="ahint-method">
+        <div class="ahint-method-icon">
+          <i data-lucide="keyboard" style="width:16px;height:16px;stroke-width:2;pointer-events:none"></i>
+        </div>
+        <div class="ahint-method-body">
+          <div class="ahint-method-name">Scrivi</div>
+          <div class="ahint-method-desc">Digita la risposta direttamente nel campo di testo — il modo classico.</div>
+        </div>
+      </div>
+      <div class="ahint-method">
+        <div class="ahint-method-icon">
+          <i data-lucide="mic" style="width:16px;height:16px;stroke-width:2;pointer-events:none"></i>
+        </div>
+        <div class="ahint-method-body">
+          <div class="ahint-method-name">Ditta a voce</div>
+          <div class="ahint-method-desc">Premi il tasto microfono e parla: la risposta verrà trascritta automaticamente.</div>
+        </div>
+      </div>
+      <div class="ahint-method">
+        <div class="ahint-method-icon">
+          <i data-lucide="camera" style="width:16px;height:16px;stroke-width:2;pointer-events:none"></i>
+        </div>
+        <div class="ahint-method-body">
+          <div class="ahint-method-name">Scatta una foto</div>
+          <div class="ahint-method-desc">Hai scritto su carta? Fotografa il foglio — l'AI trascrive la tua calligrafia.</div>
+        </div>
+      </div>
+    </div>
+    <button class="ahint-cta" onclick="closeAnswerHint()">Inizia a rispondere</button>
   </div>
 </div>
 
