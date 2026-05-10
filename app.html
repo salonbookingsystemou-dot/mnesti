@@ -6189,9 +6189,10 @@ const _ACCENT_PRESETS = [
     _syncExamInfoToSupabase(session.user.id);
 
     // Check if new user needs onboarding (no exam date or no AI plan)
-    const info = JSON.parse(localStorage.getItem('psico_exam_info') || '{}');
-    const plan = localStorage.getItem('psico_ai_plan');
-    const needsOb = !info.date || !plan;
+    const info      = JSON.parse(localStorage.getItem('psico_exam_info') || '{}');
+    const plan      = localStorage.getItem('psico_ai_plan');
+    const obSkipped = localStorage.getItem('psico_ob_skipped') === '1';
+    const needsOb   = !obSkipped && (!info.date || !plan);
 
     if (needsOb) {
       // Give DOM a moment to settle before showing onboarding
@@ -6680,16 +6681,15 @@ async function _runOnboarding() {
 
   // 3. Reset pending list, close onboarding, generate plan
   _obPendingSources = [];
+  localStorage.removeItem('psico_ob_skipped'); // completed properly — clear skip flag
   _closeOnboarding();
   await generateStudyPlan(true);
 }
 
 function _skipOnboarding() {
   _closeOnboarding();
-  // Mark as seen so we don't re-show (use default plan)
-  _safeLSSet('psico_exam_info', JSON.stringify(
-    JSON.parse(localStorage.getItem('psico_exam_info') || '{"skipped":true}')
-  ));
+  // Permanent skip flag — prevents onboarding from re-appearing on reload
+  localStorage.setItem('psico_ob_skipped', '1');
 }
 // ── End onboarding ────────────────────────────────────────────
 
