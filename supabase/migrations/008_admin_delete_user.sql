@@ -23,9 +23,10 @@ BEGIN
   END IF;
 
   -- Cascade-delete related public data first
-  DELETE FROM public.user_exams      WHERE user_id = p_user_id;
-  DELETE FROM public.api_usage_log   WHERE user_id = p_user_id;
-  DELETE FROM public.user_plans      WHERE user_id = p_user_id;
+  -- (user_exams already has ON DELETE CASCADE but we delete explicitly for safety)
+  DELETE FROM public.user_exams  WHERE user_id = p_user_id;
+  DELETE FROM public.api_usage   WHERE user_id = p_user_id;
+  DELETE FROM public.user_plans  WHERE user_id = p_user_id;
 
   -- Delete the auth user (requires SECURITY DEFINER with superuser ownership)
   DELETE FROM auth.users WHERE id = p_user_id;

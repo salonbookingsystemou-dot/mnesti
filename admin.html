@@ -759,10 +759,19 @@
       opacity: 0;
       transform: translateY(8px);
       transition: opacity .25s, transform .25s;
-      z-index: 9999;
+      z-index: 20000;
       pointer-events: none;
     }
     #toast.show { opacity: 1; transform: translateY(0); }
+
+    .del-error {
+      font-size: .8rem;
+      color: var(--red);
+      margin-top: -16px;
+      margin-bottom: 16px;
+      min-height: 0;
+      line-height: 1.4;
+    }
   </style>
 </head>
 <body>
@@ -1074,6 +1083,7 @@
       Questa operazione è <strong style="color:var(--red)">irreversibile</strong>.<br>
       Verranno cancellati l'account, tutti gli esami, le sessioni e i dati di utilizzo.
     </p>
+    <div class="del-error" id="del-error"></div>
     <div class="del-actions">
       <button class="del-cancel" onclick="_cancelDelete()">Annulla</button>
       <button class="del-confirm" id="del-confirm-btn" onclick="_confirmDelete()">Elimina definitivamente</button>
@@ -1809,11 +1819,14 @@ function showToast(msg) {
 let _deleteTarget = null;
 
 function promptDeleteUser(userId, email) {
+  if (!userId) { showToast('⚠ ID utente non disponibile'); return; }
   _deleteTarget = { userId, email };
   document.getElementById('del-email').textContent = email;
   const btn = document.getElementById('del-confirm-btn');
   btn.disabled = false;
   btn.textContent = 'Elimina definitivamente';
+  const errEl = document.getElementById('del-error');
+  if (errEl) errEl.textContent = '';
   document.getElementById('delOverlay').classList.add('open');
 }
 
@@ -1825,15 +1838,17 @@ function _cancelDelete() {
 async function _confirmDelete() {
   if (!_deleteTarget) return;
   const { userId, email } = _deleteTarget;
-  const btn = document.getElementById('del-confirm-btn');
+  const btn   = document.getElementById('del-confirm-btn');
+  const errEl = document.getElementById('del-error');
+
   btn.disabled = true;
   btn.textContent = 'Eliminazione in corso…';
+  if (errEl) errEl.textContent = '';
 
   try {
     const { error } = await _sb.rpc('admin_delete_user', { p_user_id: userId });
     if (error) throw error;
 
-    // Remove from in-memory dataset and re-render
     _allUsers = _allUsers.filter(u => u.user_id !== userId);
     _cancelDelete();
     renderUsersTable();
@@ -1841,7 +1856,8 @@ async function _confirmDelete() {
   } catch(e) {
     btn.disabled = false;
     btn.textContent = 'Elimina definitivamente';
-    showToast('⚠ Errore: ' + (e.message || 'impossibile eliminare l\'utente'));
+    const msg = e.message || 'Impossibile eliminare l\'utente';
+    if (errEl) errEl.textContent = '⚠ ' + msg;
     console.error('admin_delete_user error:', e);
   }
 }
