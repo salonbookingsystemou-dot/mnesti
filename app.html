@@ -11391,6 +11391,7 @@ function _tutorBuildSystem() {
   const subject = info.subject   || 'questo esame';
   const prof    = info.professor ? ` (Prof. ${info.professor})` : '';
 
+  // ── Snippet fonti ────────────────────────────────────────────
   const sources = getSources();
   let srcCtx = '';
   if (sources.length) {
@@ -11400,9 +11401,46 @@ function _tutorBuildSystem() {
     srcCtx = `\n\nFONTI DI STUDIO DISPONIBILI:\n${snippets}`;
   }
 
+  // ── Indice domande con tracciabilità fonte ───────────────────
+  // Costruisce un indice compatto: giorno → lista domande (piano + AI)
+  // con numero progressivo e sourceRef, in modo che il tutor possa
+  // rispondere a "da quale fonte viene la domanda n°X di [giorno]?"
+  let questionIndex = '';
+  try {
+    const activeDays = typeof getActiveDays === 'function' ? getActiveDays() : [];
+    const st = (typeof state !== 'undefined') ? state : {};
+    const indexLines = [];
+
+    for (const day of activeDays) {
+      if (day.type === 'rest' || day.type === 'exam') continue;
+      const planQs = day.questions || [];
+      const aiQs   = (st[day.id]?.aiQuestions) || [];
+      if (!planQs.length && !aiQs.length) continue;
+
+      indexLines.push(`\n${day.label || day.id}${day.title ? ' — ' + day.title : ''}:`);
+      let n = 1;
+      for (const q of planQs) {
+        const src = q.sourceRef ? ` | Fonte: ${q.sourceRef.slice(0, 120)}` : '';
+        indexLines.push(`  ${n}. [${q.type || 'domanda'}] ${q.text.slice(0, 100)}${src}`);
+        n++;
+      }
+      for (const q of aiQs) {
+        const src = q.sourceRef ? ` | Fonte: ${q.sourceRef.slice(0, 120)}` : '';
+        indexLines.push(`  ${n}. [AI·${q.type || 'domanda'}] ${q.text.slice(0, 100)}${src}`);
+        n++;
+      }
+    }
+
+    if (indexLines.length) {
+      questionIndex = `\n\nINDICE DOMANDE DEL PIANO DI STUDIO (tracciabilità fonte):
+Quando lo studente chiede da quale fonte proviene una domanda specifica (es. "la domanda n°3 di mercoledì"), cerca nell'indice qui sotto e rispondi citando il sourceRef corrispondente.
+${indexLines.join('\n')}`;
+    }
+  } catch(e) { /* non bloccare il tutor se l'indice fallisce */ }
+
   return `Sei l'assistente di studio Mnesti specializzato nell'esame di "${subject}"${prof}.
 
-Il tuo ruolo è aiutare lo studente a chiarire dubbi e capire meglio gli argomenti dell'esame.
+Il tuo ruolo è aiutare lo studente a chiarire dubbi, capire meglio gli argomenti dell'esame e verificare la tracciabilità delle domande.
 
 REGOLE ASSOLUTE:
 1. Rispondi SOLO a domande pertinenti all'esame di "${subject}" e ai suoi argomenti.
@@ -11412,7 +11450,8 @@ REGOLE ASSOLUTE:
 5. Usa le fonti di studio disponibili quando pertinenti.
 6. Parla come un tutor universitario esperto: preciso, diretto, incoraggiante.
 7. Non generare liste lunghe o testo accademico pesante — risposte conversazionali e brevi.
-8. Non aggiungere mai [SUPPORTO_UMANO] per domande sull'esame o sul suo contenuto.${srcCtx}`;
+8. Non aggiungere mai [SUPPORTO_UMANO] per domande sull'esame o sul suo contenuto.
+9. TRACCIABILITÀ: se ti chiedono da quale fonte proviene una domanda del piano, usa l'indice domande qui sotto per rispondere con precisione — cita nome fonte, sezione/slide e l'estratto testuale del sourceRef.${srcCtx}${questionIndex}`;
 }
 
 // ── Render ─────────────────────────────────────────────────
