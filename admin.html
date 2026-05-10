@@ -678,6 +678,69 @@
     .svc-update-time { font-size: .68rem; opacity: .6; margin-left: 4px; }
     .svc-loading { color: var(--grey); font-size: .82rem; padding: 16px; }
 
+    /* ── DELETE BUTTON ── */
+    .btn-delete {
+      padding: 4px 9px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--grey2);
+      font-size: .73rem;
+      cursor: pointer;
+      transition: background .15s, color .15s, border-color .15s;
+      line-height: 1;
+    }
+    .btn-delete:hover {
+      background: rgba(229,85,85,.12);
+      border-color: var(--red);
+      color: var(--red);
+    }
+
+    /* ── DELETE CONFIRM MODAL ── */
+    .del-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      background: rgba(0,0,0,.65);
+      backdrop-filter: blur(6px);
+      align-items: center;
+      justify-content: center;
+    }
+    .del-overlay.open { display: flex; }
+    .del-box {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 36px 32px 28px;
+      width: min(400px, 94vw);
+      text-align: center;
+      animation: del-in .22s cubic-bezier(.34,1.26,.64,1);
+    }
+    @keyframes del-in { from { opacity:0; transform:scale(.93) translateY(8px); } to { opacity:1; transform:none; } }
+    .del-icon   { font-size: 2.2rem; margin-bottom: 14px; }
+    .del-title  { font-size: 1.05rem; font-weight: 700; color: var(--white); margin-bottom: 8px; }
+    .del-email  { font-size: .85rem; color: var(--accent); font-weight: 600; margin-bottom: 10px; word-break: break-all; }
+    .del-warn   { font-size: .8rem; color: var(--grey); line-height: 1.55; margin-bottom: 26px; }
+    .del-actions { display: flex; gap: 10px; }
+    .del-cancel {
+      flex: 1; padding: 11px;
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 10px; color: var(--grey);
+      font-family: var(--sans); font-size: .88rem; font-weight: 600;
+      cursor: pointer; transition: background .15s, color .15s;
+    }
+    .del-cancel:hover { background: var(--bg4); color: var(--white); }
+    .del-confirm {
+      flex: 1; padding: 11px;
+      background: rgba(229,85,85,.14); border: 1px solid rgba(229,85,85,.5);
+      border-radius: 10px; color: var(--red);
+      font-family: var(--sans); font-size: .88rem; font-weight: 600;
+      cursor: pointer; transition: background .15s;
+    }
+    .del-confirm:hover:not(:disabled) { background: rgba(229,85,85,.25); }
+    .del-confirm:disabled { opacity: .4; cursor: not-allowed; }
+
     /* ── SCROLLBAR ── */
     ::-webkit-scrollbar { width: 4px; height: 4px; }
     ::-webkit-scrollbar-track { background: var(--bg); }
@@ -873,6 +936,7 @@
                   <th onclick="sortTable('total_input_tok')">Token In</th>
                   <th onclick="sortTable('total_output_tok')">Token Out</th>
                   <th onclick="sortTable('estimated_cost')">Costo $</th>
+                  <th style="cursor:default">Azioni</th>
                 </tr>
               </thead>
               <tbody id="users-tbody">
@@ -999,6 +1063,23 @@
   </main>
 
 </div><!-- /app -->
+
+<!-- ── DELETE CONFIRM MODAL ── -->
+<div class="del-overlay" id="delOverlay">
+  <div class="del-box">
+    <div class="del-icon">⚠️</div>
+    <div class="del-title">Elimina utente</div>
+    <div class="del-email" id="del-email">—</div>
+    <p class="del-warn">
+      Questa operazione è <strong style="color:var(--red)">irreversibile</strong>.<br>
+      Verranno cancellati l'account, tutti gli esami, le sessioni e i dati di utilizzo.
+    </p>
+    <div class="del-actions">
+      <button class="del-cancel" onclick="_cancelDelete()">Annulla</button>
+      <button class="del-confirm" id="del-confirm-btn" onclick="_confirmDelete()">Elimina definitivamente</button>
+    </div>
+  </div>
+</div>
 
 <div id="toast"></div>
 
@@ -1372,10 +1453,12 @@ function renderUsersTable() {
 
   const tbody = document.getElementById('users-tbody');
   if (!slice.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="10">Nessun utente trovato</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="11">Nessun utente trovato</td></tr>';
   } else {
     tbody.innerHTML = slice.map(u => {
       const isActive = u.last_active_date && u.last_active_date >= new Date(Date.now()-7*864e5).toISOString().slice(0,10);
+      const uid = escHtml(u.user_id || '');
+      const em  = escHtml(u.email  || '');
       return `<tr>
         <td class="email-cell" title="${u.email}">${u.email}</td>
         <td class="muted">${fmtDate(u.registered_at)}</td>
@@ -1387,6 +1470,7 @@ function renderUsersTable() {
         <td class="muted">${fmtNum(u.total_input_tok)}</td>
         <td class="muted">${fmtNum(u.total_output_tok)}</td>
         <td class="muted">$${Number(u.estimated_cost).toFixed(3)}</td>
+        <td><button class="btn-delete" onclick="promptDeleteUser('${uid}','${em}')">🗑 Elimina</button></td>
       </tr>`;
     }).join('');
   }
@@ -1716,7 +1800,50 @@ function showToast(msg) {
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+  _toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+/* ───────────────────────────────────────────────
+   DELETE USER
+─────────────────────────────────────────────── */
+let _deleteTarget = null;
+
+function promptDeleteUser(userId, email) {
+  _deleteTarget = { userId, email };
+  document.getElementById('del-email').textContent = email;
+  const btn = document.getElementById('del-confirm-btn');
+  btn.disabled = false;
+  btn.textContent = 'Elimina definitivamente';
+  document.getElementById('delOverlay').classList.add('open');
+}
+
+function _cancelDelete() {
+  _deleteTarget = null;
+  document.getElementById('delOverlay').classList.remove('open');
+}
+
+async function _confirmDelete() {
+  if (!_deleteTarget) return;
+  const { userId, email } = _deleteTarget;
+  const btn = document.getElementById('del-confirm-btn');
+  btn.disabled = true;
+  btn.textContent = 'Eliminazione in corso…';
+
+  try {
+    const { error } = await _sb.rpc('admin_delete_user', { p_user_id: userId });
+    if (error) throw error;
+
+    // Remove from in-memory dataset and re-render
+    _allUsers = _allUsers.filter(u => u.user_id !== userId);
+    _cancelDelete();
+    renderUsersTable();
+    showToast('✓ Utente eliminato: ' + email);
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = 'Elimina definitivamente';
+    showToast('⚠ Errore: ' + (e.message || 'impossibile eliminare l\'utente'));
+    console.error('admin_delete_user error:', e);
+  }
 }
 </script>
 
