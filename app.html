@@ -13277,6 +13277,74 @@ async function _extractPdfTextOCR(pdf, onStatus) {
   return text.trim();
 }
 
+/**
+ * Extract educational content from image-based slide PDFs using Claude Vision.
+ * Processes pages in batches of 6, far more accurate than Tesseract for slides.
+ */
+async function _extractPdfVision(pdf, onStatus) {
+  const BATCH_SIZE = 6;
+  const maxPages   = Math.min(OCR_MAX_PAGES, pdf.numPages);
+  const totalBatches = Math.ceil(maxPages / BATCH_SIZE);
+
+  if (onStatus) onStatus(0, maxPages, `Analisi AI delle slide (${maxPages} pagine)…`);
+
+  let allText = '';
+
+  for (let batch = 0; batch < totalBatches; batch++) {
+    const startPage = batch * BATCH_SIZE + 1;
+    const endPage   = Math.min(startPage + BATCH_SIZE - 1, maxPages);
+    const pct       = Math.round((batch / totalBatches) * 88);
+    if (onStatus) onStatus(pct, maxPages, `Slide ${startPage}–${endPage} di ${maxPages}…`);
+
+    // Render pages to compressed JPEG base64
+    const images = [];
+    for (let i = startPage; i <= endPage; i++) {
+      const page = await pdf.getPage(i);
+      const baseVp = page.getViewport({ scale: 1.0 });
+      const scale  = Math.min(1.0, 900 / baseVp.width);
+      const vp     = page.getViewport({ scale });
+      const canvas = document.createElement('canvas');
+      canvas.width  = Math.round(vp.width);
+      canvas.height = Math.round(vp.height);
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+      images.push(canvas.toDataURL('image/jpeg', 0.72).split(',')[1]);
+    }
+
+    // Build Claude Vision message with all slide images in one call
+    const msgContent = [];
+    images.forEach((b64, idx) => {
+      msgContent.push({
+        type: 'image',
+        source: { type: 'base64', media_type: 'image/jpeg', data: b64 }
+      });
+      msgContent.push({ type: 'text', text: `--- Slide ${startPage + idx} ---` });
+    });
+    msgContent.push({
+      type: 'text',
+      text: `Queste sono ${images.length} slide di un corso universitario di psicologia. Per OGNI slide estrai in italiano: tutti i testi visibili, definizioni, concetti chiave, nomi di autori, esperimenti citati, schemi o liste. Sii completo e fedele. Se una slide ha pochi testi ma un'immagine significativa (es. schema, grafico), descrivi brevemente il contenuto visivo. Formato: "Slide N: [contenuto]" per ciascuna.`
+    });
+
+    try {
+      const result = await _callClaude({
+        model:      'claude-haiku-4-5',
+        max_tokens: 2500,
+        system:     'Sei un sistema di estrazione contenuto da slide universitarie. Estrai fedelmente tutto il testo e i concetti visibili nelle slide.',
+        messages:   [{ role: 'user', content: msgContent }]
+      });
+      const txt = (result?.content?.[0]?.text || '').trim();
+      if (txt) allText += '\n\n' + txt;
+    } catch (e) {
+      console.warn(`[PDF Vision] batch ${batch + 1} failed:`, e.message);
+      // On failure, skip this batch and continue with next
+    }
+
+    if (allText.length >= SOURCE_MAX_CHARS) break;
+  }
+
+  if (onStatus) onStatus(92, maxPages, 'Elaborazione completata…');
+  return allText.trim().slice(0, SOURCE_MAX_CHARS);
+}
+
 function _setExtractUI(title, msg, pct) {
   const el    = document.getElementById('sourcesExtracting');
   const tEl   = document.getElementById('sourcesExtractTitle');
@@ -13303,17 +13371,37 @@ async function _processPdfFile(file) {
     const { text: directText, pdf } = await _extractPdfText(buffer);
 
     let finalText = directText;
-    // Trigger OCR if: no text at all, or the PDF is likely image-based slides
+    // Trigger AI extraction if: no text at all, or the PDF is likely image-based slides
     // (avg < 150 chars/page → headers only, real content is in slide images)
     const charsPerPage = pdf.numPages > 0 ? directText.length / pdf.numPages : 0;
     const isSparse     = directText.length < 100 || charsPerPage < 150;
     if (isSparse) {
-      const reason = directText.length < 100 ? 'PDF senza testo selezionabile' : `slide image-based (${Math.round(charsPerPage)} chars/pag)`;
-      _setExtractUI('OCR attivo', `${reason} — avvio OCR (prime ${OCR_MAX_PAGES} pagine)…`, 20);
-      finalText = await _extractPdfTextOCR(pdf, (phase, pct, total, msg) => {
-        const title = phase === 'init' ? 'Preparazione OCR…' : `OCR — ${Math.round(pct)}%`;
-        _setExtractUI(title, msg, pct);
-      });
+      const reason = directText.length < 100
+        ? 'PDF senza testo selezionabile'
+        : `slide image-based (${Math.round(charsPerPage)} char/pag)`;
+      _setExtractUI('AI Vision', `${reason} — estrazione AI in corso…`, 20);
+      try {
+        // Claude Vision: understands slide layout and visual content (much better than Tesseract)
+        finalText = await _extractPdfVision(pdf, (pct, total, msg) => {
+          _setExtractUI(`AI Vision — ${Math.round(pct)}%`, msg, 20 + Math.round(pct * 0.75));
+        });
+        // If Vision returned very little, try Tesseract as backup
+        if (finalText.length < 200 && typeof Tesseract !== 'undefined') {
+          _setExtractUI('OCR backup…', 'AI Vision ha restituito poco testo — avvio OCR Tesseract…', 75);
+          const ocrText = await _extractPdfTextOCR(pdf, (phase, pct, total, msg) => {
+            _setExtractUI(`OCR — ${Math.round(pct)}%`, msg, pct);
+          });
+          if (ocrText.length > finalText.length) finalText = ocrText;
+        }
+      } catch (visionErr) {
+        // Fallback to Tesseract if Vision completely fails
+        console.warn('[PDF] Vision failed, trying Tesseract:', visionErr.message);
+        _setExtractUI('OCR fallback…', 'Avvio OCR Tesseract…', 25);
+        finalText = await _extractPdfTextOCR(pdf, (phase, pct, total, msg) => {
+          const title = phase === 'init' ? 'Preparazione OCR…' : `OCR — ${Math.round(pct)}%`;
+          _setExtractUI(title, msg, pct);
+        });
+      }
     } else {
       _setExtractUI('Quasi pronto…', 'Salvataggio fonte…', 95);
     }
