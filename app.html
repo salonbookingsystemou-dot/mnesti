@@ -13615,8 +13615,27 @@ OBBLIGATORIO: includi "sourceRef" per ogni domanda con sezione/slide e estratto 
     if (!Array.isArray(questions) || !questions.length) throw new Error('Risposta non valida');
 
     if (!state[dayId]) state[dayId] = {};
-    // Aggiunge le nuove domande senza sovrascrivere quelle esistenti (e relativi feedback)
     const prev = state[dayId].aiQuestions || [];
+
+    // ── First-time AI generation: archive plan-question progress ──
+    // Plan feedbacks/answers are indexed 0,1,2… same as AI questions.
+    // If we kept them active, _autoSetStatus would count them as AI
+    // verifications → the day would appear instantly "done".
+    // We archive them so they're not lost but don't pollute status logic.
+    if (!prev.length) {
+      if (state[dayId].feedbacks && Object.keys(state[dayId].feedbacks).length) {
+        state[dayId].planFeedbacks = state[dayId].feedbacks;
+      }
+      if (state[dayId].answers && Object.keys(state[dayId].answers).length) {
+        state[dayId].planAnswers = state[dayId].answers;
+      }
+      delete state[dayId].feedbacks;
+      delete state[dayId].answers;
+      delete state[dayId].skipped;
+      delete state[dayId].sessionStarted;
+      delete state[dayId].status;
+    }
+
     state[dayId].aiQuestions = [...prev, ...questions];
     saveState();
     buildDays();
