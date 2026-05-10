@@ -13287,24 +13287,37 @@ async function _extractPdfTextOCR(pdf, onStatus) {
  * Processes pages in batches of 6, far more accurate than Tesseract for slides.
  */
 async function _extractPdfVision(pdf, onStatus) {
-  const BATCH_SIZE = 6;
-  const maxPages   = Math.min(OCR_MAX_PAGES, pdf.numPages);
-  const totalBatches = Math.ceil(maxPages / BATCH_SIZE);
+  const BATCH_SIZE  = 6;
+  const totalPages  = pdf.numPages;
+  const sampleCount = Math.min(OCR_MAX_PAGES, totalPages);
 
-  if (onStatus) onStatus(0, maxPages, `Analisi AI delle slide (${maxPages} pagine)…`);
+  // Distributed sampling: spread pages evenly across the ENTIRE document
+  // so all lessons/topics are represented, not just the first N pages.
+  // e.g. a 200-page PDF → sample pages 1, 5, 9, 13, ... 197 (every 4th page)
+  const sampledPages = [];
+  if (totalPages <= sampleCount) {
+    for (let i = 1; i <= totalPages; i++) sampledPages.push(i);
+  } else {
+    for (let i = 0; i < sampleCount; i++) {
+      const p = 1 + Math.round(i * (totalPages - 1) / (sampleCount - 1));
+      sampledPages.push(Math.min(p, totalPages));
+    }
+  }
+
+  const totalBatches = Math.ceil(sampledPages.length / BATCH_SIZE);
+  if (onStatus) onStatus(0, sampleCount, `Analisi AI slide (${sampleCount} di ${totalPages} pagine distribuite)…`);
 
   let allText = '';
 
   for (let batch = 0; batch < totalBatches; batch++) {
-    const startPage = batch * BATCH_SIZE + 1;
-    const endPage   = Math.min(startPage + BATCH_SIZE - 1, maxPages);
-    const pct       = Math.round((batch / totalBatches) * 88);
-    if (onStatus) onStatus(pct, maxPages, `Slide ${startPage}–${endPage} di ${maxPages}…`);
+    const batchPages = sampledPages.slice(batch * BATCH_SIZE, (batch + 1) * BATCH_SIZE);
+    const pct        = Math.round((batch / totalBatches) * 88);
+    if (onStatus) onStatus(pct, sampleCount, `Pagine ${batchPages[0]}–${batchPages[batchPages.length - 1]} (batch ${batch + 1}/${totalBatches})…`);
 
     // Render pages to compressed JPEG base64
     const images = [];
-    for (let i = startPage; i <= endPage; i++) {
-      const page = await pdf.getPage(i);
+    for (const pageNum of batchPages) {
+      const page   = await pdf.getPage(pageNum);
       const baseVp = page.getViewport({ scale: 1.0 });
       const scale  = Math.min(1.0, 900 / baseVp.width);
       const vp     = page.getViewport({ scale });
@@ -13312,21 +13325,21 @@ async function _extractPdfVision(pdf, onStatus) {
       canvas.width  = Math.round(vp.width);
       canvas.height = Math.round(vp.height);
       await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
-      images.push(canvas.toDataURL('image/jpeg', 0.72).split(',')[1]);
+      images.push({ b64: canvas.toDataURL('image/jpeg', 0.72).split(',')[1], pageNum });
     }
 
     // Build Claude Vision message with all slide images in one call
     const msgContent = [];
-    images.forEach((b64, idx) => {
+    images.forEach(({ b64, pageNum }) => {
       msgContent.push({
         type: 'image',
         source: { type: 'base64', media_type: 'image/jpeg', data: b64 }
       });
-      msgContent.push({ type: 'text', text: `--- Slide ${startPage + idx} ---` });
+      msgContent.push({ type: 'text', text: `--- Pagina ${pageNum} ---` });
     });
     msgContent.push({
       type: 'text',
-      text: `Queste sono ${images.length} slide di un corso universitario di psicologia. Per OGNI slide estrai in italiano: tutti i testi visibili, definizioni, concetti chiave, nomi di autori, esperimenti citati, schemi o liste. Sii completo e fedele. Se una slide ha pochi testi ma un'immagine significativa (es. schema, grafico), descrivi brevemente il contenuto visivo. Formato: "Slide N: [contenuto]" per ciascuna.`
+      text: `Queste sono ${images.length} slide di un corso universitario di psicologia. Per OGNI slide estrai in italiano: tutti i testi visibili, definizioni, concetti chiave, nomi di autori, esperimenti citati, schemi o liste. Sii completo e fedele. Se una slide ha pochi testi ma un'immagine significativa (es. schema, grafico), descrivi brevemente il contenuto visivo. Formato: "Pag. N: [contenuto]" per ciascuna.`
     });
 
     try {
