@@ -9192,8 +9192,8 @@ function invalidateMemoryCards() {
 
 // ── AI extraction ──────────────────────────────────────────
 async function _mcExtractCards(dayId) {
-  const sources = getSources();
-  if (!sources.length) return [];
+  const { context: sourceCtx, rule: sourceRule, hasPrimary } = _buildWeightedSourceContext({ primaryMax: 6000, secondaryMax: 1500, totalMax: 11000 });
+  if (!sourceCtx) return [];
 
   // Get day context
   const day      = getActiveDays().find(d => d.id === dayId);
@@ -9204,15 +9204,6 @@ async function _mcExtractCards(dayId) {
   const dayState = state[dayId] || {};
   const qList    = dayState.aiQuestions || day?.questions || [];
   const qTexts   = qList.slice(0, 12).map(q => `• ${q.text}`).join('\n');
-
-  // Build condensed source text (max ~10k chars total)
-  const MAX_TOTAL = 11000;
-  let combined = '';
-  for (const s of sources) {
-    const chunk = `--- Fonte: ${s.title} ---\n${(s.content || '').slice(0, 3500)}\n\n`;
-    if (combined.length + chunk.length > MAX_TOTAL) break;
-    combined += chunk;
-  }
 
   const dayContext = [
     dayTitle && `Argomento della giornata: "${dayTitle}"`,
@@ -9225,8 +9216,10 @@ Il contesto di studio di oggi è il seguente:
 
 ${dayContext}
 
+${sourceRule}
+
 Dal materiale di studio fornito, estrai i ricercatori/teorici/psicologi RILEVANTI per gli argomenti della giornata indicata sopra.
-Includi solo autori il cui contributo è pertinente ai topic di oggi (es. se oggi si studia "sensazione e percezione", includi Gibson, Broadbent, Treisman, ecc. — non autori di altri capitoli).
+Priorità assoluta alle fonti primarie (dispense, slide, PDF). Includi solo autori il cui contributo è pertinente ai topic di oggi (es. se oggi si studia "sensazione e percezione", includi Gibson, Broadbent, Treisman, ecc. — non autori di altri capitoli).
 
 Per ciascun autore fornisci:
 - "author": nome completo (es. "Alan Baddeley")
@@ -9242,7 +9235,7 @@ Regole:
 - Rispondi ESCLUSIVAMENTE con un array JSON valido, senza testo aggiuntivo
 
 MATERIALE DI STUDIO:
-${combined}`;
+${sourceCtx}`;
 
   const result = await _callClaude({
     model: 'claude-opus-4-5',
@@ -9760,15 +9753,15 @@ async function _submitBrainDump() {
   document.getElementById('bdLoadingView').style.display = '';
   lucide.createIcons();
 
-  const sourceCtx = getAllSourcesContext ? getAllSourcesContext() : '';
+  const { context: sourceCtx, rule: sourceRule } = _buildWeightedSourceContext({ primaryMax: 6000, secondaryMax: 1000, totalMax: 8000 });
   const day = getActiveDays().find(d => d.id === _bdDayId);
   const qList = (state[_bdDayId]?.aiQuestions) || (day?.questions) || [];
   const knownConcepts = qList.map(q => q.text).slice(0, 12).join('\n');
 
   const systemPrompt = `Sei un professore di Psicologia Cognitiva (corso UNINETTUNO, Prof. Laura Serra).
 Hai ricevuto un "brain dump" testuale di uno studente: tutto quello che ricorda su un argomento specifico, scritto liberamente senza guardare gli appunti.
-Il tuo compito è analizzare quanto lo studente ha compreso e ricordato.
-${sourceCtx ? `\nMateriale del corso di riferimento (usa per identificare i concetti chiave):\n${sourceCtx.slice(0, 8000)}` : ''}
+Il tuo compito è analizzare quanto lo studente ha compreso e ricordato rispetto al materiale delle fonti primarie.
+${sourceCtx ? `\n${sourceRule}\n\nMateriale del corso:\n${sourceCtx}` : ''}
 ${knownConcepts ? `\nConcetti noti dall'argomento:\n${knownConcepts}` : ''}
 
 Rispondi ESCLUSIVAMENTE con JSON valido, nessun altro testo:
@@ -10791,7 +10784,9 @@ async function showCorrectAnswer(dayId, qIdx, questionText, qType, context) {
     const data = await _callClaude({
       model: 'claude-sonnet-4-6',
       max_tokens: 1500,
-      system: `Sei un docente universitario di Psicologia Cognitiva. Fornisci una risposta modello completa, chiara e accademica alla domanda dello studente. Usa le fonti disponibili come riferimento principale. Scrivi in italiano. Rispondi direttamente, senza preamboli.`,
+      system: `Sei un docente universitario di Psicologia Cognitiva. Fornisci una risposta modello completa, chiara e accademica alla domanda dello studente.
+Gerarchia fonti: basa la risposta PRIORITARIAMENTE sulle FONTI PRIMARIE (dispense, slide, PDF caricati). Le fonti secondarie (riepiloghi AI libri di testo) sono solo integrative. Se un concetto è nelle fonti primarie, usalo come riferimento principale.
+Scrivi in italiano. Rispondi direttamente, senza preamboli.`,
       messages: [{
         role: 'user',
         content: `Domanda: "${questionText}"\nTipo: ${qType || 'concettuale'}${sourcesCtx}\n\nFornisci la risposta corretta e completa a questa domanda.`
@@ -11391,15 +11386,11 @@ function _tutorBuildSystem() {
   const subject = info.subject   || 'questo esame';
   const prof    = info.professor ? ` (Prof. ${info.professor})` : '';
 
-  // ── Snippet fonti ────────────────────────────────────────────
-  const sources = getSources();
-  let srcCtx = '';
-  if (sources.length) {
-    const snippets = sources.slice(0, 4).map(s =>
-      `### ${s.title}\n${(s.content || '').slice(0, 900)}`
-    ).join('\n\n');
-    srcCtx = `\n\nFONTI DI STUDIO DISPONIBILI:\n${snippets}`;
-  }
+  // ── Snippet fonti pesato (fonti primarie prima, secondarie ridotte) ──────
+  const { context: _srcRaw, rule: _srcRule } = _buildWeightedSourceContext({ primaryMax: 900, secondaryMax: 300, totalMax: 6000 });
+  const srcCtx = _srcRaw
+    ? `\n\n${_srcRule}\n\nFONTI DI STUDIO DISPONIBILI:\n${_srcRaw}`
+    : '';
 
   // ── Indice domande con tracciabilità fonte ───────────────────
   // Costruisce un indice compatto: giorno → lista domande (piano + AI)
@@ -12043,14 +12034,14 @@ async function startQuiz(dayId, topic) {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 
   // Include source context if available
-  const sourceCtx = getAllSourcesContext();
+  const { context: sourceCtx, rule: sourceRule } = _buildWeightedSourceContext({ primaryMax: 12000, secondaryMax: 2000, totalMax: 18000 });
   const hasSources = !!sourceCtx;
   const sourcePreamble = hasSources
-    ? `Hai a disposizione il seguente materiale del corso. Le domande devono essere ricavate ESCLUSIVAMENTE da questo contenuto — non usare conoscenza generale della disciplina:\n--- INIZIO FONTI ---\n${sourceCtx.slice(0, 18000)}\n--- FINE FONTI ---\n\n`
+    ? `${sourceRule}\n\nHai a disposizione il seguente materiale del corso. Le domande devono essere ricavate seguendo la gerarchia sopra:\n--- INIZIO FONTI ---\n${sourceCtx}\n--- FINE FONTI ---\n\n`
     : '';
 
   const sourceConstraint = hasSources
-    ? `VINCOLO FONTI (critico): ogni domanda DEVE essere direttamente ricavabile dal materiale fornito sopra. Ogni concetto, autore, modello, esperimento o termine tecnico citato deve essere esplicitamente presente nelle fonti. NON generare domande basate su conoscenza generale della disciplina. Se un concetto non è nelle fonti, non fare domande su di esso.`
+    ? `VINCOLO FONTI (critico): ogni domanda DEVE essere direttamente ricavabile dalle FONTI PRIMARIE fornite sopra. Ogni concetto, autore, modello, esperimento o termine tecnico citato deve essere esplicitamente presente nelle fonti primarie. Le fonti secondarie sono solo orientative. NON generare domande basate su conoscenza generale della disciplina.`
     : `ATTENZIONE: nessuna fonte fornita. Genera domande strettamente specifiche all'argomento indicato, con terminologia tecnica precisa, evitando qualsiasi domanda di carattere metodologico generale o metadisciplinare (es. evita domande sul "metodo scientifico in psicologia" o simili). Focalizzati solo sui concetti, modelli e autori specifici di quell'argomento.`;
 
   const systemPrompt = `Sei un professore universitario di Psicologia Cognitiva (corso UNINETTUNO, Prof. Laura Serra) che prepara uno studente a un esame universitario scritto.\n\n${sourcePreamble}${sourceConstraint}\n\nSTANDARD DI QUALITÀ — ogni domanda DEVE rispettare tutti questi criteri:
@@ -13272,24 +13263,68 @@ function saveTextSource() {
 }
 
 // Text sources (programma/lista lezioni) go FIRST in context — they are the compass
-function getAllSourcesContext() {
-  const sources = getSources();
-  if (!sources.length) return '';
-  const textSrcs = sources.filter(s => s.type === 'text');
-  const pdfSrcs  = sources.filter(s => s.type !== 'text');
-  let combined = '';
-  for (const s of [...textSrcs, ...pdfSrcs]) {
-    const chunk = s.content.slice(0, SOURCE_MAX_CHARS);
-    const label = s.type === 'text' ? '📋 PROGRAMMA/LISTA LEZIONI' : '📄';
-    combined += `\n\n=== ${label}: ${s.title} ===\n${chunk}`;
-    if (combined.length > 30000) break;
+/**
+ * Costruisce il contesto fonti pesato per i prompt AI.
+ * Fonti primarie (materiale caricato dallo studente) hanno priorità e budget maggiori.
+ * Fonti secondarie (riepiloghi AI di libri di testo, type='textbook-ref') hanno peso orientativo.
+ *
+ * Questo criterio è il riferimento unico per TUTTI i contesti AI dell'app:
+ * generazione domande, quiz, memory cards, brain dump, tutor, valutazione risposte.
+ *
+ * @param {object} [opts]
+ * @param {number} [opts.primaryMax=12000]  - max chars per fonte primaria
+ * @param {number} [opts.secondaryMax=2000] - max chars per fonte secondaria
+ * @param {number} [opts.totalMax=40000]    - max chars totali
+ * @returns {{ context: string, rule: string, hasPrimary: boolean, hasSecondary: boolean,
+ *             primaryCount: number, secondaryCount: number }}
+ */
+function _buildWeightedSourceContext({ primaryMax = 12000, secondaryMax = 2000, totalMax = 40000 } = {}) {
+  const all = getSources().filter(s => (s.content || '').trim().length > 100);
+  const empty = { context: '', rule: '', hasPrimary: false, hasSecondary: false, primaryCount: 0, secondaryCount: 0 };
+  if (!all.length) return empty;
+
+  const primary   = all.filter(s => s.type !== 'textbook-ref');
+  const secondary = all.filter(s => s.type === 'textbook-ref');
+
+  const RULE = `GERARCHIA DELLE FONTI (regola assoluta — si applica a domande, quiz, valutazioni e risposte):
+• FONTI PRIMARIE (dispense, slide, PDF, appunti caricati dallo studente): riferimento PRINCIPALE e DETERMINANTE. Genera domande, valuta risposte e produci contenuti basandoti ESCLUSIVAMENTE su queste. Se un concetto è nelle fonti primarie, usalo; se una risposta è coerente con esse, è corretta.
+• FONTI SECONDARIE (riepiloghi AI di libri di testo): valore ORIENTATIVO. Usale solo per integrare concetti non presenti nelle fonti primarie. Non usarle per contraddire le fonti primarie né per penalizzare chi le segue.
+• In assenza di fonti primarie: usa le fonti secondarie come unico riferimento disponibile.`;
+
+  const parts = [];
+  let totalChars = 0;
+
+  for (const s of primary) {
+    if (totalChars >= totalMax) break;
+    const chunk = (s.content || '').slice(0, primaryMax);
+    parts.push(`[FONTE PRIMARIA — ${s.title || 'senza titolo'}]\n${chunk}`);
+    totalChars += chunk.length;
   }
-  return combined.trim();
+  for (const s of secondary) {
+    if (totalChars >= totalMax) break;
+    const chunk = (s.content || '').slice(0, secondaryMax);
+    parts.push(`[FONTE SECONDARIA — orientativa — ${s.title || 'senza titolo'}]\n${chunk}`);
+    totalChars += chunk.length;
+  }
+
+  return {
+    context:        parts.join('\n\n---\n\n'),
+    rule:           RULE,
+    hasPrimary:     primary.length > 0,
+    hasSecondary:   secondary.length > 0,
+    primaryCount:   primary.length,
+    secondaryCount: secondary.length,
+  };
+}
+
+/** Retrocompatibilità — restituisce solo il testo delle fonti, pesato. */
+function getAllSourcesContext() {
+  return _buildWeightedSourceContext({ primaryMax: 12000, secondaryMax: 2000, totalMax: 30000 }).context;
 }
 
 // ── Generate open-ended questions from sources ─────────────
 async function generateQuestionsFromSource(dayId) {
-  const sourceCtx = getAllSourcesContext();
+  const { context: sourceCtx, rule: sourceRule } = _buildWeightedSourceContext({ primaryMax: 12000, secondaryMax: 2000, totalMax: 20000 });
   if (!sourceCtx) {
     alert('Carica prima almeno una fonte PDF nel pannello Fonti.');
     return;
@@ -13347,9 +13382,11 @@ async function generateQuestionsFromSource(dayId) {
 
   const systemPrompt = `Sei un professore universitario di Psicologia Cognitiva (corso UNINETTUNO, Prof. Laura Serra) che prepara uno studente a un esame universitario scritto.
 
+${sourceRule}
+
 Hai a disposizione il seguente materiale del corso:
 --- INIZIO FONTI ---
-${sourceCtx.slice(0, 20000)}
+${sourceCtx}
 --- FINE FONTI ---
 
 Genera esattamente ${nQuestions} domande a risposta aperta sull'argomento specificato, basandoti ESCLUSIVAMENTE sulle fonti fornite.
@@ -13655,7 +13692,7 @@ async function generateStudyPlan(fromOnboarding = false) {
   const info = getExamInfo();
   if (!info.date) { alert('Inserisci prima la data dell\'esame.'); return; }
 
-  const sourceCtx = getAllSourcesContext(); // may be null — sources are optional
+  const { context: sourceCtx, rule: sourceRule } = _buildWeightedSourceContext({ primaryMax: 12000, secondaryMax: 2000, totalMax: 22000 });
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -13685,7 +13722,7 @@ async function generateStudyPlan(fromOnboarding = false) {
   });
 
   const sourcePart = sourceCtx
-    ? `FONTI DEL CORSO (usa queste per costruire i contenuti delle giornate):\n--- INIZIO FONTI ---\n${sourceCtx.slice(0, 22000)}\n--- FINE FONTI ---\n\n`
+    ? `${sourceRule}\n\nFONTI DEL CORSO (usa queste per costruire i contenuti delle giornate — priorità assoluta alle fonti primarie):\n--- INIZIO FONTI ---\n${sourceCtx}\n--- FINE FONTI ---\n\n`
     : `NESSUNA FONTE CARICATA: genera un piano strutturato basandoti sulla tua conoscenza della materia "${subject}". Distribuisci i topic principali della disciplina in modo progressivo, dal più fondamentale al più avanzato. Le domande devono essere pertinenti alla materia e di livello universitario.\n\n`;
 
   const systemPrompt = `Sei un pedagogista esperto di pianificazione universitaria. Il tuo compito è costruire un piano di studio ottimale per uno studente universitario che deve prepararsi a un esame.
