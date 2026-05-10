@@ -8430,7 +8430,7 @@ function _renderQsPanel(dayId) {
         </button>
         <div class="q-done-body">
           ${_doneSourceTag}
-          <div class="q-done-answer-label">La tua risposta</div>
+          <div class="q-done-answer-label" id="done-ans-label-${dayId}-${i}">La tua risposta</div>
           <div class="q-done-answer-text" id="done-ans-text-${dayId}-${i}">${ansPreview}</div>
           <div class="q-feedback ${fb.grade || ''} visible" style="margin-top:0" id="done-fb-${dayId}-${i}">${fbContent}</div>
           <button class="q-done-improve-btn" onclick="openImproveAnswer('${dayId}', ${i})" id="done-improve-btn-${dayId}-${i}">✏ Migliora risposta</button>
@@ -10733,24 +10733,42 @@ Sii come un professore esigente ma dalla parte dello studente: onesto, preciso, 
 
 // ── Improve (re-edit + re-verify) done answers ──────────────
 function openImproveAnswer(dayId, qIdx) {
-  const area = document.getElementById(`done-edit-${dayId}-${qIdx}`);
-  const btn  = document.getElementById(`done-improve-btn-${dayId}-${qIdx}`);
+  const area      = document.getElementById(`done-edit-${dayId}-${qIdx}`);
+  const btn       = document.getElementById(`done-improve-btn-${dayId}-${qIdx}`);
+  const fbEl      = document.getElementById(`done-fb-${dayId}-${qIdx}`);
+  const ansText   = document.getElementById(`done-ans-text-${dayId}-${qIdx}`);
+  const ansLabel  = document.getElementById(`done-ans-label-${dayId}-${qIdx}`);
   if (!area) return;
+
+  // Hide previous answer and AI feedback — the edit area replaces them
+  if (fbEl)     fbEl.style.display     = 'none';
+  if (ansText)  ansText.style.display  = 'none';
+  if (ansLabel) ansLabel.style.display = 'none';
+
   area.classList.add('open');
   if (btn) btn.style.display = 'none';
-  // make sure the card is expanded
+
+  // Make sure the card is expanded so the question text is visible
   const card = document.getElementById(`done-q-${dayId}-${qIdx}`);
   if (card && !card.classList.contains('expanded')) card.classList.add('expanded');
+
   const ta = document.getElementById(`done-edit-ta-${dayId}-${qIdx}`);
   if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
   _syncReverifyBtn(dayId, qIdx, ta?.value || '');
 }
 
 function closeImproveAnswer(dayId, qIdx) {
-  const area = document.getElementById(`done-edit-${dayId}-${qIdx}`);
-  const btn  = document.getElementById(`done-improve-btn-${dayId}-${qIdx}`);
+  const area      = document.getElementById(`done-edit-${dayId}-${qIdx}`);
+  const btn       = document.getElementById(`done-improve-btn-${dayId}-${qIdx}`);
+  const fbEl      = document.getElementById(`done-fb-${dayId}-${qIdx}`);
+  const ansText   = document.getElementById(`done-ans-text-${dayId}-${qIdx}`);
+  const ansLabel  = document.getElementById(`done-ans-label-${dayId}-${qIdx}`);
+
   if (area) area.classList.remove('open');
-  if (btn) btn.style.display = '';
+  if (btn)      btn.style.display      = '';
+  if (fbEl)     fbEl.style.display     = '';
+  if (ansText)  ansText.style.display  = '';
+  if (ansLabel) ansLabel.style.display = '';
 }
 
 function _syncReverifyBtn(dayId, qIdx, val) {
