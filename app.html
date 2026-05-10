@@ -11448,7 +11448,7 @@ async function _ocrRunVision(file) {
     let data;
     try {
       data = await _callClaude({
-        model: 'claude-haiku-4-5',   // faster model — OCR doesn't need heavy reasoning
+        model: 'claude-sonnet-4-6',  // Sonnet needed for accurate handwriting recognition
         max_tokens: 2000,
         messages: [{
           role: 'user',
