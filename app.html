@@ -12824,9 +12824,10 @@ function renderSourcesList() {
         ? `<i data-lucide="clipboard-list" style="width:16px;height:16px;stroke-width:2"></i>`
         : `<i data-lucide="file-text" style="width:16px;height:16px;stroke-width:2"></i>`;
 
-    // Detect sparse image-based PDF: < 20 chars/KB and file > 50 KB
+    // Detect sparse image-based PDF: < 20 chars/KB, file > 50 KB, and content still low.
+    // If content >= 10000 chars the Vision/OCR extraction succeeded — no warning needed.
     const charsPerKb = (s.sizeBytes && s.sizeBytes > 50000) ? charLen / (s.sizeBytes / 1024) : 999;
-    const isSparse   = !isTextbook && !isText && hasContent && charsPerKb < 20;
+    const isSparse   = !isTextbook && !isText && hasContent && charsPerKb < 20 && charLen < 10000;
 
     // Status indicator
     let statusDot, statusText, sparseWarning = '';
@@ -12845,7 +12846,11 @@ function renderSourcesList() {
       statusText = `<span style="color:#e67e22">${charLen.toLocaleString('it-IT')} caratteri (contenuto limitato)</span>`;
     } else {
       statusDot = `<span style="width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0;display:inline-block"></span>`;
-      const label = isTextbook ? 'caratteri · fonte secondaria AI' : isText ? 'caratteri · fonte primaria' : 'caratteri estratti';
+      const wasVision = !isTextbook && !isText && s.sizeBytes > 50000 && charsPerKb < 20;
+      const label = isTextbook ? 'caratteri · fonte secondaria AI'
+                  : isText     ? 'caratteri · fonte primaria'
+                  : wasVision  ? 'caratteri estratti con AI Vision · fonte primaria'
+                  :              'caratteri estratti · fonte primaria';
       statusText = `<span style="color:var(--accent);font-weight:500">${charLen.toLocaleString('it-IT')} ${label}</span>`;
     }
 
