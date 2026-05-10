@@ -9786,8 +9786,8 @@ Rispondi ESCLUSIVAMENTE con JSON valido, nessun altro testo:
       system: systemPrompt,
       messages: [{ role: 'user', content: `Argomento: ${_bdTopic}\n\nBrain dump dello studente:\n${text || '(nessun testo inserito)'}` }]
     });
-    let raw = data.content[0].text.trim().replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
-    const result = JSON.parse(raw);
+    const raw = data.content[0].text.trim();
+    const result = _extractJson(raw);
     _showBrainDumpResults(result.score || 0, result.covered || [], result.missing || [], result.feedback || '');
 
   } catch(e) {
@@ -11882,21 +11882,47 @@ function _tutorStopSpeaking() {
 // ── Quiz ────────────────────────────────────────────────────
 let _quiz = null;
 
-/** Ripara JSON quiz da risposte Claude con virgolette tipografiche o testo extra. */
-function _repairAndParseQuiz(raw) {
-  try { return JSON.parse(raw); } catch { /* fall through */ }
-
-  let fixed = raw
+/**
+ * Estrae e parsa il primo valore JSON valido dalla risposta di Claude.
+ * Gestisce: testo prima/dopo il JSON, code fence markdown, virgolette tipografiche.
+ * @param {string} raw - testo grezzo dalla risposta
+ * @returns {any} valore JSON parsato
+ */
+function _extractJson(raw) {
+  // 1. Normalizza virgolette tipografiche
+  let s = raw
     .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"')
     .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'");
-  try { return JSON.parse(fixed); } catch { /* fall through */ }
 
-  const match = fixed.match(/\[[\s\S]*\]/);
-  if (match) {
-    try { return JSON.parse(match[0]); } catch { /* fall through */ }
+  // 2. Rimuovi code fences
+  s = s.replace(/```(?:json)?/gi, '').replace(/```/g, '');
+
+  // 3. Prova direttamente
+  try { return JSON.parse(s.trim()); } catch { /* fall through */ }
+
+  // 4. Estrai il primo array [...] o oggetto {...}
+  const firstBracket = s.indexOf('[');
+  const firstBrace   = s.indexOf('{');
+  let start = -1, end = -1, closing = '';
+
+  if (firstBracket !== -1 && (firstBrace === -1 || firstBracket < firstBrace)) {
+    start = firstBracket; closing = ']';
+    end = s.lastIndexOf(']');
+  } else if (firstBrace !== -1) {
+    start = firstBrace; closing = '}';
+    end = s.lastIndexOf('}');
+  }
+
+  if (start !== -1 && end > start) {
+    try { return JSON.parse(s.slice(start, end + 1)); } catch { /* fall through */ }
   }
 
   throw new Error('JSON non valido: ' + raw.slice(0, 120) + '…');
+}
+
+/** Ripara JSON quiz da risposte Claude con virgolette tipografiche o testo extra. */
+function _repairAndParseQuiz(raw) {
+  return _extractJson(raw);
 }
 
 async function startQuiz(dayId, topic) {
@@ -12022,9 +12048,7 @@ Dove "ans" è l'indice 0-3 dell'opzione corretta. Usa solo italiano.`;
         content: `Argomento: ${topic}\n\n[Sessione #${Date.now()}-${Math.random().toString(36).slice(2,7)}] Genera un set di domande COMPLETAMENTE NUOVO e DIVERSO rispetto a qualsiasi sessione precedente. Varia i concetti scelti, le formulazioni e i distrattori.\n\nRicorda: le domande devono riguardare concetti, modelli, autori ed esperimenti SPECIFICI di questo argomento${hasSources ? ', presenti nelle fonti fornite' : ''}. Evita domande generiche, metodologiche o metadisciplinari.\n\nOBBLIGATORIO: includi "sourceRef" per ogni domanda con la citazione della sezione/slide specifica e l'estratto testuale dalle fonti.`
       }]
     });
-    let raw = data.content[0].text.trim();
-    raw = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
-    const questions = _repairAndParseQuiz(raw);
+    const questions = _repairAndParseQuiz(data.content[0].text.trim());
     if (!Array.isArray(questions) || questions.length === 0) throw new Error('Risposta non valida');
 
     // Shuffle options so the correct answer is never predictably in position 0
@@ -13334,9 +13358,7 @@ OBBLIGATORIO: includi "sourceRef" per ogni domanda con sezione/slide e estratto 
       messages: [{ role: 'user', content: userMsg }]
     });
 
-    let raw = data.content[0].text.trim();
-    raw = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
-    const questions = JSON.parse(raw);
+    const questions = _extractJson(data.content[0].text.trim());
     if (!Array.isArray(questions) || !questions.length) throw new Error('Risposta non valida');
 
     if (!state[dayId]) state[dayId] = {};
@@ -13679,10 +13701,7 @@ REGOLE ASSOLUTE (non derogabili):
     });
 
     _setPlanGenUI('Elaborazione risposta…', 'Analisi e validazione del piano generato…', 70, 'Parsing JSON…');
-    let raw = data.content[0].text.trim();
-    raw = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
-
-    const planDays = JSON.parse(raw);
+    const planDays = _extractJson(data.content[0].text.trim());
     if (!Array.isArray(planDays) || planDays.length === 0) throw new Error('Piano non valido ricevuto dall\'AI');
 
     _setPlanGenUI('Salvataggio…', 'Costruzione del calendario…', 90, 'Quasi pronto…');
