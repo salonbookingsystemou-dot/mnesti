@@ -4237,6 +4237,25 @@
     overflow: hidden;
   }
   #loginScreen.fade-out { opacity: 0; pointer-events: none; }
+  #loginScreen.email-confirming .login-box { display: none; }
+  #loginScreen.email-confirming #emailConfirmingBox { display: flex; }
+  #emailConfirmingBox {
+    display: none;
+    flex-direction: column; align-items: center;
+    gap: 18px; text-align: center;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 18px; padding: 40px 32px;
+    width: min(360px, 90vw); position: relative; z-index: 1;
+  }
+  .ec-spinner {
+    width: 40px; height: 40px; border-radius: 50%;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .ec-title { font-size: 1.1rem; font-weight: 700; color: var(--text-1); }
+  .ec-sub   { font-size: 0.85rem; color: var(--text-3); line-height: 1.5; }
   #loginBgCanvas {
     position: absolute; inset: 0;
     width: 100%; height: 100%;
@@ -5418,6 +5437,15 @@
 
 <div id="loginScreen">
   <canvas id="loginBgCanvas" aria-hidden="true"></canvas>
+
+  <!-- Email confirmation in-progress state -->
+  <div id="emailConfirmingBox">
+    <img src="logo-mark.png" alt="Mnesti" style="height:32px;filter:invert(1);opacity:.85">
+    <div class="ec-spinner"></div>
+    <div class="ec-title">Verifica email in corso…</div>
+    <div class="ec-sub">Stiamo confermando il tuo account.<br>Verrai loggato automaticamente tra un momento.</div>
+  </div>
+
   <div class="login-box">
     <div class="login-logo">
       <img class="login-logo-img" src="logo-login.png" alt="Mnesti" onerror="this.style.display='none'">
@@ -6211,7 +6239,7 @@ const _ACCENT_PRESETS = [
         if (!result.error && result.data?.user && !result.data.session) {
           // Email confirmation required
           errEl.style.color = '#27ae60';
-          errEl.textContent = '✓ Controlla la tua email per confermare l\'account, poi accedi.';
+          errEl.textContent = '✓ Controlla la tua email e clicca il link di conferma — verrai loggato automaticamente.';
           btn.disabled = false;
           btn.textContent = 'Crea account →';
           return;
@@ -6264,12 +6292,31 @@ const _ACCENT_PRESETS = [
     location.reload();
   };
 
+  /* ── Detect email confirmation URL (PKCE ?code= or legacy #access_token) ── */
+  function _isConfirmationUrl() {
+    const params = new URLSearchParams(location.search);
+    const hash   = new URLSearchParams(location.hash.slice(1));
+    return params.has('code') ||
+           (hash.get('type') === 'signup' && hash.has('access_token')) ||
+           (hash.get('type') === 'recovery') ||
+           params.get('type') === 'signup';
+  }
+
   /* ── Check existing session on load ── */
   window.addEventListener('DOMContentLoaded', async () => {
     // Hide mic buttons when not in a secure context (HTTP)
     if (!window.isSecureContext) document.body.classList.add('no-secure-context');
 
     if (!_sb) { _showBody(); return; }
+
+    // If URL contains a confirmation/recovery code, show spinner and wait for
+    // onAuthStateChange to fire SIGNED_IN — do NOT show the login form.
+    const isConfirming = _isConfirmationUrl();
+    if (isConfirming) {
+      const ls = document.getElementById('loginScreen');
+      if (ls) ls.classList.add('email-confirming');
+      _showBody();
+    }
 
     try {
       const { data: { session } } = await _sb.auth.getSession();
@@ -6281,22 +6328,26 @@ const _ACCENT_PRESETS = [
           window._reinitApp();
         }
         _bootstrap(session, false);
-      } else {
-        // No session — show login screen
+      } else if (!isConfirming) {
+        // No session and no confirmation in progress — show login screen
         _showBody();
         const loginEmail = document.getElementById('loginEmail');
         if (loginEmail) loginEmail.focus();
       }
+      // If isConfirming + no session yet: wait for onAuthStateChange below
     } catch(e) {
       console.warn('[Supabase] Session check failed:', e);
-      _showBody(); // fallback: always show something
+      _showBody();
     }
 
     // Listen for auth state changes (token refresh, logout, email confirmation)
     _sb.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
         if (!_logoutInProgress) location.reload();
-      } else if (event === 'SIGNED_IN' && session && !_bootstrapped) {
+      } else if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session && !_bootstrapped) {
+        // Remove confirming state if present
+        const ls = document.getElementById('loginScreen');
+        if (ls) ls.classList.remove('email-confirming');
         _loadFromSupabase(session.user.id).then(loaded => {
           if (loaded && typeof window._reinitApp === 'function') window._reinitApp();
           _bootstrap(session, true);
