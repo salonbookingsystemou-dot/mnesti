@@ -6109,7 +6109,17 @@ const _ACCENT_PRESETS = [
   window._SB_URL = SB_URL;
   window._getSBToken = async () => {
     if (!_sb) return null;
-    const { data: { session } } = await _sb.auth.getSession();
+    let { data: { session } } = await _sb.auth.getSession();
+    if (!session?.access_token) {
+      // On iOS the token can temporarily disappear after camera/backgrounding.
+      // Attempt a silent refresh before giving up.
+      try {
+        const { data: refreshData } = await _sb.auth.refreshSession();
+        session = refreshData?.session ?? null;
+      } catch(e) {
+        console.warn('[getSBToken] refresh failed:', e);
+      }
+    }
     return session?.access_token || null;
   };
 
@@ -8307,7 +8317,8 @@ async function _callClaude(payload, signal) {
       ...(signal ? { signal } : {}),
     });
   } catch (netErr) {
-    throw netErr; // preserve AbortError name so callers can detect timeouts
+    if (netErr.name === 'AbortError') throw netErr; // preserve for timeout detection
+    throw new Error(`Errore di rete — controlla la connessione. (${netErr.message})`);
   }
 
   try {
