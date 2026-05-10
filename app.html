@@ -2648,6 +2648,7 @@
   }
   .source-item-del:hover { color: var(--skip-text); background: var(--border-subtle); }
   .source-item.src-error    { opacity: 0.8; border-left: 3px solid #e74c3c; }
+  .source-item.src-sparse   { border-left: 3px solid #e67e22; }
   .source-item.textbook-type { border-left: 3px solid #8e44ad22; }
   .source-item.textbook-type .source-item-icon { color: #8e44ad; }
   .src-diag-preview {
@@ -12612,7 +12613,7 @@ if (typeof lucide !== 'undefined') lucide.createIcons();
 
 // ── Sources (PDF fonti) ────────────────────────────────────
 const SOURCES_KEY  = 'psico_sources';
-const SOURCE_MAX_CHARS = 14000; // ~3500 tokens per fonte
+const SOURCE_MAX_CHARS = 30000; // ~7500 tokens per fonte
 
 function getSources() {
   try { return JSON.parse(localStorage.getItem(SOURCES_KEY) || '[]'); }
@@ -12823,11 +12824,22 @@ function renderSourcesList() {
         ? `<i data-lucide="clipboard-list" style="width:16px;height:16px;stroke-width:2"></i>`
         : `<i data-lucide="file-text" style="width:16px;height:16px;stroke-width:2"></i>`;
 
+    // Detect sparse image-based PDF: < 20 chars/KB and file > 50 KB
+    const charsPerKb = (s.sizeBytes && s.sizeBytes > 50000) ? charLen / (s.sizeBytes / 1024) : 999;
+    const isSparse   = !isTextbook && !isText && hasContent && charsPerKb < 20;
+
     // Status indicator
-    let statusDot, statusText;
+    let statusDot, statusText, sparseWarning = '';
     if (!hasContent) {
       statusDot = `<span style="width:7px;height:7px;border-radius:50%;background:#e74c3c;flex-shrink:0;display:inline-block"></span>`;
       statusText = `<span style="color:#e74c3c;font-weight:600">Testo non estratto — ricarica il file</span>`;
+    } else if (isSparse) {
+      statusDot = `<span style="width:7px;height:7px;border-radius:50%;background:#e67e22;flex-shrink:0;display:inline-block"></span>`;
+      statusText = `<span style="color:#e67e22;font-weight:600">${charLen.toLocaleString('it-IT')} caratteri estratti — slide image-based</span>`;
+      sparseWarning = `<div style="margin-top:6px;padding:7px 9px;border-radius:6px;background:#e67e2215;border:1px solid #e67e2240;font-size:10.5px;font-family:'Inter',sans-serif;color:#e67e22;line-height:1.5;">
+        ⚠️ <strong>Estratto solo il ${Math.round(charsPerKb)} char/KB — le slide sono image-based.</strong><br>
+        Rimuovi questa fonte e ricarica il PDF: ora l'app usa l'OCR automatico per estrarre il testo dalle immagini delle slide (prime 50 pagine).
+      </div>`;
     } else if (charLen < 500) {
       statusDot = `<span style="width:7px;height:7px;border-radius:50%;background:#e67e22;flex-shrink:0;display:inline-block"></span>`;
       statusText = `<span style="color:#e67e22">${charLen.toLocaleString('it-IT')} caratteri (contenuto limitato)</span>`;
@@ -12850,7 +12862,7 @@ function renderSourcesList() {
     const sizeInfo = !isText && !isTextbook && s.sizeBytes
       ? `${(s.sizeBytes/1024).toFixed(0)} KB · ` : '';
 
-    return `<div class="source-item${isText ? ' text-type' : ''}${isTextbook ? ' textbook-type' : ''}${!hasContent ? ' src-error' : ''}">
+    return `<div class="source-item${isText ? ' text-type' : ''}${isTextbook ? ' textbook-type' : ''}${!hasContent ? ' src-error' : ''}${isSparse ? ' src-sparse' : ''}">
       <div class="source-item-icon">${icon}</div>
       <div class="source-item-info" style="min-width:0">
         <div class="source-item-title" title="${escHtml(s.title||'')}">${escHtml(s.title||'Senza titolo')}${badge}</div>
@@ -12858,6 +12870,7 @@ function renderSourcesList() {
           ${statusDot}${statusText}
           ${sizeInfo ? `<span style="color:var(--text-3)">· ${sizeInfo.replace(' · ','')}</span>` : ''}
         </div>
+        ${sparseWarning}
         ${preview}
       </div>
       <button class="source-item-del" onclick="removeSource('${s.id}')" title="Rimuovi"><i data-lucide="trash-2" style="width:12px;height:12px;stroke-width:2"></i></button>
@@ -13213,7 +13226,7 @@ function _initPdfJs() {
   return true;
 }
 
-const OCR_MAX_PAGES = 30; // limit OCR to first N pages to keep it fast
+const OCR_MAX_PAGES = 50; // limit OCR to first N pages to keep it fast
 
 async function _extractPdfText(arrayBuffer) {
   if (!_initPdfJs()) throw new Error('PDF.js non disponibile');
@@ -13290,9 +13303,13 @@ async function _processPdfFile(file) {
     const { text: directText, pdf } = await _extractPdfText(buffer);
 
     let finalText = directText;
-    if (directText.length < 100) {
-      // Image-based PDF → fallback to OCR
-      _setExtractUI('OCR attivo', `PDF con immagini — avvio OCR (prime ${OCR_MAX_PAGES} pagine)…`, 20);
+    // Trigger OCR if: no text at all, or the PDF is likely image-based slides
+    // (avg < 150 chars/page → headers only, real content is in slide images)
+    const charsPerPage = pdf.numPages > 0 ? directText.length / pdf.numPages : 0;
+    const isSparse     = directText.length < 100 || charsPerPage < 150;
+    if (isSparse) {
+      const reason = directText.length < 100 ? 'PDF senza testo selezionabile' : `slide image-based (${Math.round(charsPerPage)} chars/pag)`;
+      _setExtractUI('OCR attivo', `${reason} — avvio OCR (prime ${OCR_MAX_PAGES} pagine)…`, 20);
       finalText = await _extractPdfTextOCR(pdf, (phase, pct, total, msg) => {
         const title = phase === 'init' ? 'Preparazione OCR…' : `OCR — ${Math.round(pct)}%`;
         _setExtractUI(title, msg, pct);
@@ -13472,16 +13489,27 @@ function _buildWeightedSourceContext({ primaryMax = 12000, secondaryMax = 2000, 
   if (!all.length) return empty;
 
   const primary   = all.filter(s => s.type !== 'textbook-ref');
-  // When primaryOnly=true and primary sources exist, suppress secondary entirely
-  // (prevents Claude from drawing on its internal textbook knowledge via small hints)
-  const secondary = (primaryOnly && primary.length > 0)
+
+  // Minimum usable content check: if primary sources exist but total content is < 3000 chars
+  // the PDF was likely image-based and extracted poorly → include secondary as fallback
+  // to avoid Claude generating purely from training knowledge.
+  const totalPrimaryChars = primary.reduce((acc, s) => acc + (s.content || '').trim().length, 0);
+  const primaryIsUsable   = primary.length > 0 && totalPrimaryChars >= 3000;
+
+  // When primaryOnly=true AND primary sources have usable content, suppress secondary entirely.
+  const secondary = (primaryOnly && primaryIsUsable)
     ? []
     : all.filter(s => s.type === 'textbook-ref');
+
+  // Build a note if primary sources exist but are too sparse (user needs to re-upload)
+  const sparseNote = (primary.length > 0 && !primaryIsUsable)
+    ? '\n\n⚠️ NOTA: le fonti primarie caricate contengono pochissimo testo (probabilmente slide image-based non ancora ri-caricate con OCR). In mancanza di contenuto testuale sufficiente, integra con le fonti secondarie disponibili.'
+    : '';
 
   const RULE = `GERARCHIA DELLE FONTI (regola assoluta — si applica a domande, quiz, valutazioni e risposte):
 • FONTI PRIMARIE (dispense, slide, PDF, appunti caricati dallo studente): riferimento PRINCIPALE e DETERMINANTE. Genera domande, valuta risposte e produci contenuti basandoti ESCLUSIVAMENTE su queste. Se un concetto è nelle fonti primarie, usalo; se una risposta è coerente con esse, è corretta.
 • FONTI SECONDARIE (riepiloghi AI di libri di testo): valore ORIENTATIVO. Usale solo per integrare concetti non presenti nelle fonti primarie. Non usarle per contraddire le fonti primarie né per penalizzare chi le segue.
-• In assenza di fonti primarie: usa le fonti secondarie come unico riferimento disponibile.`;
+• In assenza di fonti primarie (o se le fonti primarie hanno pochissimo contenuto testuale): usa le fonti secondarie come riferimento disponibile.${sparseNote}`;
 
   const parts = [];
   let totalChars = 0;
@@ -13506,6 +13534,8 @@ function _buildWeightedSourceContext({ primaryMax = 12000, secondaryMax = 2000, 
     hasSecondary:   secondary.length > 0,
     primaryCount:   primary.length,
     secondaryCount: secondary.length,
+    primaryIsUsable,
+    totalPrimaryChars,
   };
 }
 
