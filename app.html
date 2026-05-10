@@ -2284,6 +2284,29 @@
     font-size: 12px;
   }
   .q-done-summary.expanded .q-done-body { display: block; }
+
+  /* ── Improving state: show full question, hide toggle header ── */
+  .q-done-improving-header {
+    display: none;
+    padding: 12px 14px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .q-done-improving-header .q-type-badge {
+    display: inline-block;
+    font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em;
+    font-weight: 700; color: var(--text-3);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 4px; padding: 1px 6px; margin-bottom: 6px;
+    font-family: 'Inter', sans-serif;
+  }
+  .q-done-improving-header .q-full-text {
+    font-size: 13px; color: var(--text); line-height: 1.5;
+    font-family: 'Inter', sans-serif; font-weight: 500;
+  }
+  .q-done-summary.improving .q-done-toggle  { display: none; }
+  .q-done-summary.improving .q-done-improving-header { display: block; }
+  .q-done-summary.improving .q-done-body { display: block; border-top: none; }
+  .q-done-summary.improving { border-color: var(--accent); }
   .q-done-answer-label {
     font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em;
     color: var(--text-3); font-weight: 600; margin-bottom: 4px;
@@ -8428,6 +8451,10 @@ function _renderQsPanel(dayId) {
           <span class="q-done-text">${q.text}</span>
           <span class="q-done-chevron">›</span>
         </button>
+        <div class="q-done-improving-header">
+          <div class="q-type-badge">${q.type || 'domanda'}</div>
+          <div class="q-full-text">${escHtml(q.text)}</div>
+        </div>
         <div class="q-done-body">
           ${_doneSourceTag}
           <div class="q-done-answer-label" id="done-ans-label-${dayId}-${i}">La tua risposta</div>
@@ -10733,11 +10760,12 @@ Sii come un professore esigente ma dalla parte dello studente: onesto, preciso, 
 
 // ── Improve (re-edit + re-verify) done answers ──────────────
 function openImproveAnswer(dayId, qIdx) {
-  const area      = document.getElementById(`done-edit-${dayId}-${qIdx}`);
-  const btn       = document.getElementById(`done-improve-btn-${dayId}-${qIdx}`);
-  const fbEl      = document.getElementById(`done-fb-${dayId}-${qIdx}`);
-  const ansText   = document.getElementById(`done-ans-text-${dayId}-${qIdx}`);
-  const ansLabel  = document.getElementById(`done-ans-label-${dayId}-${qIdx}`);
+  const area     = document.getElementById(`done-edit-${dayId}-${qIdx}`);
+  const btn      = document.getElementById(`done-improve-btn-${dayId}-${qIdx}`);
+  const fbEl     = document.getElementById(`done-fb-${dayId}-${qIdx}`);
+  const ansText  = document.getElementById(`done-ans-text-${dayId}-${qIdx}`);
+  const ansLabel = document.getElementById(`done-ans-label-${dayId}-${qIdx}`);
+  const card     = document.getElementById(`done-q-${dayId}-${qIdx}`);
   if (!area) return;
 
   // Hide previous answer and AI feedback — the edit area replaces them
@@ -10748,9 +10776,11 @@ function openImproveAnswer(dayId, qIdx) {
   area.classList.add('open');
   if (btn) btn.style.display = 'none';
 
-  // Make sure the card is expanded so the question text is visible
-  const card = document.getElementById(`done-q-${dayId}-${qIdx}`);
-  if (card && !card.classList.contains('expanded')) card.classList.add('expanded');
+  // Switch card to "improving" mode: shows full question, hides collapsed toggle
+  if (card) {
+    card.classList.add('improving');
+    card.classList.add('expanded'); // keep body visible
+  }
 
   const ta = document.getElementById(`done-edit-ta-${dayId}-${qIdx}`);
   if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
@@ -10758,17 +10788,21 @@ function openImproveAnswer(dayId, qIdx) {
 }
 
 function closeImproveAnswer(dayId, qIdx) {
-  const area      = document.getElementById(`done-edit-${dayId}-${qIdx}`);
-  const btn       = document.getElementById(`done-improve-btn-${dayId}-${qIdx}`);
-  const fbEl      = document.getElementById(`done-fb-${dayId}-${qIdx}`);
-  const ansText   = document.getElementById(`done-ans-text-${dayId}-${qIdx}`);
-  const ansLabel  = document.getElementById(`done-ans-label-${dayId}-${qIdx}`);
+  const area     = document.getElementById(`done-edit-${dayId}-${qIdx}`);
+  const btn      = document.getElementById(`done-improve-btn-${dayId}-${qIdx}`);
+  const fbEl     = document.getElementById(`done-fb-${dayId}-${qIdx}`);
+  const ansText  = document.getElementById(`done-ans-text-${dayId}-${qIdx}`);
+  const ansLabel = document.getElementById(`done-ans-label-${dayId}-${qIdx}`);
+  const card     = document.getElementById(`done-q-${dayId}-${qIdx}`);
 
   if (area) area.classList.remove('open');
   if (btn)      btn.style.display      = '';
   if (fbEl)     fbEl.style.display     = '';
   if (ansText)  ansText.style.display  = '';
   if (ansLabel) ansLabel.style.display = '';
+
+  // Restore normal card state
+  if (card) card.classList.remove('improving');
 }
 
 function _syncReverifyBtn(dayId, qIdx, val) {
