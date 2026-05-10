@@ -12216,7 +12216,9 @@ async function startQuiz(dayId, topic) {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 
   // Include source context if available
-  const { context: sourceCtx, rule: sourceRule } = _buildWeightedSourceContext({ primaryMax: 12000, secondaryMax: 2000, totalMax: 18000 });
+  // primaryOnly: esclude i libri di testo quando ci sono fonti primarie (stesso motivo
+  // della generazione domande — Claude attinge ai libri noti anche con pochi token).
+  const { context: sourceCtx, rule: sourceRule } = _buildWeightedSourceContext({ primaryMax: 12000, secondaryMax: 2000, totalMax: 18000, primaryOnly: true });
   const hasSources = !!sourceCtx;
   const sourcePreamble = hasSources
     ? `${sourceRule}\n\nHai a disposizione il seguente materiale del corso. Le domande devono essere ricavate seguendo la gerarchia sopra:\n--- INIZIO FONTI ---\n${sourceCtx}\n--- FINE FONTI ---\n\n`
@@ -13454,19 +13456,27 @@ function saveTextSource() {
  * generazione domande, quiz, memory cards, brain dump, tutor, valutazione risposte.
  *
  * @param {object} [opts]
- * @param {number} [opts.primaryMax=12000]  - max chars per fonte primaria
- * @param {number} [opts.secondaryMax=2000] - max chars per fonte secondaria
- * @param {number} [opts.totalMax=40000]    - max chars totali
+ * @param {number}  [opts.primaryMax=12000]  - max chars per fonte primaria
+ * @param {number}  [opts.secondaryMax=2000] - max chars per fonte secondaria
+ * @param {number}  [opts.totalMax=40000]    - max chars totali
+ * @param {boolean} [opts.primaryOnly=false] - se true E esistono fonti primarie, esclude
+ *                                             completamente le secondarie (usare per
+ *                                             generazione domande/quiz per evitare che
+ *                                             Claude attinga al libro di testo noto)
  * @returns {{ context: string, rule: string, hasPrimary: boolean, hasSecondary: boolean,
  *             primaryCount: number, secondaryCount: number }}
  */
-function _buildWeightedSourceContext({ primaryMax = 12000, secondaryMax = 2000, totalMax = 40000 } = {}) {
+function _buildWeightedSourceContext({ primaryMax = 12000, secondaryMax = 2000, totalMax = 40000, primaryOnly = false } = {}) {
   const all = getSources().filter(s => (s.content || '').trim().length > 100);
   const empty = { context: '', rule: '', hasPrimary: false, hasSecondary: false, primaryCount: 0, secondaryCount: 0 };
   if (!all.length) return empty;
 
   const primary   = all.filter(s => s.type !== 'textbook-ref');
-  const secondary = all.filter(s => s.type === 'textbook-ref');
+  // When primaryOnly=true and primary sources exist, suppress secondary entirely
+  // (prevents Claude from drawing on its internal textbook knowledge via small hints)
+  const secondary = (primaryOnly && primary.length > 0)
+    ? []
+    : all.filter(s => s.type === 'textbook-ref');
 
   const RULE = `GERARCHIA DELLE FONTI (regola assoluta — si applica a domande, quiz, valutazioni e risposte):
 • FONTI PRIMARIE (dispense, slide, PDF, appunti caricati dallo studente): riferimento PRINCIPALE e DETERMINANTE. Genera domande, valuta risposte e produci contenuti basandoti ESCLUSIVAMENTE su queste. Se un concetto è nelle fonti primarie, usalo; se una risposta è coerente con esse, è corretta.
@@ -13506,7 +13516,10 @@ function getAllSourcesContext() {
 
 // ── Generate open-ended questions from sources ─────────────
 async function generateQuestionsFromSource(dayId) {
-  const { context: sourceCtx, rule: sourceRule } = _buildWeightedSourceContext({ primaryMax: 12000, secondaryMax: 2000, totalMax: 20000 });
+  // primaryOnly: se esistono dispense/PDF caricati, non includere i libri di testo citati.
+  // Claude conosce già quei libri dal training — anche 2000 chars bastano a fargli
+  // generare domande "da manuale". Le domande devono venire SOLO dal materiale caricato.
+  const { context: sourceCtx, rule: sourceRule } = _buildWeightedSourceContext({ primaryMax: 12000, secondaryMax: 2000, totalMax: 20000, primaryOnly: true });
   if (!sourceCtx) {
     alert('Carica prima almeno una fonte PDF nel pannello Fonti.');
     return;
@@ -13893,7 +13906,9 @@ async function generateStudyPlan(fromOnboarding = false) {
   const info = getExamInfo();
   if (!info.date) { alert('Inserisci prima la data dell\'esame.'); return; }
 
-  const { context: sourceCtx, rule: sourceRule } = _buildWeightedSourceContext({ primaryMax: 12000, secondaryMax: 2000, totalMax: 22000 });
+  // primaryOnly: il piano di studio deve strutturarsi sulle dispense caricate,
+  // non sul programma del manuale che Claude già conosce.
+  const { context: sourceCtx, rule: sourceRule } = _buildWeightedSourceContext({ primaryMax: 12000, secondaryMax: 2000, totalMax: 22000, primaryOnly: true });
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
