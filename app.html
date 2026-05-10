@@ -1476,6 +1476,52 @@
   }
   .q-cam-btn:hover { border-color: var(--accent); color: var(--accent); }
   .q-cam-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  /* ── PWA install banner ─────────────────────────────────── */
+  .pwa-banner {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 8500;
+    background: var(--surface); border-top: 1px solid var(--border);
+    padding: 14px 16px 20px;
+    display: flex; align-items: flex-start; gap: 12px;
+    transform: translateY(110%);
+    transition: transform 0.35s cubic-bezier(0.34,1.2,0.64,1);
+    box-shadow: 0 -8px 32px rgba(0,0,0,0.18);
+  }
+  .pwa-banner.visible { transform: translateY(0); }
+  .pwa-banner-icon {
+    width: 40px; height: 40px; flex-shrink: 0; border-radius: 10px;
+    overflow: hidden; background: var(--bg);
+    border: 1px solid var(--border);
+  }
+  .pwa-banner-icon img { width: 100%; height: 100%; object-fit: cover; }
+  .pwa-banner-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .pwa-banner-title { font-size: 13px; font-weight: 700; color: var(--text-1); }
+  .pwa-banner-desc  { font-size: 12px; color: var(--text-3); line-height: 1.45; }
+  .pwa-banner-ios-steps {
+    margin-top: 8px; display: flex; flex-direction: column; gap: 5px;
+  }
+  .pwa-banner-ios-step {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 12px; color: var(--text-2);
+  }
+  .pwa-banner-ios-step span {
+    background: var(--accent); color: #fff;
+    border-radius: 50%; width: 16px; height: 16px;
+    font-size: 9px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .pwa-banner-actions { display: flex; gap: 8px; margin-top: 10px; }
+  .pwa-banner-install {
+    background: var(--accent); color: #fff;
+    border: none; border-radius: 8px; padding: 8px 16px;
+    font-size: 13px; font-weight: 700; cursor: pointer; flex-shrink: 0;
+  }
+  .pwa-banner-dismiss {
+    position: absolute; top: 10px; right: 12px;
+    background: none; border: none; cursor: pointer;
+    color: var(--text-3); font-size: 18px; line-height: 1; padding: 2px 4px;
+  }
+  .pwa-banner-dismiss:hover { color: var(--text-1); }
+
   /* ── Answer-hint modal ──────────────────────────────────── */
   .ahint-overlay {
     display: none; position: fixed; inset: 0; z-index: 10200;
@@ -6263,6 +6309,8 @@ const _ACCENT_PRESETS = [
       setTimeout(() => {
         if (typeof window._maybeShowExamOutcomeModal === 'function') window._maybeShowExamOutcomeModal();
       }, 800);
+      // No welcome modal this session: try PWA banner after a delay
+      setTimeout(() => { if (typeof _tryShowPwaBanner === 'function') _tryShowPwaBanner(); }, 4000);
     }
   }
 
@@ -6739,6 +6787,7 @@ async function _runOnboarding() {
   _obPendingSources = [];
   localStorage.removeItem('psico_ob_skipped'); // completed properly — clear skip flag
   _closeOnboarding();
+  setTimeout(() => { if (typeof _tryShowPwaBanner === 'function') _tryShowPwaBanner(); }, 3000);
   await generateStudyPlan(true);
 }
 
@@ -6746,6 +6795,7 @@ function _skipOnboarding() {
   _closeOnboarding();
   // Permanent skip flag — prevents onboarding from re-appearing on reload
   localStorage.setItem('psico_ob_skipped', '1');
+  setTimeout(() => { if (typeof _tryShowPwaBanner === 'function') _tryShowPwaBanner(); }, 1500);
 }
 // ── End onboarding ────────────────────────────────────────────
 
@@ -8080,7 +8130,76 @@ function closeWelcomeModal() {
   setTimeout(() => {
     if (typeof window._maybeShowExamOutcomeModal === 'function') window._maybeShowExamOutcomeModal();
   }, 450);
+  // Try PWA banner after welcome modal closes
+  setTimeout(_tryShowPwaBanner, 1200);
 }
+
+// ── PWA Install Banner ────────────────────────────────────────────────────────
+(function() {
+  const _isMobile    = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const _isIOS       = /iPad|iPhone|iPod/i.test(navigator.userAgent) && !window.MSStream;
+  const _isStandalone = window.matchMedia('(display-mode: standalone)').matches
+                      || !!navigator.standalone;
+
+  let _deferredPrompt = null; // Android beforeinstallprompt event
+
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    _deferredPrompt = e;
+  });
+
+  function _anyModalOpen() {
+    return !!(
+      document.querySelector('.ob-overlay.active') ||
+      document.getElementById('welcomeOverlay')?.classList.contains('open') ||
+      document.getElementById('ahintModal')?.classList.contains('open') ||
+      document.getElementById('ocrModal')?.classList.contains('open')
+    );
+  }
+
+  window._tryShowPwaBanner = function _tryShowPwaBanner(retries) {
+    retries = retries ?? 0;
+    if (!_isMobile || _isStandalone) return;
+    if (localStorage.getItem('psico_pwa_dismissed')) return;
+    if (_anyModalOpen()) {
+      if (retries < 8) setTimeout(() => _tryShowPwaBanner(retries + 1), 2000);
+      return;
+    }
+    _showPwaBanner();
+  };
+
+  function _showPwaBanner() {
+    const banner = document.getElementById('pwaBanner');
+    if (!banner || banner.classList.contains('visible')) return;
+
+    if (_isIOS) {
+      // iOS Safari: manual instructions
+      document.getElementById('pwaBannerDesc').textContent = 'Salvala sulla tua Home per aprirla come un\'app vera.';
+      document.getElementById('pwaBannerIosSteps').style.display = 'flex';
+    } else if (_deferredPrompt) {
+      // Android Chrome: native install button
+      document.getElementById('pwaBannerInstallBtn').style.display = 'inline-flex';
+    } else {
+      // Generic mobile (other browser)
+      document.getElementById('pwaBannerDesc').textContent = 'Aggiungi Mnesti alla tua schermata Home dal menu del browser.';
+    }
+
+    banner.classList.add('visible');
+  }
+
+  window._pwaBannerInstall = async function() {
+    if (!_deferredPrompt) return;
+    _deferredPrompt.prompt();
+    const { outcome } = await _deferredPrompt.userChoice;
+    _deferredPrompt = null;
+    if (outcome === 'accepted') _pwaBannerDismiss();
+  };
+
+  window._pwaBannerDismiss = function() {
+    document.getElementById('pwaBanner')?.classList.remove('visible');
+    localStorage.setItem('psico_pwa_dismissed', '1');
+  };
+})();
 
 // ── Claude API proxy helper ───────────────────────────────────
 // All AI calls go through this function. The API key lives server-side.
@@ -14220,6 +14339,33 @@ updateSourcesBtn();
     </div>
     <div class="mic-modal-hint">Parla in italiano &middot; ✓ per applicare &middot; ✕ per annullare</div>
   </div>
+</div>
+
+<!-- ── PWA install banner ──────────────────────────────────── -->
+<div id="pwaBanner" class="pwa-banner" role="complementary" aria-label="Installa app">
+  <div class="pwa-banner-icon">
+    <img src="logo-mark.png" alt="Mnesti">
+  </div>
+  <div class="pwa-banner-body">
+    <div class="pwa-banner-title">Installa Mnesti sul tuo telefono</div>
+    <div class="pwa-banner-desc" id="pwaBannerDesc">Accedi all'app più velocemente, anche offline.</div>
+    <div id="pwaBannerIosSteps" class="pwa-banner-ios-steps" style="display:none">
+      <div class="pwa-banner-ios-step">
+        <span>1</span>
+        Tocca il pulsante <strong>&nbsp;Condividi&nbsp;</strong> in basso nel browser
+      </div>
+      <div class="pwa-banner-ios-step">
+        <span>2</span>
+        Scegli <strong>&nbsp;"Aggiungi a Home"&nbsp;</strong> dall'elenco
+      </div>
+    </div>
+    <div class="pwa-banner-actions">
+      <button class="pwa-banner-install" id="pwaBannerInstallBtn" onclick="_pwaBannerInstall()" style="display:none">
+        Installa
+      </button>
+    </div>
+  </div>
+  <button class="pwa-banner-dismiss" onclick="_pwaBannerDismiss()" aria-label="Chiudi">×</button>
 </div>
 
 <!-- ── Answer-hint modal ─────────────────────────────────── -->
