@@ -1476,6 +1476,21 @@
   }
   .q-cam-btn:hover { border-color: var(--accent); color: var(--accent); }
   .q-cam-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  /* ── Clear textarea button ─────────────────────────────── */
+  .q-textarea-wrap { position: relative; }
+  .q-clear-btn {
+    position: absolute; top: 7px; right: 7px;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text-3); cursor: pointer; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.15s, color 0.15s, background 0.15s;
+    z-index: 2;
+  }
+  .q-textarea-wrap:focus-within .q-clear-btn.has-text,
+  .q-clear-btn.has-text { opacity: 0.75; pointer-events: auto; }
+  .q-clear-btn.has-text:hover { opacity: 1; color: var(--text); background: var(--surface); }
   /* ── PWA install banner ─────────────────────────────────── */
   .pwa-banner {
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 8500;
@@ -8463,8 +8478,15 @@ function _renderQsPanel(dayId) {
           <button class="q-done-improve-btn" onclick="openImproveAnswer('${dayId}', ${i})" id="done-improve-btn-${dayId}-${i}">✏ Migliora risposta</button>
           <div class="q-done-edit-area" id="done-edit-${dayId}-${i}">
             <div class="q-done-edit-label">Modifica e riverifica</div>
-            <textarea class="q-done-edit-textarea" id="done-edit-ta-${dayId}-${i}"
-              oninput="_syncReverifyBtn('${dayId}', ${i}, this.value)">${escHtml(ans)}</textarea>
+            <div class="q-textarea-wrap">
+              <textarea class="q-done-edit-textarea" id="done-edit-ta-${dayId}-${i}"
+                oninput="_syncReverifyBtn('${dayId}', ${i}, this.value); _syncClearBtn(this)">${escHtml(ans)}</textarea>
+              <button class="q-clear-btn${ans ? ' has-text' : ''}" tabindex="-1"
+                onclick="_clearAnswerField('done-edit-ta-${dayId}-${i}')"
+                title="Cancella risposta">
+                <i data-lucide="x" style="width:11px;height:11px;stroke-width:2.5;pointer-events:none"></i>
+              </button>
+            </div>
             <div class="q-done-edit-bar">
               <div class="q-tool-btns">
                 <button class="q-mic-btn" onclick="startVoiceDictationInto('done-edit-ta-${dayId}-${i}')" title="Trascrivi con voce">${_MIC_SVG}</button>
@@ -8584,9 +8606,16 @@ function _renderQsPanel(dayId) {
       </div>
       ${_srcTagHtml}
       <div class="q-answer-area">
-        <textarea class="q-answer-input" id="answer-${dayId}-${activeIdx}"
-          placeholder="Scrivi qui la tua risposta…"
-          oninput="saveAnswer('${dayId}', ${activeIdx}, this.value); _syncVerifyBtn('${dayId}', ${activeIdx}, this.value)">${escHtml(existingAns)}</textarea>
+        <div class="q-textarea-wrap">
+          <textarea class="q-answer-input" id="answer-${dayId}-${activeIdx}"
+            placeholder="Scrivi qui la tua risposta…"
+            oninput="saveAnswer('${dayId}', ${activeIdx}, this.value); _syncVerifyBtn('${dayId}', ${activeIdx}, this.value); _syncClearBtn(this)">${escHtml(existingAns)}</textarea>
+          <button class="q-clear-btn${existingAns ? ' has-text' : ''}" tabindex="-1"
+            onclick="_clearAnswerField('answer-${dayId}-${activeIdx}')"
+            title="Cancella risposta">
+            <i data-lucide="x" style="width:11px;height:11px;stroke-width:2.5;pointer-events:none"></i>
+          </button>
+        </div>
         <div class="q-answer-tools">
           <div class="q-tool-btns">
             <button class="q-mic-btn" id="mic-${dayId}-${activeIdx}"
@@ -10813,6 +10842,20 @@ function closeImproveAnswer(dayId, qIdx) {
 function _syncReverifyBtn(dayId, qIdx, val) {
   const btn = document.getElementById(`done-reverify-btn-${dayId}-${qIdx}`);
   if (btn) btn.disabled = val.trim().length < MIN_ANSWER_CHARS;
+}
+
+function _syncClearBtn(ta) {
+  const btn = ta.parentElement?.querySelector('.q-clear-btn');
+  if (!btn) return;
+  btn.classList.toggle('has-text', ta.value.length > 0);
+}
+
+function _clearAnswerField(taId) {
+  const ta = document.getElementById(taId);
+  if (!ta) return;
+  ta.value = '';
+  ta.dispatchEvent(new Event('input'));
+  ta.focus();
 }
 
 async function showCorrectAnswer(dayId, qIdx, questionText, qType, context) {
