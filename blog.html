@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>if(location.protocol!=='https:'&&location.protocol!=='file:'&&location.hostname!=='localhost')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
+
+  <title>Blog Mnesti — Consigli di studio per studenti universitari lavoratori italiani</title>
+  <meta name="description" content="Articoli pratici su come studiare con poco tempo, active recall, gestione dello studio universitario per studenti lavoratori italiani. Tecniche, metodi e strategie per superare gli esami." />
+  <meta name="keywords" content="blog studio universitario, studenti lavoratori università, come studiare con poco tempo, active recall università, preparazione esami università telematica, metodi studio efficaci" />
+  <meta name="author" content="Mnesti" />
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large" />
+
+  <link rel="canonical" href="https://mnesti.it/blog.html" />
+  <link rel="alternate" hreflang="it" href="https://mnesti.it/blog.html" />
+
+  <meta property="og:type"        content="website" />
+  <meta property="og:url"         content="https://mnesti.it/blog.html" />
+  <meta property="og:site_name"   content="Mnesti" />
+  <meta property="og:locale"      content="it_IT" />
+  <meta property="og:title"       content="Blog Mnesti — Studio universitario per chi lavora" />
+  <meta property="og:description" content="Tecniche, metodi e consigli per superare gli esami universitari con poco tempo disponibile. Per studenti lavoratori italiani." />
+  <meta property="og:image"       content="https://mnesti.it/og-image.png" />
+  <meta property="og:image:alt"   content="Blog Mnesti — Studio universitario per studenti lavoratori" />
+
+  <meta name="twitter:card"        content="summary_large_image" />
+  <meta name="twitter:title"       content="Blog Mnesti — Studio universitario per chi lavora" />
+  <meta name="twitter:description" content="Tecniche, metodi e consigli per superare gli esami con poco tempo. Per studenti universitari lavoratori italiani." />
+  <meta name="twitter:image"       content="https://mnesti.it/og-image.png" />
+
+  <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <link rel="manifest" href="manifest.json" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Blog",
+    "@id": "https://mnesti.it/blog.html",
+    "url": "https://mnesti.it/blog.html",
+    "name": "Blog Mnesti",
+    "description": "Articoli pratici su studio universitario, active recall e gestione del tempo per studenti lavoratori italiani.",
+    "publisher": {
+      "@type": "Organization",
+      "name": "Mnesti",
+      "url": "https://mnesti.it",
+      "logo": { "@type": "ImageObject", "url": "https://mnesti.it/logo-full.png" }
+    },
+    "breadcrumb": {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Mnesti", "item": "https://mnesti.it" },
+        { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://mnesti.it/blog.html" }
+      ]
+    }
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #0d0d0d;
+      --surface: #161616;
+      --border:  #2a2a2a;
+      --white:   #f5f0eb;
+      --grey:    #999;
+      --grey2:   #666;
+      --accent:  #d97757;
+      --accent2: #c4633f;
+      --text:    #e8e2db;
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 1rem; line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    img { display: block; max-width: 100%; }
+
+    .container { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+    /* ── Nav ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      padding: 16px 0; transition: background 0.3s, border-color 0.3s;
+    }
+    nav.scrolled {
+      background: rgba(13,13,13,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner { display: flex; align-items: center; justify-content: space-between; }
+    .nav-logo img { height: 26px; width: auto; filter: brightness(0) invert(1); }
+    [data-theme="light"] .nav-logo img { filter: none; }
+    .nav-right { display: flex; align-items: center; gap: 20px; }
+    .nav-link { font-size: 0.88rem; color: var(--grey); transition: color 0.2s; }
+    .nav-link:hover, .nav-link.active { color: var(--white); }
+    .nav-cta {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--accent); color: #fff;
+      padding: 8px 18px; border-radius: 100px;
+      font-size: 0.88rem; font-weight: 600;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .nav-cta:hover { background: var(--accent2); transform: translateY(-1px); }
+
+    /* ── Hero ── */
+    .blog-hero {
+      padding: 120px 0 64px;
+      border-bottom: 1px solid var(--border);
+    }
+    .blog-hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 0.78rem; font-weight: 600; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--accent);
+      margin-bottom: 20px;
+    }
+    .blog-hero h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      line-height: 1.18; color: var(--white);
+      max-width: 680px; margin-bottom: 20px;
+    }
+    .blog-hero p {
+      font-size: 1.05rem; color: var(--grey); max-width: 560px; line-height: 1.75;
+    }
+
+    /* ── Grid ── */
+    .blog-grid-section { padding: 64px 0 96px; }
+    .blog-grid-header {
+      display: flex; align-items: baseline; justify-content: space-between;
+      margin-bottom: 40px;
+    }
+    .blog-grid-header h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.5rem; color: var(--white);
+    }
+    .blog-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 28px;
+    }
+
+    /* ── Article card ── */
+    .blog-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      display: flex; flex-direction: column;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .blog-card:hover { border-color: var(--accent); transform: translateY(-3px); }
+    .blog-card-img {
+      height: 180px;
+      background: linear-gradient(135deg, #1a1208 0%, #2a1a0e 50%, #1a1208 100%);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 3rem; position: relative; overflow: hidden;
+    }
+    .blog-card-img::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(to bottom, transparent 60%, var(--surface));
+    }
+    .blog-card-body { padding: 24px; flex: 1; display: flex; flex-direction: column; }
+    .blog-card-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+    .blog-card-tag {
+      font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--accent);
+      background: rgba(217,119,87,0.1); border: 1px solid rgba(217,119,87,0.25);
+      border-radius: 100px; padding: 2px 9px;
+    }
+    .blog-card h3 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.18rem; color: var(--white); line-height: 1.35;
+      margin-bottom: 10px; flex: 1;
+    }
+    .blog-card p {
+      font-size: 0.88rem; color: var(--grey); line-height: 1.65;
+      margin-bottom: 20px;
+    }
+    .blog-card-meta {
+      display: flex; align-items: center; justify-content: space-between;
+      padding-top: 16px; border-top: 1px solid var(--border);
+    }
+    .blog-card-date { font-size: 0.78rem; color: var(--grey2); }
+    .blog-card-read {
+      font-size: 0.78rem; font-weight: 600; color: var(--accent);
+      display: flex; align-items: center; gap: 4px;
+    }
+
+    /* ── Featured card (first article) ── */
+    .blog-card.featured {
+      grid-column: 1 / -1;
+      flex-direction: row;
+    }
+    .blog-card.featured .blog-card-img {
+      width: 340px; min-width: 340px; height: auto; font-size: 4rem;
+    }
+    @media (max-width: 700px) {
+      .blog-card.featured { flex-direction: column; }
+      .blog-card.featured .blog-card-img { width: 100%; min-width: unset; height: 180px; }
+    }
+
+    /* ── CTA banner ── */
+    .blog-cta {
+      margin: 0 0 96px;
+      background: linear-gradient(135deg, #1e100a 0%, #251507 100%);
+      border: 1px solid rgba(217,119,87,0.2);
+      border-radius: 16px;
+      padding: 48px 40px;
+      display: flex; align-items: center; justify-content: space-between; gap: 32px;
+      flex-wrap: wrap;
+    }
+    .blog-cta-text h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.6rem; color: var(--white); margin-bottom: 8px;
+    }
+    .blog-cta-text p { font-size: 0.95rem; color: var(--grey); max-width: 480px; }
+    .blog-cta-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent); color: #fff;
+      padding: 14px 28px; border-radius: 100px;
+      font-size: 0.95rem; font-weight: 600; white-space: nowrap;
+      transition: background 0.2s, transform 0.15s;
+      flex-shrink: 0;
+    }
+    .blog-cta-btn:hover { background: var(--accent2); transform: translateY(-1px); }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px 0;
+      display: flex; flex-direction: column; align-items: center; gap: 16px;
+    }
+    .footer-links { display: flex; gap: 24px; }
+    .footer-links a { font-size: 0.82rem; color: var(--grey); transition: color 0.2s; }
+    .footer-links a:hover { color: var(--white); }
+    .footer-copy { font-size: 0.78rem; color: var(--grey2); }
+
+    @media (max-width: 600px) {
+      .blog-hero { padding: 100px 0 48px; }
+      .nav-link { display: none; }
+      .blog-cta { padding: 32px 24px; }
+      .footer-links { justify-content: center; flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+
+<nav id="main-nav" role="navigation" aria-label="Navigazione principale">
+  <div class="container nav-inner">
+    <a href="https://mnesti.it" class="nav-logo" aria-label="Mnesti — torna alla homepage">
+      <img src="logo-full.png" alt="Mnesti" width="112" height="28" />
+    </a>
+    <div class="nav-right">
+      <a href="blog.html" class="nav-link active">Blog</a>
+      <a href="faq.html" class="nav-link">FAQ</a>
+      <a href="./app.html" class="nav-cta">Inizia gratis
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 7h10M7 2l5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>
+  </div>
+</nav>
+
+<main>
+  <section class="blog-hero">
+    <div class="container">
+      <div class="blog-hero-eyebrow">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="var(--accent)"><circle cx="6" cy="6" r="6"/></svg>
+        Blog Mnesti
+      </div>
+      <h1>Studiare meglio,<br>con il tempo che hai.</h1>
+      <p>Tecniche, metodi e strategie per studenti universitari che lavorano. Consigli pratici per preparare gli esami in modo efficace, anche con poche ore a disposizione.</p>
+    </div>
+  </section>
+
+  <section class="blog-grid-section">
+    <div class="container">
+      <div class="blog-grid-header">
+        <h2>Tutti gli articoli</h2>
+      </div>
+      <div class="blog-grid">
+
+        <!-- Featured -->
+        <a href="blog-studiare-poco-tempo.html" class="blog-card featured">
+          <div class="blog-card-img">📚</div>
+          <div class="blog-card-body">
+            <div class="blog-card-tags">
+              <span class="blog-card-tag">Metodo di studio</span>
+              <span class="blog-card-tag">Guida</span>
+            </div>
+            <h3>Come studiare per l'esame universitario con poco tempo: la guida per studenti lavoratori</h3>
+            <p>Lavori a tempo pieno e studi di sera o nel weekend? Questa guida raccoglie le tecniche più efficaci per massimizzare ogni ora di studio, ridurre il ripasso inutile e arrivare all'esame preparato senza sacrificare tutto il resto.</p>
+            <div class="blog-card-meta">
+              <span class="blog-card-date">Maggio 2026</span>
+              <span class="blog-card-read">Leggi →</span>
+            </div>
+          </div>
+        </a>
+
+        <!-- Card 2 -->
+        <a href="blog-active-recall.html" class="blog-card">
+          <div class="blog-card-img">🧠</div>
+          <div class="blog-card-body">
+            <div class="blog-card-tags">
+              <span class="blog-card-tag">Active Recall</span>
+              <span class="blog-card-tag">Neuroscienze</span>
+            </div>
+            <h3>Active Recall: la tecnica di studio più efficace (e perché la maggior parte degli studenti non la usa)</h3>
+            <p>Rileggere gli appunti non serve. La scienza dice che il modo più efficiente per fissare i concetti è interrogarsi attivamente. Ecco come funziona e come applicarla.</p>
+            <div class="blog-card-meta">
+              <span class="blog-card-date">Maggio 2026</span>
+              <span class="blog-card-read">Leggi →</span>
+            </div>
+          </div>
+        </a>
+
+        <!-- Card 3 -->
+        <a href="blog-lavoro-e-studio.html" class="blog-card">
+          <div class="blog-card-img">⏱️</div>
+          <div class="blog-card-body">
+            <div class="blog-card-tags">
+              <span class="blog-card-tag">Gestione del tempo</span>
+              <span class="blog-card-tag">Produttività</span>
+            </div>
+            <h3>Conciliare lavoro e università: il sistema delle sessioni da 45 minuti per non impazzire</h3>
+            <p>Non hai bisogno di ore libere per studiare in modo serio. Con il metodo delle micro-sessioni strutturate puoi mantenere la continuità di studio anche nei giorni più densi.</p>
+            <div class="blog-card-meta">
+              <span class="blog-card-date">Maggio 2026</span>
+              <span class="blog-card-read">Leggi →</span>
+            </div>
+          </div>
+        </a>
+
+        <!-- Card 4 -->
+        <a href="blog-universita-telematica.html" class="blog-card">
+          <div class="blog-card-img">💻</div>
+          <div class="blog-card-body">
+            <div class="blog-card-tags">
+              <span class="blog-card-tag">Università telematica</span>
+              <span class="blog-card-tag">Strategia</span>
+            </div>
+            <h3>Università telematica e lavoro: la guida pratica per non restare indietro con gli esami</h3>
+            <p>UNINETTUNO, Pegaso, UniMercatorum, eCampus: studiare in una università telematica da lavoratore è possibile, ma richiede un metodo preciso. Ecco cosa funziona davvero.</p>
+            <div class="blog-card-meta">
+              <span class="blog-card-date">Maggio 2026</span>
+              <span class="blog-card-read">Leggi →</span>
+            </div>
+          </div>
+        </a>
+
+      </div>
+    </div>
+  </section>
+
+  <div class="container">
+    <div class="blog-cta">
+      <div class="blog-cta-text">
+        <h2>Smetti di rileggere. Inizia a ricordare.</h2>
+        <p>Mnesti costruisce il tuo piano di studio giorno per giorno dalle tue dispense, con domande aperte, quiz adattivi e feedback AI istantaneo. Il primo esame è gratis.</p>
+      </div>
+      <a href="./app.html" class="blog-cta-btn">
+        Prova gratis
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7h10M7 2l5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="footer-links">
+    <a href="https://mnesti.it">mnesti.it</a>
+    <a href="blog.html">Blog</a>
+    <a href="faq.html">FAQ</a>
+    <a href="privacy.html">Privacy</a>
+  </div>
+  <p class="footer-copy">© 2026 Mnesti — Tutti i diritti riservati</p>
+</footer>
+
+<script>
+const nav = document.getElementById('main-nav');
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('scrolled', window.scrollY > 40);
+}, { passive: true });
+</script>
+</body>
+</html>
