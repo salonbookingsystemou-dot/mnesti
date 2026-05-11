@@ -9088,6 +9088,12 @@ function _clearInactivity() {
 function _onTimerInactive() {
   if (!_timerIsRunning()) return;
   if (_stillThereShown) return; // already showing
+  // If user has an answer edit in progress, silently extend the timer rather
+  // than interrupting them — they may be thinking between sentences.
+  if (document.querySelector('.q-done-edit-area.open')) {
+    _resetInactivity();
+    return;
+  }
   timerPause(_activeTimerDayId);
   _showStillThereModal('inactivity', 0);
 }
@@ -10065,6 +10071,14 @@ function _stillThereResume() {
 }
 
 function _stillThereStop() {
+  // If user has an edit open, don't stop the session — just dismiss the modal.
+  // Stopping would re-render the panel and erase their unsaved edits.
+  if (document.querySelector('.q-done-edit-area.open')) {
+    _hideStillThereModal();
+    if (_activeTimerDayId) timerResume(_activeTimerDayId);
+    _resetInactivity();
+    return;
+  }
   _hideStillThereModal();
   if (_activeTimerDayId) {
     timerStop(_activeTimerDayId);
@@ -10211,8 +10225,11 @@ function timerStop(dayId) {
   // Force immediate cloud sync on session end (don't rely on debounce)
   clearTimeout(_syncTimer);
   if (typeof window._syncToSupabase === 'function') window._syncToSupabase();
-  // Rebuild questions panel back to pre-session prompt
-  if (typeof _renderQsPanel === 'function') _renderQsPanel(dayId);
+  // Rebuild questions panel back to pre-session prompt.
+  // Guard: if the user has an edit open, skip re-render to preserve their unsaved text.
+  if (typeof _renderQsPanel === 'function' && !document.querySelector('.q-done-edit-area.open')) {
+    _renderQsPanel(dayId);
+  }
 }
 
 function updateTotalHours() {
