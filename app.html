@@ -11452,13 +11452,24 @@ async function _ocrRunVision(file) {
     progressFill.style.width = '30%';
     progressLabel.textContent = 'Elaborazione immagine…';
 
-    // Resize to 1024px max — sufficient for OCR, significantly faster than 1568px
-    const { base64, mediaType } = await _ocrResizeImage(file, 1024);
+    // Higher resolution = more detail for cursive handwriting recognition
+    const { base64, mediaType } = await _ocrResizeImage(file, 1568);
 
     progressFill.style.width = '55%';
-    progressLabel.textContent = 'Lettura testo con AI… (può richiedere 15–30s)';
+    progressLabel.textContent = 'Lettura testo con AI… (può richiedere 20–40s)';
 
     _startProgressPulse();
+
+    // Infer source context for domain-aware transcription
+    const _srcCtx = (() => {
+      try {
+        const sources = getSources ? getSources() : [];
+        const primary = sources.filter(s => s.type !== 'textbook-ref').slice(0, 2);
+        if (!primary.length) return '';
+        const hint = primary.map(s => s.title).join(', ');
+        return `\nIl contenuto è relativo al corso universitario: ${hint}.`;
+      } catch { return ''; }
+    })();
 
     // AbortController with 90-second timeout
     const _ocrAbort = new AbortController();
@@ -11467,8 +11478,17 @@ async function _ocrRunVision(file) {
     let data;
     try {
       data = await _callClaude({
-        model: 'claude-sonnet-4-6',  // Sonnet needed for accurate handwriting recognition
-        max_tokens: 2000,
+        model: 'claude-sonnet-4-6',
+        max_tokens: 3000,
+        temperature: 0,
+        system: `Sei un esperto trascrittore di testo accademico scritto a mano in italiano. Il tuo compito è trascrivere con la massima fedeltà possibile, sfruttando il contesto disciplinare per riconoscere correttamente termini tecnici, nomi di autori e concetti specialistici.${_srcCtx}
+
+Regole:
+- Trascrivi TUTTO il testo visibile, riga per riga, rispettando i paragrafi originali.
+- Per parole illeggibili o incerte usa [?] come segnaposto; non inventare parole.
+- Usa il vocabolario tecnico del dominio (psicologia, neuroscienze, scienze cognitive) per disambiguare le parole dalla grafia simile.
+- Non aggiungere spiegazioni, titoli, commenti o formattazione extra — solo il testo trascritto.
+- Se il testo è tagliato o parzialmente visibile ai bordi, trascrivi comunque la parte leggibile.`,
         messages: [{
           role: 'user',
           content: [
@@ -11478,7 +11498,7 @@ async function _ocrRunVision(file) {
             },
             {
               type: 'text',
-              text: 'Trascrivi fedelmente tutto il testo scritto a mano in questa immagine, mantenendo la struttura dei paragrafi. Restituisci solo il testo trascritto, senza spiegazioni o commenti aggiuntivi.'
+              text: 'Trascrivi il testo scritto a mano in questa immagine.'
             }
           ]
         }]
