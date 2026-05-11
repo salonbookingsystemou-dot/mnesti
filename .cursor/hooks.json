@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": ".cursor/hooks/next-opt-task.sh",
+        "timeout": 5
+      }
+    ]
+  }
+}

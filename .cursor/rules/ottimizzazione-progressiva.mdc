@@ -1,0 +1,32 @@
+---
+description: Guida l'agente nell'implementazione progressiva della roadmap di ottimizzazione
+alwaysApply: false
+globs: app.html, supabase/functions/**/*.ts
+---
+
+# Roadmap Ottimizzazione Mnesti
+
+Quando l'utente chiede di "implementare il prossimo task" o simile:
+
+1. **Leggi** `.cursor/optimization-roadmap.md` per trovare il primo task con `- [ ]`
+2. **Implementa** esattamente quanto descritto nel task (file, problema, fix)
+3. **Testa** che nessun'altra funzionalità esistente sia rotta
+4. **Fai commit e push** con messaggio nel formato: `opt: [OPT-XX] titolo del task`
+5. **Segna come completato** in `.cursor/optimization-roadmap.md` cambiando `- [ ]` in `- [x]`
+
+## Regole di implementazione
+
+- Ogni task va implementato in isolamento: non toccare codice non menzionato nel task
+- Se il fix richiede di modificare logica esistente, prima aggiungi un test manuale mentale: "cosa succede se X fa Y?"
+- Preferire soluzioni backward-compatible (non rompere API esistenti)
+- Dopo ogni modifica a `app.html`, bump la versione cache del Service Worker in `sw.js` se il cambiamento è visibile all'utente
+
+## Pattern di completamento
+
+Alla fine di ogni task:
+```
+/usr/bin/git add -p  # staged solo i file del task
+/usr/bin/git commit -m "opt: [OPT-XX] descrizione breve"
+/usr/bin/git push origin main
+# Poi aggiorna optimization-roadmap.md: [ ] → [x]
+```
