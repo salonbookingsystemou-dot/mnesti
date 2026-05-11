@@ -5194,10 +5194,16 @@
     }
     .quiz-launch-btn:hover { opacity: 0.9; }
 
+    /* iOS zoom fix: any input/textarea < 16px triggers auto-zoom on focus.
+       Force 16px on ALL text fields globally on mobile. */
+    input, textarea, select {
+      font-size: 16px !important;
+    }
+
     /* ── Questions ── */
     .q-top { flex-direction: column; gap: 8px; }
     .q-type { align-self: flex-start; flex-direction: row; gap: 6px; }
-    .q-answer-input { font-size: 16px; min-height: 120px; } /* 16px prevents iOS zoom */
+    .q-answer-input { font-size: 16px; min-height: 120px; }
     .q-answer-tools { gap: 10px; }
     .q-mic-btn { width: 44px; height: 44px; flex-shrink: 0; }
     .q-cam-btn { width: 44px; height: 44px; flex-shrink: 0; }
