@@ -7524,6 +7524,9 @@ function saveState() {
   _safeLSSet('psico_state', JSON.stringify(state));
   updateProgress();
   renderReadinessPanel();
+  // Mark timestamp so the sync engine knows local is authoritative for the next 30s
+  // (prevents a Supabase pull from overwriting local state before the async push commits)
+  window._lastLocalWrite = Date.now();
   _debouncedSync();
   _pwaNotifyStateChange();
 }
@@ -7563,6 +7566,14 @@ function saveState() {
     if (document.querySelector('.q-done-edit-area.open')) {
       _applyLocalState();
       window._deferredReinit = true;
+      return;
+    }
+    // If local state was written in the last 30s, trust it — the async Supabase push
+    // may not have committed yet, so pulling now would overwrite with stale remote data.
+    // (e.g. "Genera domande" saves locally → sync in 1s async → user tabs out/back fast)
+    const LOCAL_WRITE_GRACE_MS = 30_000;
+    if (window._lastLocalWrite && Date.now() - window._lastLocalWrite < LOCAL_WRITE_GRACE_MS) {
+      _applyLocalState();
       return;
     }
     if (Date.now() - _lastPull < PULL_THROTTLE_MS) { _applyLocalState(); return; }
@@ -13881,6 +13892,10 @@ OBBLIGATORIO: includi "sourceRef" per ogni domanda con sezione/slide e estratto 
 
     state[dayId].aiQuestions = [...prev, ...questions];
     saveState();
+    // Push to Supabase immediately (don't wait for debounce) so the remote copy
+    // is up to date before any visibility-change pull can overwrite local state.
+    clearTimeout(_syncTimer);
+    if (typeof window._syncToSupabase === 'function') window._syncToSupabase();
     buildDays();
     buildNav();
     showDay(dayId);
