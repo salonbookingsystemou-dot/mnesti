@@ -167,8 +167,14 @@ img { display: block; max-width: 100%; }
   display: inline-flex; align-items: center; gap: 6px;
   background: var(--accent); color: #fff;
   padding: 12px 28px; border-radius: 100px;
-  font-size: 0.95rem; font-weight: 600;
+  font-size: 0.95rem; font-weight: 600; text-decoration: none;
   transition: background 0.2s, transform 0.15s;
+}
+/* Override .article-body a which has higher specificity (0,1,1) vs (0,1,0) */
+.article-body .article-cta-btn,
+.article-body .article-cta-btn:hover {
+  color: #fff;
+  text-decoration: none;
 }
 .article-cta-btn:hover { background: var(--accent2); transform: translateY(-1px); }
 
