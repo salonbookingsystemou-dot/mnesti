@@ -24,7 +24,7 @@
   - **Fix:** Prima di ogni write stimare `Object.keys(localStorage).reduce((s,k) => s + (localStorage.getItem(k)||'').length, 0)`. Se > 4.5 MB mostrare un avviso con `_showToast` e suggerire di eliminare fonti obsolete. Non bloccare il save.
   - **Effort:** ~45 min
 
-- [ ] **[OPT-06] Central store con Proxy (saveState automatico)**
+- [x] **[OPT-06] Central store con Proxy (saveState automatico)**
   - **File:** `app.html` — refactor del modello `state` + 19 chiamate a `saveState()`
   - **Problema:** 19 punti nel codice chiamano `saveState()` manualmente. Facile dimenticare un save su un nuovo path → dato perso silenziosamente.
   - **Fix:** Avvolgere `state` in un `Proxy` con trap `set` che chiama `_safeLSSet` + `_debouncedSync` automaticamente. Le 19 chiamate a `saveState()` esplicite rimangono come flush immediato dove necessario, ma il proxy garantisce che nessuna modifica vada persa.

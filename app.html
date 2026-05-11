@@ -6627,9 +6627,11 @@ window._reinitApp = function() {
   if (document.querySelector('.q-done-edit-area.open')) {
     try {
       const remote = JSON.parse(localStorage.getItem('psico_state') || '{}');
+      _suppressAutoSave = true;
       Object.keys(state).forEach(k => delete state[k]);
       Object.assign(state, remote);
-    } catch(e) {}
+      _suppressAutoSave = false;
+    } catch(e) { _suppressAutoSave = false; }
     if (typeof updateProgress     === 'function') updateProgress();
     if (typeof updateTotalHours   === 'function') updateTotalHours();
     if (typeof renderReadinessPanel === 'function') renderReadinessPanel();
@@ -6645,9 +6647,11 @@ window._reinitApp = function() {
   // Repopulate in-memory state from localStorage (written by _loadFromSupabase)
   try {
     const remote = JSON.parse(localStorage.getItem('psico_state') || '{}');
+    _suppressAutoSave = true;
     Object.keys(state).forEach(k => delete state[k]);
     Object.assign(state, remote);
-  } catch(e) { console.warn('[reinit] state parse failed', e); }
+    _suppressAutoSave = false;
+  } catch(e) { _suppressAutoSave = false; console.warn('[reinit] state parse failed', e); }
 
   // Recover any elapsed time from a session that ended without timerStop
   if (typeof _restoreTimerCheckpoint === 'function') _restoreTimerCheckpoint();
@@ -7435,9 +7439,58 @@ const days = [
   }
 ];
 
+// ── Reactive state store ──────────────────────────────────────
+// state is a recursive Proxy: any set/delete on state or its nested
+// objects automatically triggers a debounced localStorage + Supabase save.
+// Explicit saveState() calls still run the full render cycle on top.
+// Set _suppressAutoSave = true during bulk loads to avoid spurious saves.
+var _autoSaveTimer    = null;
+var _suppressAutoSave = false;
+
+function _debouncedAutoSave() {
+  if (_suppressAutoSave) return;
+  clearTimeout(_autoSaveTimer);
+  _autoSaveTimer = setTimeout(function() {
+    try {
+      _safeLSSet('psico_state', JSON.stringify(state));
+      window._lastLocalWrite = Date.now();
+      if (typeof _debouncedSync === 'function') _debouncedSync();
+    } catch(e) { console.warn('[AutoSave] failed:', e); }
+  }, 800);
+}
+
+function _makeReactiveState(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return raw;
+  // Wrap existing nested plain objects recursively
+  Object.keys(raw).forEach(function(k) {
+    if (raw[k] && typeof raw[k] === 'object' && !Array.isArray(raw[k])) {
+      raw[k] = _makeReactiveState(raw[k]);
+    }
+  });
+  return new Proxy(raw, {
+    set: function(target, key, value) {
+      // Wrap plain objects so nested mutations are also reactive
+      target[key] = (value && typeof value === 'object' && !Array.isArray(value))
+        ? _makeReactiveState(value)
+        : value;
+      _debouncedAutoSave();
+      return true;
+    },
+    deleteProperty: function(target, key) {
+      if (key in target) { delete target[key]; _debouncedAutoSave(); }
+      return true;
+    }
+  });
+}
+
 const state = (function() {
-  try { return JSON.parse(localStorage.getItem('psico_state') || '{}'); }
-  catch(e) { console.warn('[Storage] Corrupted psico_state, resetting'); return {}; }
+  try {
+    const raw = JSON.parse(localStorage.getItem('psico_state') || '{}');
+    return _makeReactiveState(raw);
+  } catch(e) {
+    console.warn('[Storage] Corrupted psico_state, resetting');
+    return _makeReactiveState({});
+  }
 })();
 
 // ── Robust localStorage wrapper ───────────────────────────────
@@ -7536,11 +7589,12 @@ function _debouncedSync() {
 }
 
 function saveState() {
+  // Cancel any pending auto-save — we're doing a full explicit flush right now
+  clearTimeout(_autoSaveTimer);
   _safeLSSet('psico_state', JSON.stringify(state));
   updateProgress();
   renderReadinessPanel();
   // Mark timestamp so the sync engine knows local is authoritative for the next 30s
-  // (prevents a Supabase pull from overwriting local state before the async push commits)
   window._lastLocalWrite = Date.now();
   _debouncedSync();
   _pwaNotifyStateChange();
@@ -7560,9 +7614,11 @@ function saveState() {
   function _applyLocalState() {
     try {
       const remote = JSON.parse(localStorage.getItem('psico_state') || '{}');
+      _suppressAutoSave = true;
       Object.keys(state).forEach(k => delete state[k]);
       Object.assign(state, remote);
-    } catch(e) {}
+      _suppressAutoSave = false;
+    } catch(e) { _suppressAutoSave = false; }
     if (typeof updateProgress       === 'function') updateProgress();
     if (typeof renderReadinessPanel === 'function') renderReadinessPanel();
     if (typeof getActiveDays === 'function' && typeof renderDayReadiness === 'function') {
