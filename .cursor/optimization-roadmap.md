@@ -38,7 +38,7 @@
   - **Fix:** `const existingBlock = allExisting.slice(-15)` — mandare solo le ultime 15 domande. Aggiungere in fondo al prompt: "Esistono in totale N domande; quelle più recenti sono mostrate sopra."
   - **Effort:** ~20 min
 
-- [ ] **[OPT-05] TimerRegistry per clearAll() su cambio giornata**
+- [x] **[OPT-05] TimerRegistry per clearAll() su cambio giornata**
   - **File:** `app.html` — tutti i `setTimeout`/`setInterval` sparsi (69 occorrenze)
   - **Problema:** Timer multipli senza gestore centralizzato. Su cambio giornata o navigazione quelli vecchi rimangono attivi → memory leak + consumo batteria su mobile.
   - **Fix:** Creare `const TimerRegistry = { _map: new Map(), set(id,fn,ms){clearTimeout(this._map.get(id)); this._map.set(id, setTimeout(fn,ms));}, interval(id,fn,ms){...}, clear(id){...}, clearAll(){this._map.forEach(clearTimeout); this._map.clear();} }`. Migrare progressivamente i timer critici (inattività, debounce sync, progress pulse).

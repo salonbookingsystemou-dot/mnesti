@@ -6492,6 +6492,7 @@ const _ACCENT_PRESETS = [
   /* ── Logout ── */
   window.doLogout = async function() {
     _logoutInProgress = true;
+    TimerRegistry.clearAll(); // stop every timer before tearing down session
     window._currentUserId = null;
     try {
       if (_sb) await _sb.auth.signOut();
@@ -7439,18 +7440,65 @@ const days = [
   }
 ];
 
+// ── Timer Registry ────────────────────────────────────────────
+// Central manager for named timers and intervals.
+// Replaces scattered clearTimeout/clearInterval calls with semantic IDs.
+// Use clearSession() on session end, clearAll() on logout.
+const TimerRegistry = {
+  _t: new Map(), // timeouts
+  _i: new Map(), // intervals
+
+  /** Register or replace a named timeout. */
+  set(id, fn, ms) {
+    clearTimeout(this._t.get(id));
+    const h = setTimeout(() => { this._t.delete(id); fn(); }, ms);
+    this._t.set(id, h);
+    return h;
+  },
+
+  /** Register or replace a named interval. */
+  interval(id, fn, ms) {
+    clearInterval(this._i.get(id));
+    const h = setInterval(fn, ms);
+    this._i.set(id, h);
+    return h;
+  },
+
+  /** Cancel a named timeout. */
+  clear(id) {
+    clearTimeout(this._t.get(id));
+    this._t.delete(id);
+  },
+
+  /** Cancel a named interval. */
+  clearInterval(id) {
+    clearInterval(this._i.get(id));
+    this._i.delete(id);
+  },
+
+  /** Cancel session-bound timers (inactivity, modal countdowns, OCR pulse, auto-save). */
+  clearSession() {
+    ['inactivity', 'stillThere', 'autoSave'].forEach(id => this.clear(id));
+    ['stillThereCountdown'].forEach(id => this.clearInterval(id));
+  },
+
+  /** Cancel every registered timer (use on logout). */
+  clearAll() {
+    this._t.forEach(h => clearTimeout(h));  this._t.clear();
+    this._i.forEach(h => clearInterval(h)); this._i.clear();
+  }
+};
+
 // ── Reactive state store ──────────────────────────────────────
 // state is a recursive Proxy: any set/delete on state or its nested
 // objects automatically triggers a debounced localStorage + Supabase save.
 // Explicit saveState() calls still run the full render cycle on top.
 // Set _suppressAutoSave = true during bulk loads to avoid spurious saves.
-var _autoSaveTimer    = null;
 var _suppressAutoSave = false;
 
 function _debouncedAutoSave() {
   if (_suppressAutoSave) return;
-  clearTimeout(_autoSaveTimer);
-  _autoSaveTimer = setTimeout(function() {
+  TimerRegistry.set('autoSave', function() {
     try {
       _safeLSSet('psico_state', JSON.stringify(state));
       window._lastLocalWrite = Date.now();
@@ -7580,17 +7628,15 @@ function _storageUsageKB() {
 }
 
 // Debounced cloud sync — avoids hammering Supabase on every keystroke
-let _syncTimer = null;
 function _debouncedSync() {
-  clearTimeout(_syncTimer);
-  _syncTimer = setTimeout(() => {
+  TimerRegistry.set('sync', () => {
     if (typeof window._syncToSupabase === 'function') window._syncToSupabase();
-  }, 1000); // 1s instead of 3s — reduces data-loss window on quick tab close
+  }, 1000); // 1s — reduces data-loss window on quick tab close
 }
 
 function saveState() {
   // Cancel any pending auto-save — we're doing a full explicit flush right now
-  clearTimeout(_autoSaveTimer);
+  TimerRegistry.clear('autoSave');
   _safeLSSet('psico_state', JSON.stringify(state));
   updateProgress();
   renderReadinessPanel();
@@ -9163,12 +9209,10 @@ const INACTIVITY_MS   = 15 * 60 * 1000; // 15 min no interaction → pause
 const HIDDEN_GRACE_MS = 30 * 1000;       // <30 s hidden → silent resume
 const ST_AUTO_STOP_MS = 2 * 60 * 1000;  // "still there?" auto-stop after 2 min
 
-let _activeTimerDayId    = null;  // dayId whose timer is currently running
-let _inactivityTimer     = null;  // setTimeout handle (best-effort; not reliable on mobile)
-let _lastActivityAt      = Date.now(); // timestamp of last user interaction
-let _hiddenAt            = null;  // Date.now() when tab went hidden
-let _stAutoStopTimer     = null;  // auto-stop countdown for the "still there" modal
-let _stCountdownInterval = null;
+let _activeTimerDayId = null;  // dayId whose timer is currently running
+let _lastActivityAt   = Date.now(); // timestamp of last user interaction
+let _hiddenAt         = null;  // Date.now() when tab went hidden
+// _inactivityTimer, _stAutoStopTimer, _stCountdownInterval → managed by TimerRegistry
 let _stillThereShown     = false; // guard against double-show
 
 function _timerIsRunning() {
@@ -9178,15 +9222,13 @@ function _timerIsRunning() {
 function _resetInactivity() {
   if (!_timerIsRunning()) return;
   _lastActivityAt = Date.now();
-  clearTimeout(_inactivityTimer);
   // setTimeout is throttled on mobile when page is backgrounded,
   // so we also check elapsed time on visibilitychange (see below).
-  _inactivityTimer = setTimeout(_onTimerInactive, INACTIVITY_MS);
+  TimerRegistry.set('inactivity', _onTimerInactive, INACTIVITY_MS);
 }
 
 function _clearInactivity() {
-  clearTimeout(_inactivityTimer);
-  _inactivityTimer = null;
+  TimerRegistry.clear('inactivity');
 }
 
 function _onTimerInactive() {
@@ -9207,7 +9249,7 @@ document.addEventListener('visibilitychange', function() {
   if (document.visibilityState === 'hidden') {
     _saveHiddenState();
     // Flush pending sync — essential for PWA: iOS kills the app right after hidden
-    clearTimeout(_syncTimer);
+    TimerRegistry.clear('sync');
     if (typeof window._syncToSupabase === 'function') window._syncToSupabase();
   } else {
     _onPageVisible();
@@ -9218,7 +9260,7 @@ document.addEventListener('visibilitychange', function() {
 window.addEventListener('pagehide', function() {
   _saveHiddenState();
   // Flush any pending sync immediately — debounce won't fire if app is killed
-  clearTimeout(_syncTimer);
+  TimerRegistry.clear('sync');
   if (typeof window._syncToSupabase === 'function') window._syncToSupabase();
 });
 window.addEventListener('pageshow', function(e) { if (e.persisted) _onPageVisible(); });
@@ -10088,7 +10130,7 @@ window._debugInactivity = function(action) {
   const info = {
     timerRunning: running,
     activeDay: _activeTimerDayId,
-    inactivityTimerSet: !!_inactivityTimer,
+    inactivityTimerSet: TimerRegistry._t.has('inactivity'),
     stillThereShown: _stillThereShown,
     idleSec,
     idleUntilFireSec: Math.max(0, INACTIVITY_MS/1000 - idleSec),
@@ -10120,10 +10162,8 @@ function _showStillThereModal(reason, awayMs) {
   const countEl  = document.getElementById('stCountdown');
   if (!modal) return;
   // Clear any lingering timers from a previous invocation
-  clearTimeout(_stAutoStopTimer);
-  clearInterval(_stCountdownInterval);
-  _stAutoStopTimer = null;
-  _stCountdownInterval = null;
+  TimerRegistry.clear('stillThere');
+  TimerRegistry.clearInterval('stillThereCountdown');
 
   _stillThereShown = true;
 
@@ -10142,13 +10182,13 @@ function _showStillThereModal(reason, awayMs) {
   // Auto-stop countdown
   let secsLeft = Math.round(ST_AUTO_STOP_MS / 1000);
   countEl.textContent = `La sessione si chiuderà automaticamente tra ${secsLeft}s`;
-  _stAutoStopTimer = setTimeout(function() { _stillThereStop(); }, ST_AUTO_STOP_MS);
-  _stCountdownInterval = setInterval(function() {
+  TimerRegistry.set('stillThere', function() { _stillThereStop(); }, ST_AUTO_STOP_MS);
+  TimerRegistry.interval('stillThereCountdown', function() {
     secsLeft--;
     if (secsLeft > 0) {
       countEl.textContent = `La sessione si chiuderà automaticamente tra ${secsLeft}s`;
     } else {
-      clearInterval(_stCountdownInterval);
+      TimerRegistry.clearInterval('stillThereCountdown');
       countEl.textContent = 'Chiusura in corso…';
     }
   }, 1000);
@@ -10160,10 +10200,8 @@ function _hideStillThereModal() {
   _stillThereShown = false;
   const modal = document.getElementById('stillThereModal');
   if (modal) modal.classList.remove('open');
-  clearTimeout(_stAutoStopTimer);
-  clearInterval(_stCountdownInterval);
-  _stAutoStopTimer = null;
-  _stCountdownInterval = null;
+  TimerRegistry.clear('stillThere');
+  TimerRegistry.clearInterval('stillThereCountdown');
 }
 
 function _stillThereResume() {
@@ -10322,12 +10360,13 @@ function timerStop(dayId) {
 
   _focusModeOff();
   _clearInactivity();
+  TimerRegistry.clearSession(); // clear inactivity + stillThere + autoSave
   _activeTimerDayId = null;
   _hiddenAt = null;
   saveState();
   updateTotalHours();
   // Force immediate cloud sync on session end (don't rely on debounce)
-  clearTimeout(_syncTimer);
+  TimerRegistry.clear('sync');
   if (typeof window._syncToSupabase === 'function') window._syncToSupabase();
   // Rebuild questions panel back to pre-session prompt.
   // Guard: if the user has an edit open, skip re-render to preserve their unsaved text.
@@ -13969,7 +14008,7 @@ OBBLIGATORIO: includi "sourceRef" per ogni domanda con sezione/slide e estratto 
     saveState();
     // Push to Supabase immediately (don't wait for debounce) so the remote copy
     // is up to date before any visibility-change pull can overwrite local state.
-    clearTimeout(_syncTimer);
+    TimerRegistry.clear('sync');
     if (typeof window._syncToSupabase === 'function') window._syncToSupabase();
     buildDays();
     buildNav();
