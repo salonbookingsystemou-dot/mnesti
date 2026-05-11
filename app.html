@@ -6626,6 +6626,21 @@ function _healPlanExamDate() {
 }
 
 window._reinitApp = function() {
+  // If user has an answer edit in progress, skip full DOM rebuild to avoid data loss.
+  // Only do the lightweight state + progress updates; schedule a deferred full reinit.
+  if (document.querySelector('.q-done-edit-area.open')) {
+    try {
+      const remote = JSON.parse(localStorage.getItem('psico_state') || '{}');
+      Object.keys(state).forEach(k => delete state[k]);
+      Object.assign(state, remote);
+    } catch(e) {}
+    if (typeof updateProgress     === 'function') updateProgress();
+    if (typeof updateTotalHours   === 'function') updateTotalHours();
+    if (typeof renderReadinessPanel === 'function') renderReadinessPanel();
+    window._deferredReinit = true;
+    return;
+  }
+
   // Fix plan exam date if mismatched (self-heal)
   _healPlanExamDate();
   // Apply saved accent color
@@ -7543,6 +7558,13 @@ function saveState() {
   // Pull fresh data from Supabase then reinit
   async function _pullAndReinit() {
     if (!window._loadFromSupabase || !window._currentUserId) return;
+    // If user has an answer edit in progress, never re-render the DOM.
+    // Use the lightweight update and set a flag to do a full reinit once the edit closes.
+    if (document.querySelector('.q-done-edit-area.open')) {
+      _applyLocalState();
+      window._deferredReinit = true;
+      return;
+    }
     if (Date.now() - _lastPull < PULL_THROTTLE_MS) { _applyLocalState(); return; }
     _lastPull = Date.now();
     try {
@@ -10904,6 +10926,12 @@ function closeImproveAnswer(dayId, qIdx) {
 
   // Restore normal card state
   if (card) card.classList.remove('improving');
+
+  // If a full reinit was deferred while the edit was open, run it now
+  if (window._deferredReinit) {
+    window._deferredReinit = false;
+    if (typeof window._reinitApp === 'function') window._reinitApp();
+  }
 }
 
 function _syncReverifyBtn(dayId, qIdx, val) {
