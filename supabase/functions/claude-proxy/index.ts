@@ -77,8 +77,13 @@ Deno.serve(async (req) => {
         }, 429)
       }
     } catch (rateErr) {
-      // Tables might not exist yet — log and continue
-      console.warn('[claude-proxy] Rate limit check skipped:', rateErr?.message)
+      // If we cannot read usage data, deny the request rather than silently allowing it.
+      // This prevents unbounded API calls when the DB is degraded or the table is missing.
+      console.error('[claude-proxy] Rate limit check failed — denying request:', rateErr?.message)
+      return json({
+        error: 'Servizio temporaneamente non disponibile. Riprova tra qualche minuto.',
+        code: 'SERVICE_UNAVAILABLE'
+      }, 503)
     }
 
     // ── 3. Check API key ──────────────────────────────────────────

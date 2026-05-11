@@ -6232,13 +6232,10 @@ const _ACCENT_PRESETS = [
 
       let loaded = false;
 
-      // API key is piggybacked inside psico_state as __apiKey
       if (data.psico_state) {
         const remote = data.psico_state;
-        if (remote.__apiKey) {
-          localStorage.setItem('anthropic_api_key', remote.__apiKey);
-          delete remote.__apiKey;
-        }
+        // __apiKey was previously piggybacked here — strip it if present in old records
+        if (remote.__apiKey) delete remote.__apiKey;
         if (remote.__lastDay) {
           localStorage.setItem('psico_last_day', remote.__lastDay);
           delete remote.__lastDay;
@@ -6314,10 +6311,9 @@ const _ACCENT_PRESETS = [
       try { return JSON.parse(localStorage.getItem(key)); } catch { return null; }
     }
 
-    // Piggyback API key inside psico_state so no extra DB column needed
+    // Never sync the Anthropic API key to Supabase — it must stay client-side only.
+    // The claude-proxy manages the key server-side; storing it in the DB is a security risk.
     const statePayload = _parseLS('psico_state') || {};
-    const apiKey = localStorage.getItem('anthropic_api_key');
-    if (apiKey) statePayload.__apiKey = apiKey;
 
     // Piggyback last visited day inside psico_state (no extra DB column needed)
     const lastDay = localStorage.getItem('psico_last_day');
@@ -7445,13 +7441,31 @@ const state = (function() {
 })();
 
 // ── Robust localStorage wrapper ───────────────────────────────
+// Threshold for proactive localStorage warning (once per session)
+const LS_WARN_KB  = 4_500; // warn at ~4.5 MB
+const LS_CRIT_KB  = 5_500; // compact + warn at ~5.5 MB
+let   _lsWarnShown = false;
+
 function _safeLSSet(key, value) {
+  // Proactive check: warn before the browser throws QuotaExceededError
+  if (!_lsWarnShown) {
+    const usedKB = _storageUsageKB();
+    if (usedKB > LS_CRIT_KB) {
+      _compactState();
+      _showStorageWarning('⚠️ Spazio locale quasi esaurito (' + usedKB + ' KB). Rimuovi fonti PDF obsolete per evitare perdite di dati.');
+      _lsWarnShown = true;
+    } else if (usedKB > LS_WARN_KB) {
+      _showStorageWarning('ℹ️ Spazio locale in esaurimento (' + usedKB + ' KB / ~5.000 KB). Valuta di rimuovere fonti PDF non più necessarie.');
+      _lsWarnShown = true;
+    }
+  }
   try {
     localStorage.setItem(key, value);
     return true;
   } catch(e) {
     if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || e.code === 22) {
       console.warn('[Storage] QuotaExceededError — attempting compact…');
+      _lsWarnShown = false; // reset so next save re-evaluates
       _compactState();
       try {
         localStorage.setItem(key, value);
@@ -7504,10 +7518,11 @@ function _showStorageWarning(msg) {
 
 function _storageUsageKB() {
   let total = 0;
-  ['psico_state','psico_sources','psico_exam_info','psico_ai_plan','anthropic_api_key'].forEach(k => {
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
     const v = localStorage.getItem(k);
-    if (v) total += v.length * 2; // UTF-16: 2 bytes per char
-  });
+    if (v) total += (k.length + v.length) * 2; // UTF-16: 2 bytes per char
+  }
   return Math.round(total / 1024);
 }
 
@@ -13845,9 +13860,13 @@ Rispondi ESCLUSIVAMENTE con un array JSON valido (nessun altro testo):
 [{"text":"testo della domanda","type":"definizione|meccanismo|connessione","sourceRef":"NomeFonte — Sezione: «estratto dal testo»"}]`;
 
   try {
-    // Costruisce la lista di TUTTE le domande esistenti da passare al modello
+    // Passa solo le ultime 15 domande esistenti per contenere i token del prompt.
+    // Con 30+ domande l'existingBlock supererebbe 5.000 token; le ultime 15 sono
+    // sufficienti per evitare duplicati concettuali sugli argomenti più recenti.
+    const MAX_EXISTING_IN_PROMPT = 15;
+    const existingForPrompt = allExisting.slice(-MAX_EXISTING_IN_PROMPT);
     const existingBlock = allExisting.length
-      ? `\n\nDOMANDE GIÀ PRESENTI — NON ripetere, NON riformulare, NON sovrapporre concettualmente.\nOgni nuova domanda deve esplorare un aspetto NON ancora coperto da queste:\n${allExisting.map((q, i) => `${i + 1}. [${q.type || 'domanda'}] ${q.text}`).join('\n')}`
+      ? `\n\nDOMANDE GIÀ PRESENTI — NON ripetere, NON riformulare, NON sovrapporre concettualmente.\nOgni nuova domanda deve esplorare un aspetto NON ancora coperto da queste${allExisting.length > MAX_EXISTING_IN_PROMPT ? ` (mostrate le ${MAX_EXISTING_IN_PROMPT} più recenti su ${allExisting.length} totali)` : ''}:\n${existingForPrompt.map((q, i) => `${i + 1}. [${q.type || 'domanda'}] ${q.text}`).join('\n')}`
       : '';
 
     const userMsg = `Argomento: ${topic}${existingBlock}

@@ -4,13 +4,13 @@
 
 ## Sicurezza (priorità massima)
 
-- [ ] **[OPT-01] Rimuovere anthropic_api_key dal payload Supabase**
+- [x] **[OPT-01] Rimuovere anthropic_api_key dal payload Supabase**
   - **File:** `app.html` — funzione `_syncToSupabase()` e `_loadFromSupabase()`
   - **Problema:** La chiave API Anthropic è salvata in `__apiKey` dentro `psico_state` e caricata su Supabase. Chiunque acceda alla colonna DB può leggerla.
   - **Fix:** Rimuovere `statePayload.__apiKey = apiKey` da `_syncToSupabase()`. Rimuovere il restore `localStorage.setItem('anthropic_api_key', remote.__apiKey)` da `_loadFromSupabase`. Il claude-proxy gestisce già l'auth lato server, la chiave non deve mai uscire dal client.
   - **Effort:** ~30 min
 
-- [ ] **[OPT-02] Rate limit fail-closed nel claude-proxy**
+- [x] **[OPT-02] Rate limit fail-closed nel claude-proxy**
   - **File:** `supabase/functions/claude-proxy/index.ts`
   - **Problema:** Il try/catch del check rate limit fa `console.warn` e prosegue se il DB non risponde (fail-open). Un utente con DB degradato può fare chiamate illimitate.
   - **Fix:** Nel catch del rate limit check, restituire `Response({ error: 'Servizio temporaneamente non disponibile' }, { status: 503 })` invece di procedere con la chiamata Claude.
@@ -18,7 +18,7 @@
 
 ## Stato & Dati
 
-- [ ] **[OPT-03] Check dimensione localStorage in _safeLSSet()**
+- [x] **[OPT-03] Check dimensione localStorage in _safeLSSet()**
   - **File:** `app.html` — funzione `_safeLSSet()`
   - **Problema:** Con 5+ fonti PDF OCR (30.000 char cad.) + 30 giorni di domande, localStorage può saturarsi (~5-10 MB limite browser). Un `QuotaExceededError` silenzioso causa perdita dati.
   - **Fix:** Prima di ogni write stimare `Object.keys(localStorage).reduce((s,k) => s + (localStorage.getItem(k)||'').length, 0)`. Se > 4.5 MB mostrare un avviso con `_showToast` e suggerire di eliminare fonti obsolete. Non bloccare il save.
@@ -32,7 +32,7 @@
 
 ## Scalabilità & Costo API
 
-- [ ] **[OPT-04] Limitare existingBlock in generateQuestionsFromSource**
+- [x] **[OPT-04] Limitare existingBlock in generateQuestionsFromSource**
   - **File:** `app.html` — funzione `generateQuestionsFromSource()`
   - **Problema:** Tutte le domande esistenti vengono inviate al modello. Con 30+ domande il solo `existingBlock` supera 5.000 token (~$0.015/call extra).
   - **Fix:** `const existingBlock = allExisting.slice(-15)` — mandare solo le ultime 15 domande. Aggiungere in fondo al prompt: "Esistono in totale N domande; quelle più recenti sono mostrate sopra."
