@@ -3319,6 +3319,25 @@
     opacity: 0.2 !important;
     transition: height 0.2s ease, opacity 0.2s ease;
   }
+  /* Preparing state: gentle sequential pulse while mic initializes */
+  .mic-indicator.preparing span {
+    animation: mic-idle-wave 1.3s ease-in-out infinite;
+    animation-delay: calc(var(--i, 0) * 0.13s);
+    height: 5px;
+    opacity: 0.3;
+  }
+  @keyframes mic-idle-wave {
+    0%, 100% { height: 5px;  opacity: 0.25; }
+    50%       { height: 20px; opacity: 0.6;  }
+  }
+  /* Listening state: accent label + soft glowing border on the modal box */
+  .mic-modal-label { transition: color 0.25s ease; }
+  .mic-modal-label.listening { color: var(--accent); }
+  .mic-modal-overlay.listening .mic-modal-box {
+    border-color: var(--accent);
+    box-shadow: 0 24px 64px rgba(0,0,0,0.35), 0 0 0 3px var(--accent-bg);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  }
   .mic-modal-timer {
     font-family: 'Inter', monospace;
     font-size: 30px;
@@ -11275,23 +11294,28 @@ function startVoiceDictation(dayId, qIdx, overrideTextarea) {
 
   document.getElementById('micModalQuestion').textContent = questionText;
   timerEl.textContent = '00:00';
-  transcriptEl.textContent = 'In ascolto...';
+  transcriptEl.textContent = 'Avvio microfono...';
   transcriptEl.className = 'mic-modal-transcript placeholder';
   _setMicPauseIcon(false);
   waveEl.classList.remove('paused');
+  waveEl.classList.add('preparing');
   pauseBtn.classList.remove('paused');
+  const labelEl = document.getElementById('micModalLabel');
+  if (labelEl) labelEl.classList.remove('listening');
+  modal.classList.remove('listening');
   modal.classList.add('open');
   if (typeof lucide !== 'undefined') lucide.createIcons();
 
-  const baseText   = textarea.value;
-  let finalAdded   = '';
-  let timerSecs    = 0;
-  let isPaused     = false;
-  let closing      = false;
+  const baseText    = textarea.value;
+  let finalAdded    = '';
+  let timerSecs     = 0;
+  let isPaused      = false;
+  let closing       = false;
+  let timerStarted  = false; // true once rec.onstart fires
 
-  // Timer
+  // Timer — increments only after recognition has actually started
   const timerInterval = setInterval(() => {
-    if (isPaused) return;
+    if (isPaused || !timerStarted) return;
     timerSecs++;
     const m = String(Math.floor(timerSecs / 60)).padStart(2, '0');
     const s = String(timerSecs % 60).padStart(2, '0');
@@ -11304,6 +11328,17 @@ function startVoiceDictation(dayId, qIdx, overrideTextarea) {
     rec.interimResults = true;
     rec.continuous = true;
     rec.maxAlternatives = 1;
+
+    rec.onstart = () => {
+      // Only act the very first time (not on auto-restart)
+      if (timerStarted) return;
+      timerStarted = true;
+      waveEl.classList.remove('preparing');
+      transcriptEl.textContent = 'Parla ora...';
+      const lbl = document.getElementById('micModalLabel');
+      if (lbl) lbl.classList.add('listening');
+      modal.classList.add('listening');
+    };
 
     rec.onresult = (event) => {
       let interim = '', final = '';
@@ -11489,7 +11524,11 @@ function _closeMicModal(apply) {
   }
 
   _mic = null;
-  document.getElementById('micModal').classList.remove('open');
+  const _modal = document.getElementById('micModal');
+  _modal.classList.remove('open');
+  _modal.classList.remove('listening');
+  const _lbl = document.getElementById('micModalLabel');
+  if (_lbl) _lbl.classList.remove('listening');
 }
 
 function _setMicPauseIcon(isPlaying) {
@@ -15138,10 +15177,10 @@ updateSourcesBtn();
 <!-- Voice Dictation Modal -->
 <div id="micModal" class="mic-modal-overlay">
   <div class="mic-modal-box">
-    <div class="mic-modal-label">TRASCRIZIONE VOCALE</div>
+    <div class="mic-modal-label" id="micModalLabel">TRASCRIZIONE VOCALE</div>
     <div class="mic-modal-question" id="micModalQuestion"></div>
-    <div class="mic-indicator" id="micWave">
-      <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+    <div class="mic-indicator preparing" id="micWave">
+      <span style="--i:0"></span><span style="--i:1"></span><span style="--i:2"></span><span style="--i:3"></span><span style="--i:4"></span><span style="--i:5"></span><span style="--i:6"></span>
     </div>
     <div class="mic-modal-timer" id="micModalTimer">00:00</div>
     <div class="mic-modal-transcript" id="micModalTranscript">In ascolto...</div>
