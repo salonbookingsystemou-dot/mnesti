@@ -29,11 +29,11 @@ img { display: block; max-width: 100%; }
 .container { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
 
 /* ── Nav ── */
-nav {
+#main-nav {
   position: fixed; top: 0; left: 0; right: 0; z-index: 100;
   padding: 16px 0; transition: background 0.3s, border-color 0.3s;
 }
-nav.scrolled {
+#main-nav.scrolled {
   background: rgba(13,13,13,0.92);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
