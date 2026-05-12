@@ -6417,6 +6417,9 @@ const _ACCENT_PRESETS = [
     // Backfill user_exams row so admin dashboard always counts correctly
     _syncExamInfoToSupabase(session.user.id);
 
+    // Good luck email on exam day at 08:00 (if conditions met)
+    TimerRegistry.set('examGoodLuck', _checkExamDayGoodLuck, 5_000);
+
     // Check if new user needs onboarding (no exam date or no AI plan)
     const info      = JSON.parse(localStorage.getItem('psico_exam_info') || '{}');
     const plan      = localStorage.getItem('psico_ai_plan');
@@ -9272,6 +9275,8 @@ document.addEventListener('visibilitychange', function() {
     if (typeof window._syncToSupabase === 'function') window._syncToSupabase();
   } else {
     _onPageVisible();
+    // Re-check exam day email when user returns to the tab (catches the 08:00 transition)
+    if (typeof _checkExamDayGoodLuck === 'function') _checkExamDayGoodLuck();
   }
 });
 
@@ -11982,6 +11987,76 @@ async function _tutorSubmitSupport(msgId, msgIdx) {
     console.error('[support-email]', e);
     send.disabled    = false;
     send.textContent = 'Riprova';
+  }
+}
+
+// ── Exam Day Good Luck Email ──────────────────────────────────────────────────
+// Fires once at 08:00 on exam day — only if ≥70% giorni completati AND ≥65% preparazione.
+// Idempotent: stores a sent-flag in localStorage keyed to the exam date.
+async function _checkExamDayGoodLuck() {
+  try {
+    const info = getExamInfo();
+    if (!info?.date) return;
+
+    // Is today exam day?
+    const today = new Date();
+    const examD = _examInfoParseYMD(info.date);
+    if (!examD) return;
+    if (
+      today.getFullYear() !== examD.getFullYear() ||
+      today.getMonth()    !== examD.getMonth()    ||
+      today.getDate()     !== examD.getDate()
+    ) return;
+
+    // Not before 08:00
+    if (today.getHours() < 8) return;
+
+    // Already sent for this exam date?
+    const sentKey = 'psico_goodluck_sent_' + info.date;
+    if (localStorage.getItem(sentKey)) return;
+
+    // Conditions: ≥70% giorni completati, ≥65% preparazione
+    const activeDays = getActiveDays();
+    const studyDays  = activeDays.filter(d => d.type !== 'rest' && d.type !== 'exam');
+    const done       = studyDays.filter(d => state[d.id]?.status === 'done').length;
+    const total      = studyDays.length || 1;
+    const studioPct  = Math.round((done / total) * 100);
+    const readiness  = calculateGlobalReadiness()?.score ?? 0;
+
+    if (studioPct < 70 || readiness < 65) {
+      console.info('[GoodLuck] Condizioni non raggiunte:', studioPct + '% giorni,', readiness + '% preparazione');
+      return;
+    }
+
+    // Get auth token
+    const SB_URL  = 'https://olagntawajefdjrkkvcc.supabase.co';
+    const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYWdudGF3YWplZmRqcmtrdmNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU2NTYwNTAsImV4cCI6MjA2MTIzMjA1MH0.ePDFMBNJMtCBSanKdxGJLDIs3GCJKMOmTnvAJOJJBww';
+    const session = (await _sb?.auth?.getSession())?.data?.session;
+    const token   = session?.access_token || SB_ANON;
+
+    const res = await fetch(`${SB_URL}/functions/v1/exam-goodluck`, {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        subject:   info.subject   || '',
+        professor: info.professor || '',
+        studioPct,
+        readiness,
+        examDate:  info.date,
+      }),
+    });
+
+    if (res.ok) {
+      localStorage.setItem(sentKey, '1');
+      console.info('[GoodLuck] Email inviata (', studioPct + '% giorni,', readiness + '% prep)');
+    } else {
+      console.warn('[GoodLuck] Edge function error:', res.status, await res.text());
+    }
+  } catch(e) {
+    console.warn('[GoodLuck]', e.message);
   }
 }
 
