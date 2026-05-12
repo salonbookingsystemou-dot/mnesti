@@ -54,7 +54,7 @@
 
 ## Architettura & Manutenibilità
 
-- [ ] **[OPT-08] Separare app.js e app.css da app.html**
+- [x] **[OPT-08] Separare app.js e app.css da app.html**
   - **File:** `app.html` → `app.js` + `app.css` (nuovi file)
   - **Problema:** 638 KB in un file unico. Ogni diff mostra migliaia di righe. CSS e JS non possono essere cachati separatamente dal browser.
   - **Fix:** Estrarre il blocco `<style>` in `app.css` e il blocco `<script>` in `app.js`. In `app.html` rimane solo `<link rel="stylesheet" href="app.css">` e `<script src="app.js" defer>`. Aggiornare il Service Worker per cachare i tre file separatamente.
