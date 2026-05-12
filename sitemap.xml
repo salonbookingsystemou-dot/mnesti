@@ -54,4 +54,13 @@
     <priority>0.7</priority>
   </url>
 
+
+  <!-- Spaced Repetition: cos'è e come usarla per gli esami universitari -->
+  <url>
+    <loc>https://mnesti.it/blog-spaced-repetition.html</loc>
+    <lastmod>2026-05-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
 </urlset>

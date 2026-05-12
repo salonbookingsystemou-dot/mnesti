@@ -5,15 +5,23 @@
     "seoTitle": "Spaced Repetition per l'università: la guida pratica | Mnesti Blog",
     "description": "Cos'è la spaced repetition, come funziona la curva dell'oblio di Ebbinghaus e come applicarla alle dispense universitarie per ridurre il tempo di ripasso.",
     "keyword": "spaced repetition università",
-    "keywords": ["spaced repetition università", "ripetizione spaziata esame", "curva dell'oblio studio", "memorizzare dispense università"],
-    "tags": ["Spaced Repetition", "Memoria"],
+    "keywords": [
+      "spaced repetition università",
+      "ripetizione spaziata esame",
+      "curva dell'oblio studio",
+      "memorizzare dispense università"
+    ],
+    "tags": [
+      "Spaced Repetition",
+      "Memoria"
+    ],
     "section": "Tecniche di studio",
     "icon": "🔄",
     "ctaTitle": "Mnesti pianifica la spaced repetition per te",
     "ctaText": "Il piano di studio di Mnesti distribuisce automaticamente le sessioni nel tempo ottimale. Primo esame gratis.",
-    "status": "pending",
-    "date": null,
-    "publishedAt": null
+    "status": "published",
+    "date": "2026-05-12",
+    "publishedAt": "2026-05-12T09:00:00+02:00"
   },
   {
     "slug": "blog-metodo-feynman",
@@ -21,8 +29,16 @@
     "seoTitle": "Metodo Feynman per l'università: come usarlo per capire davvero | Mnesti Blog",
     "description": "Il metodo Feynman in 4 passi per capire davvero quello che studi, non solo memorizzarlo. Applicato agli esami universitari italiani con esempi pratici.",
     "keyword": "metodo feynman studio università",
-    "keywords": ["metodo feynman studio", "feynman tecnica apprendimento", "capire materie università", "comprensione profonda esame"],
-    "tags": ["Metodo Feynman", "Comprensione"],
+    "keywords": [
+      "metodo feynman studio",
+      "feynman tecnica apprendimento",
+      "capire materie università",
+      "comprensione profonda esame"
+    ],
+    "tags": [
+      "Metodo Feynman",
+      "Comprensione"
+    ],
     "section": "Tecniche di studio",
     "icon": "💡",
     "ctaTitle": "Mnesti ti aiuta a capire, non solo a memorizzare",
@@ -37,8 +53,16 @@
     "seoTitle": "Come fare riassunti efficaci per l'università | Mnesti Blog",
     "description": "La maggior parte dei riassunti universitari è una perdita di tempo. Ecco il metodo per fare sintesi che consolidano la memoria invece di sostituire la lettura.",
     "keyword": "come fare riassunti università",
-    "keywords": ["come fare riassunti università", "riassunti efficaci studio", "sintesi dispense esame", "prendere appunti metodo"],
-    "tags": ["Riassunti", "Metodo di studio"],
+    "keywords": [
+      "come fare riassunti università",
+      "riassunti efficaci studio",
+      "sintesi dispense esame",
+      "prendere appunti metodo"
+    ],
+    "tags": [
+      "Riassunti",
+      "Metodo di studio"
+    ],
     "section": "Tecniche di studio",
     "icon": "✏️",
     "ctaTitle": "Smetti di copiare dispense. Inizia a ricordare.",
@@ -53,8 +77,16 @@
     "seoTitle": "Come prepararsi all'esame orale universitario | Mnesti Blog",
     "description": "Come strutturare la preparazione all'esame orale universitario: dall'organizzazione del materiale alla simulazione, fino alla gestione del nervosismo il giorno dell'appello.",
     "keyword": "prepararsi esame orale università",
-    "keywords": ["prepararsi esame orale università", "esame orale come funziona", "simulazione esame orale", "ansia esame orale"],
-    "tags": ["Esame orale", "Preparazione"],
+    "keywords": [
+      "prepararsi esame orale università",
+      "esame orale come funziona",
+      "simulazione esame orale",
+      "ansia esame orale"
+    ],
+    "tags": [
+      "Esame orale",
+      "Preparazione"
+    ],
     "section": "Preparazione esami",
     "icon": "🎤",
     "ctaTitle": "Allenati con domande aperte simulate",
@@ -69,8 +101,16 @@
     "seoTitle": "Come gestire l'ansia da esame universitario | Mnesti Blog",
     "description": "Perché l'ansia da esame blocca la memoria proprio quando ne hai più bisogno, e le strategie validate dalla ricerca per gestirla prima e durante l'appello.",
     "keyword": "ansia esame universitario come gestirla",
-    "keywords": ["ansia esame universitario", "come gestire ansia esame", "paura esame università", "blocco mentale esame"],
-    "tags": ["Ansia", "Benessere dello studente"],
+    "keywords": [
+      "ansia esame universitario",
+      "come gestire ansia esame",
+      "paura esame università",
+      "blocco mentale esame"
+    ],
+    "tags": [
+      "Ansia",
+      "Benessere dello studente"
+    ],
     "section": "Benessere",
     "icon": "🧘",
     "ctaTitle": "Preparazione sistematica = meno ansia",
@@ -85,8 +125,16 @@
     "seoTitle": "Metodo Cornell appunti universitari: come usarlo | Mnesti Blog",
     "description": "Il metodo Cornell applicato all'università italiana: come strutturare gli appunti in tre sezioni, quando usarlo e quando scegliere approcci diversi.",
     "keyword": "metodo cornell appunti università",
-    "keywords": ["metodo cornell appunti", "sistema cornell prendere appunti", "come prendere appunti università", "note cornell universitario"],
-    "tags": ["Metodo Cornell", "Appunti"],
+    "keywords": [
+      "metodo cornell appunti",
+      "sistema cornell prendere appunti",
+      "come prendere appunti università",
+      "note cornell universitario"
+    ],
+    "tags": [
+      "Metodo Cornell",
+      "Appunti"
+    ],
     "section": "Tecniche di studio",
     "icon": "📓",
     "ctaTitle": "Dal foglio Cornell alle domande di esame in automatico",
@@ -101,8 +149,16 @@
     "seoTitle": "Come studiare diritto all'università: metodo e strategie | Mnesti Blog",
     "description": "Come affrontare gli esami di diritto privato, commerciale e costituzionale all'università: memorizzare istituti, casi pratici e articoli del codice con metodo.",
     "keyword": "come studiare diritto università",
-    "keywords": ["come studiare diritto università", "studiare diritto privato esame", "memorizzare diritto università", "metodo studio giurisprudenza"],
-    "tags": ["Giurisprudenza", "Diritto"],
+    "keywords": [
+      "come studiare diritto università",
+      "studiare diritto privato esame",
+      "memorizzare diritto università",
+      "metodo studio giurisprudenza"
+    ],
+    "tags": [
+      "Giurisprudenza",
+      "Diritto"
+    ],
     "section": "Per materia",
     "icon": "⚖️",
     "ctaTitle": "Piano di studio su misura per gli esami di diritto",
@@ -117,8 +173,16 @@
     "seoTitle": "Come studiare psicologia all'università | Mnesti Blog",
     "description": "Come affrontare gli esami di psicologia generale, clinica e sociale: memorizzare teorie e autori, costruire connessioni concettuali e rispondere alle domande del professore.",
     "keyword": "come studiare psicologia università",
-    "keywords": ["come studiare psicologia università", "studiare psicologia generale esame", "memorizzare teorie psicologia", "esame psicologia metodo"],
-    "tags": ["Psicologia", "Per materia"],
+    "keywords": [
+      "come studiare psicologia università",
+      "studiare psicologia generale esame",
+      "memorizzare teorie psicologia",
+      "esame psicologia metodo"
+    ],
+    "tags": [
+      "Psicologia",
+      "Per materia"
+    ],
     "section": "Per materia",
     "icon": "🧠",
     "ctaTitle": "Memory Cards per teorie e autori di psicologia",
@@ -133,8 +197,16 @@
     "seoTitle": "Come studiare economia e management all'università | Mnesti Blog",
     "description": "Strategie per affrontare esami di economia aziendale, microeconomia, macroeconomia e management: come collegare teoria e grafici, esercizi e definizioni.",
     "keyword": "come studiare economia università",
-    "keywords": ["come studiare economia università", "studiare economia aziendale esame", "macroeconomia come studiare", "management università metodo"],
-    "tags": ["Economia", "Per materia"],
+    "keywords": [
+      "come studiare economia università",
+      "studiare economia aziendale esame",
+      "macroeconomia come studiare",
+      "management università metodo"
+    ],
+    "tags": [
+      "Economia",
+      "Per materia"
+    ],
     "section": "Per materia",
     "icon": "📈",
     "ctaTitle": "Piano di studio per gli esami di economia",
@@ -149,8 +221,16 @@
     "seoTitle": "Come fare un piano di studio per l'esame universitario | Mnesti Blog",
     "description": "Come costruire un piano di studio efficace per un esame universitario partendo dalla data dell'appello: distribuzione del materiale, sessioni di ripasso e buffer.",
     "keyword": "piano di studio esame universitario",
-    "keywords": ["piano di studio esame universitario", "come organizzare studio esame", "programmare studio università", "calendario studio esame"],
-    "tags": ["Pianificazione", "Metodo di studio"],
+    "keywords": [
+      "piano di studio esame universitario",
+      "come organizzare studio esame",
+      "programmare studio università",
+      "calendario studio esame"
+    ],
+    "tags": [
+      "Pianificazione",
+      "Metodo di studio"
+    ],
     "section": "Organizzazione",
     "icon": "📅",
     "ctaTitle": "Il tuo piano di studio generato in 3 minuti",
@@ -165,8 +245,16 @@
     "seoTitle": "Quante ore studiare al giorno per l'esame universitario | Mnesti Blog",
     "description": "La risposta non è \"più ore possibile\". La ricerca sulla curva dell'oblio e sulla stanchezza cognitiva dice qualcosa di diverso: ecco il numero ottimale.",
     "keyword": "quante ore studiare esame universitario",
-    "keywords": ["quante ore studiare esame", "ore studio giornaliero università", "quanto studiare al giorno", "sessioni studio efficaci durata"],
-    "tags": ["Gestione del tempo", "Produttività"],
+    "keywords": [
+      "quante ore studiare esame",
+      "ore studio giornaliero università",
+      "quanto studiare al giorno",
+      "sessioni studio efficaci durata"
+    ],
+    "tags": [
+      "Gestione del tempo",
+      "Produttività"
+    ],
     "section": "Organizzazione",
     "icon": "⏰",
     "ctaTitle": "Studia meno, ricorda di più",
@@ -181,8 +269,16 @@
     "seoTitle": "Come ritrovare la motivazione per studiare all'università | Mnesti Blog",
     "description": "Perché la motivazione non è un prerequisito ma un risultato del progresso. Strategie concrete per ricominciare a studiare quando ti sembra impossibile.",
     "keyword": "motivazione studiare università",
-    "keywords": ["motivazione studiare università", "non riesco a studiare cosa fare", "come iniziare a studiare", "procrastinazione studio università"],
-    "tags": ["Motivazione", "Psicologia dello studio"],
+    "keywords": [
+      "motivazione studiare università",
+      "non riesco a studiare cosa fare",
+      "come iniziare a studiare",
+      "procrastinazione studio università"
+    ],
+    "tags": [
+      "Motivazione",
+      "Psicologia dello studio"
+    ],
     "section": "Benessere",
     "icon": "🔥",
     "ctaTitle": "Il primo passo è il piano. Il resto viene da solo.",
@@ -197,8 +293,16 @@
     "seoTitle": "Come studiare matematica all'università | Mnesti Blog",
     "description": "Matematica universitaria (analisi, algebra, statistica): come costruire le basi, affrontare i teoremi e allenare il problem solving con un metodo sistematico.",
     "keyword": "come studiare matematica università",
-    "keywords": ["come studiare matematica università", "analisi matematica come studiare", "algebra lineare esame metodo", "matematica universitaria difficile"],
-    "tags": ["Matematica", "Per materia"],
+    "keywords": [
+      "come studiare matematica università",
+      "analisi matematica come studiare",
+      "algebra lineare esame metodo",
+      "matematica universitaria difficile"
+    ],
+    "tags": [
+      "Matematica",
+      "Per materia"
+    ],
     "section": "Per materia",
     "icon": "∫",
     "ctaTitle": "Mnesti per esami di matematica",
@@ -213,8 +317,16 @@
     "seoTitle": "Studente fuori corso: cause, costi e come uscirne | Mnesti Blog",
     "description": "Un anno fuori corso costa tra i 20.000 e i 25.000 euro tra tasse e mancato stipendio. Come uscirne con un metodo concreto e smettere di rimandare.",
     "keyword": "studente fuori corso come uscirne",
-    "keywords": ["studente fuori corso", "come uscire fuori corso università", "laurearsi in tempo università", "costo fuori corso università"],
-    "tags": ["Fuori corso", "Strategia"],
+    "keywords": [
+      "studente fuori corso",
+      "come uscire fuori corso università",
+      "laurearsi in tempo università",
+      "costo fuori corso università"
+    ],
+    "tags": [
+      "Fuori corso",
+      "Strategia"
+    ],
     "section": "Strategia universitaria",
     "icon": "🎓",
     "ctaTitle": "Smetti di rimandare. Parti da oggi.",
@@ -229,8 +341,16 @@
     "seoTitle": "Anki per l'università: pro, contro e alternative | Mnesti Blog",
     "description": "Anki è potente ma richiede ore di setup. Per quali tipi di esame universitario vale il tempo di configurarlo e quando è meglio usare altri metodi.",
     "keyword": "anki università alternativa",
-    "keywords": ["anki università", "anki per esami universitari", "alternativa anki studio", "flashcard universitarie"],
-    "tags": ["Strumenti", "Anki"],
+    "keywords": [
+      "anki università",
+      "anki per esami universitari",
+      "alternativa anki studio",
+      "flashcard universitarie"
+    ],
+    "tags": [
+      "Strumenti",
+      "Anki"
+    ],
     "section": "Strumenti di studio",
     "icon": "🃏",
     "ctaTitle": "Memory Cards automatiche senza ore di setup",
@@ -245,8 +365,16 @@
     "seoTitle": "Come tornare a studiare dopo una pausa | Mnesti Blog",
     "description": "Come riprendere a studiare all'università dopo mesi o anni di stop: come ricominciare senza sentirti sopraffatto, anche con esami arretrati e poca autostima.",
     "keyword": "riprendere a studiare università dopo pausa",
-    "keywords": ["riprendere a studiare università", "tornare a studiare dopo pausa", "ricominciare università stop", "studente adulto università"],
-    "tags": ["Riprendere gli studi", "Motivazione"],
+    "keywords": [
+      "riprendere a studiare università",
+      "tornare a studiare dopo pausa",
+      "ricominciare università stop",
+      "studente adulto università"
+    ],
+    "tags": [
+      "Riprendere gli studi",
+      "Motivazione"
+    ],
     "section": "Strategia universitaria",
     "icon": "🔁",
     "ctaTitle": "Riprendere è più facile con un piano concreto",
@@ -261,8 +389,16 @@
     "seoTitle": "Tecnica Pomodoro per lo studio universitario | Mnesti Blog",
     "description": "La tecnica Pomodoro per studiare: come adattarla agli esami universitari, quanto devono durare le sessioni e quando non usarla (è più spesso di quanto pensi).",
     "keyword": "tecnica pomodoro studio università",
-    "keywords": ["tecnica pomodoro studio", "pomodoro università esame", "sessioni studio timer", "pomodoro technique apprendimento"],
-    "tags": ["Tecnica Pomodoro", "Gestione del tempo"],
+    "keywords": [
+      "tecnica pomodoro studio",
+      "pomodoro università esame",
+      "sessioni studio timer",
+      "pomodoro technique apprendimento"
+    ],
+    "tags": [
+      "Tecnica Pomodoro",
+      "Gestione del tempo"
+    ],
     "section": "Tecniche di studio",
     "icon": "🍅",
     "ctaTitle": "Sessioni Pomodoro con obiettivi chiari",
@@ -277,8 +413,16 @@
     "seoTitle": "Come studiare storia all'università | Mnesti Blog",
     "description": "Come studiare storia contemporanea, medievale o moderna all'università costruendo connessioni causali invece di memorizzare date e nomi a memoria.",
     "keyword": "come studiare storia università",
-    "keywords": ["come studiare storia università", "studiare storia contemporanea esame", "memorizzare storia metodo", "esame storia università tecnica"],
-    "tags": ["Storia", "Per materia"],
+    "keywords": [
+      "come studiare storia università",
+      "studiare storia contemporanea esame",
+      "memorizzare storia metodo",
+      "esame storia università tecnica"
+    ],
+    "tags": [
+      "Storia",
+      "Per materia"
+    ],
     "section": "Per materia",
     "icon": "📜",
     "ctaTitle": "Dal manuale alle domande di esame in automatico",
@@ -293,8 +437,16 @@
     "seoTitle": "Mappe mentali per lo studio universitario | Mnesti Blog",
     "description": "Le mappe mentali sono uno strumento valido o un'illusione di produttività? La ricerca dice quando funzionano davvero e per quali tipi di materiale universitario.",
     "keyword": "mappe mentali studio università",
-    "keywords": ["mappe mentali studio università", "mind map esame universitario", "schema concettuale studio", "mappe mentali efficaci apprendimento"],
-    "tags": ["Mappe mentali", "Strumenti"],
+    "keywords": [
+      "mappe mentali studio università",
+      "mind map esame universitario",
+      "schema concettuale studio",
+      "mappe mentali efficaci apprendimento"
+    ],
+    "tags": [
+      "Mappe mentali",
+      "Strumenti"
+    ],
     "section": "Tecniche di studio",
     "icon": "🗺️",
     "ctaTitle": "Dalle mappe alle domande in automatico",
@@ -309,8 +461,16 @@
     "seoTitle": "Come studiare quando sei stanco | Mnesti Blog",
     "description": "La stanchezza cognitiva è il nemico silenzioso dello studente lavoratore. Come capire quando sei davvero esaurito e come studiare in modo produttivo anche con energie basse.",
     "keyword": "studiare quando si è stanchi produttività",
-    "keywords": ["studiare stanco", "stanchezza cognitiva studio", "studiare sera lavoro", "energia studio studente lavoratore"],
-    "tags": ["Stanchezza cognitiva", "Produttività"],
+    "keywords": [
+      "studiare stanco",
+      "stanchezza cognitiva studio",
+      "studiare sera lavoro",
+      "energia studio studente lavoratore"
+    ],
+    "tags": [
+      "Stanchezza cognitiva",
+      "Produttività"
+    ],
     "section": "Benessere",
     "icon": "😴",
     "ctaTitle": "Sessioni brevi e attive battono ore passive",
@@ -325,8 +485,16 @@
     "seoTitle": "Come studiare sociologia all'università | Mnesti Blog",
     "description": "Come affrontare gli esami di sociologia generale, teoria sociologica e metodologia della ricerca: collegare autori, paradigmi e applicazioni concrete.",
     "keyword": "come studiare sociologia università",
-    "keywords": ["come studiare sociologia università", "sociologia esame metodo", "teorie sociologiche memorizzare", "weber durkheim marx studio"],
-    "tags": ["Sociologia", "Per materia"],
+    "keywords": [
+      "come studiare sociologia università",
+      "sociologia esame metodo",
+      "teorie sociologiche memorizzare",
+      "weber durkheim marx studio"
+    ],
+    "tags": [
+      "Sociologia",
+      "Per materia"
+    ],
     "section": "Per materia",
     "icon": "🏛️",
     "ctaTitle": "Memory Cards per Weber, Durkheim e tutti gli altri",
@@ -341,8 +509,16 @@
     "seoTitle": "Blocco dello studente universitario: come uscirne | Mnesti Blog",
     "description": "Il blocco dello studente non è pigrizia: è un meccanismo psicologico preciso. Come riconoscerlo, quali sono le vere cause e le strategie concrete per uscirne.",
     "keyword": "blocco studente universitario come uscirne",
-    "keywords": ["blocco studente universitario", "procrastinazione esame università", "non riesco a studiare", "paralisi studio università"],
-    "tags": ["Blocco", "Psicologia dello studio"],
+    "keywords": [
+      "blocco studente universitario",
+      "procrastinazione esame università",
+      "non riesco a studiare",
+      "paralisi studio università"
+    ],
+    "tags": [
+      "Blocco",
+      "Psicologia dello studio"
+    ],
     "section": "Benessere",
     "icon": "🔓",
     "ctaTitle": "Il blocco si rompe con un primo passo concreto",
@@ -357,8 +533,16 @@
     "seoTitle": "Come programmare la sessione esami per studenti lavoratori | Mnesti Blog",
     "description": "Come pianificare una sessione con più esami quando hai ferie limitate, colleghi da gestire e un lavoro che non aspetta. Il metodo per non fare errori di valutazione.",
     "keyword": "programmare sessione esami studente lavoratore",
-    "keywords": ["sessione esami studente lavoratore", "programmare esami università lavoro", "pianificare appelli università", "gestire più esami sessione"],
-    "tags": ["Sessione esami", "Studente lavoratore"],
+    "keywords": [
+      "sessione esami studente lavoratore",
+      "programmare esami università lavoro",
+      "pianificare appelli università",
+      "gestire più esami sessione"
+    ],
+    "tags": [
+      "Sessione esami",
+      "Studente lavoratore"
+    ],
     "section": "Studenti lavoratori",
     "icon": "🗓️",
     "ctaTitle": "Un piano separato per ogni esame della sessione",
@@ -373,8 +557,16 @@
     "seoTitle": "Memoria a breve e lungo termine: come consolidare lo studio | Mnesti Blog",
     "description": "Il processo di consolidamento mnemonico: come far sì che quello che studi oggi sia ancora lì il giorno dell'esame. Sonno, ripasso attivo e spacing.",
     "keyword": "memoria lungo termine università studio",
-    "keywords": ["memoria lungo termine studio", "consolidamento memoria esame", "come ricordare esame universitario", "neuroscienze apprendimento"],
-    "tags": ["Neuroscienze", "Memoria"],
+    "keywords": [
+      "memoria lungo termine studio",
+      "consolidamento memoria esame",
+      "come ricordare esame universitario",
+      "neuroscienze apprendimento"
+    ],
+    "tags": [
+      "Neuroscienze",
+      "Memoria"
+    ],
     "section": "Tecniche di studio",
     "icon": "🧬",
     "ctaTitle": "Studia una volta, ricorda all'esame",
@@ -389,8 +581,16 @@
     "seoTitle": "Notion per studiare all'università: guida pratica | Mnesti Blog",
     "description": "Notion per la gestione degli studi universitari: come usarlo per organizzare esami, appunti e materiali senza cadere nella trappola della produttività fittizia.",
     "keyword": "notion studiare università",
-    "keywords": ["notion studiare università", "notion appunti universitari", "notion sistema studio", "organizzare università notion"],
-    "tags": ["Strumenti", "Notion"],
+    "keywords": [
+      "notion studiare università",
+      "notion appunti universitari",
+      "notion sistema studio",
+      "organizzare università notion"
+    ],
+    "tags": [
+      "Strumenti",
+      "Notion"
+    ],
     "section": "Strumenti di studio",
     "icon": "🗃️",
     "ctaTitle": "Dall'organizzazione allo studio attivo",
@@ -405,8 +605,16 @@
     "seoTitle": "Studiare con la musica: funziona o no? | Mnesti Blog",
     "description": "La ricerca cognitiva sul rumore di fondo e lo studio: quando la musica aiuta la concentrazione, quando la peggiora e cosa dicono gli studi sul white noise.",
     "keyword": "studiare con la musica concentrazione",
-    "keywords": ["studiare musica concentrazione", "musica studio università", "white noise studio", "musica classica studiare"],
-    "tags": ["Concentrazione", "Ambiente di studio"],
+    "keywords": [
+      "studiare musica concentrazione",
+      "musica studio università",
+      "white noise studio",
+      "musica classica studiare"
+    ],
+    "tags": [
+      "Concentrazione",
+      "Ambiente di studio"
+    ],
     "section": "Benessere",
     "icon": "🎧",
     "ctaTitle": "Concentrazione o no, il metodo conta più dell'ambiente",
@@ -421,8 +629,16 @@
     "seoTitle": "Come studiare filosofia all'università | Mnesti Blog",
     "description": "Come affrontare gli esami di filosofia morale, teoretica e storia della filosofia all'università: dalla lettura dei testi alle argomentazioni orali e scritte.",
     "keyword": "come studiare filosofia università",
-    "keywords": ["come studiare filosofia università", "esame filosofia metodo", "storia filosofia come studiare", "testi filosofici università"],
-    "tags": ["Filosofia", "Per materia"],
+    "keywords": [
+      "come studiare filosofia università",
+      "esame filosofia metodo",
+      "storia filosofia come studiare",
+      "testi filosofici università"
+    ],
+    "tags": [
+      "Filosofia",
+      "Per materia"
+    ],
     "section": "Per materia",
     "icon": "🦉",
     "ctaTitle": "Domande aperte su Kant, Hegel e gli altri",
@@ -437,8 +653,16 @@
     "seoTitle": "Laurea triennale o magistrale: cosa vale nel mercato del lavoro | Mnesti Blog",
     "description": "Laurea triennale vs magistrale nel mercato del lavoro italiano: stipendi, tempi di inserimento, richieste delle aziende per settore. Dati concreti per decidere.",
     "keyword": "laurea triennale lavoro valore",
-    "keywords": ["laurea triennale lavoro", "laurea magistrale conviene", "valore laurea mercato lavoro italiano", "laurearsi triennale o magistrale"],
-    "tags": ["Laurea", "Mercato del lavoro"],
+    "keywords": [
+      "laurea triennale lavoro",
+      "laurea magistrale conviene",
+      "valore laurea mercato lavoro italiano",
+      "laurearsi triennale o magistrale"
+    ],
+    "tags": [
+      "Laurea",
+      "Mercato del lavoro"
+    ],
     "section": "Strategia universitaria",
     "icon": "💼",
     "ctaTitle": "Qualunque percorso scegli, finiscilo in tempo",
@@ -453,8 +677,16 @@
     "seoTitle": "Come scegliere i libri per l'esame universitario | Mnesti Blog",
     "description": "Non tutti i testi in bibliografia sono ugualmente importanti. Come capire quali libri studiare davvero per un esame universitario e come scalare i manuali densi.",
     "keyword": "scegliere libri esame universitario",
-    "keywords": ["scegliere libri esame università", "testi adottati università", "studiare manuale universitario", "bibliografia esame quali libri"],
-    "tags": ["Materiali di studio", "Strategia"],
+    "keywords": [
+      "scegliere libri esame università",
+      "testi adottati università",
+      "studiare manuale universitario",
+      "bibliografia esame quali libri"
+    ],
+    "tags": [
+      "Materiali di studio",
+      "Strategia"
+    ],
     "section": "Preparazione esami",
     "icon": "📚",
     "ctaTitle": "Carica quello che hai, Mnesti fa il resto",
@@ -469,8 +701,16 @@
     "seoTitle": "Come conciliare lavoro full-time e università | Mnesti Blog",
     "description": "Come studiare all'università con un lavoro a tempo pieno: i 5 principi organizzativi che separano chi ce la fa da chi resta bloccato per anni.",
     "keyword": "conciliare lavoro full-time università",
-    "keywords": ["lavoro full-time università", "lavorare e studiare contemporaneamente", "studente lavoratore full-time metodo", "università sera weekend lavoro"],
-    "tags": ["Lavoro e studio", "Organizzazione"],
+    "keywords": [
+      "lavoro full-time università",
+      "lavorare e studiare contemporaneamente",
+      "studente lavoratore full-time metodo",
+      "università sera weekend lavoro"
+    ],
+    "tags": [
+      "Lavoro e studio",
+      "Organizzazione"
+    ],
     "section": "Studenti lavoratori",
     "icon": "🏋️",
     "ctaTitle": "Progettato per chi ha poco tempo",
