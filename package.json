@@ -5,9 +5,6 @@
   "scripts": {
     "publish": "node scripts/publish.js"
   },
-  "dependencies": {
-    "@anthropic-ai/sdk": "^0.39.0"
-  },
   "engines": {
     "node": ">=18"
   }

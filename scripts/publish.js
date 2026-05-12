@@ -3,26 +3,28 @@
  * scripts/publish.js — Mnesti daily blog publisher
  *
  * Picks the next pending article from blog-queue.json,
- * generates content via Claude, writes the HTML file,
- * updates blog.html and sitemap.xml, then marks the article published.
+ * generates content via the Supabase blog-publisher Edge Function,
+ * writes the HTML file, updates blog.html and sitemap.xml,
+ * then marks the article published.
  *
  * Run: node scripts/publish.js
- * Requires: ANTHROPIC_API_KEY env var
+ * Requires: PUBLISHER_SECRET env var
  */
 'use strict';
 
-const Anthropic = require('@anthropic-ai/sdk');
-const fs        = require('fs');
-const path      = require('path');
+const fs   = require('fs');
+const path = require('path');
 
 const ROOT       = path.join(__dirname, '..');
 const QUEUE_PATH = path.join(ROOT, 'blog-queue.json');
 const SITEMAP    = path.join(ROOT, 'sitemap.xml');
 const BLOG_INDEX = path.join(ROOT, 'blog.html');
 
+const PUBLISHER_ENDPOINT = 'https://olagntawajefdjrkkvcc.supabase.co/functions/v1/blog-publisher';
+
 // ── Validation ───────────────────────────────────────────────────────────────
-if (!process.env.ANTHROPIC_API_KEY) {
-  console.error('❌  ANTHROPIC_API_KEY non impostata.');
+if (!process.env.PUBLISHER_SECRET) {
+  console.error('❌  PUBLISHER_SECRET non impostata.');
   process.exit(1);
 }
 
@@ -87,10 +89,8 @@ function dateIT(iso) {
   return new Date(iso).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
 }
 
-// ── Claude generation ─────────────────────────────────────────────────────────
+// ── Content generation via Supabase Edge Function ────────────────────────────
 async function generateContent(related) {
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
   const relatedLinks = related
     .map(slug => {
       const m = allMeta[slug];
@@ -141,15 +141,23 @@ ISTRUZIONI PER body:
 
 Rispondi SOLO con il JSON valido. Nessun testo prima o dopo, nessun markdown code block.`;
 
-  console.log('  → Chiamata Claude API...');
-  const msg = await client.messages.create({
-    model: 'claude-opus-4-5',
-    max_tokens: 4096,
-    system,
-    messages: [{ role: 'user', content: user }],
+  console.log('  → Chiamata blog-publisher Edge Function...');
+  const res = await fetch(PUBLISHER_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.PUBLISHER_SECRET}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ system, user }),
   });
 
-  const raw = msg.content[0].text.trim();
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`blog-publisher HTTP ${res.status}: ${err.error || err.detail || 'unknown error'}`);
+  }
+
+  const { content } = await res.json();
+  const raw = content.trim();
 
   // Parse JSON — tolerate markdown code fences from the model
   let parsed;

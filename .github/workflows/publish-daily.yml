@@ -26,14 +26,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-
-      - name: Installa dipendenze
-        run: npm ci
 
       - name: Genera e pubblica articolo
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PUBLISHER_SECRET: ${{ secrets.PUBLISHER_SECRET }}
         run: node scripts/publish.js
 
       - name: Controlla se ci sono modifiche
