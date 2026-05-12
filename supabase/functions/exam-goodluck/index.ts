@@ -11,6 +11,40 @@ const RESEND_KEY = Deno.env.get('RESEND_API_KEY')            ?? ''
 const SB_URL     = Deno.env.get('SUPABASE_URL')              ?? ''
 const SB_SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 const FROM_EMAIL = 'Mnesti <noreply@mnesti.it>'
+const APP_URL    = 'https://mnesti.it/app.html'
+const LOGO_URL   = 'https://mnesti.it/logo-full.png'
+
+// ── Shared base layout (mirrors lifecycle-emails/index.ts) ──────────────────
+function baseLayout(innerHtml: string): string {
+  return `
+<!DOCTYPE html>
+<html lang="it">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#0d0d0d;">
+<div style="background:#0d0d0d;padding:48px 20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
+  <table cellpadding="0" cellspacing="0" style="max-width:500px;width:100%;">
+
+    <tr><td align="center" style="padding-bottom:28px;">
+      <img src="${LOGO_URL}" alt="Mnesti" height="28" style="display:block;filter:brightness(0) invert(1);" />
+    </td></tr>
+
+    <tr><td style="background:#111111;border:1px solid #2a2a2a;border-radius:16px;padding:40px 36px;">
+      ${innerHtml}
+    </td></tr>
+
+    <tr><td style="padding-top:24px;text-align:center;">
+      <p style="margin:0;font-size:11px;color:#444444;line-height:1.6;">
+        Hai ricevuto questa email perché sei iscritto a Mnesti.<br>
+        Per disiscriverti rispondi a questa email con oggetto "Unsubscribe".
+      </p>
+    </td></tr>
+
+  </table>
+  </td></tr></table>
+</div>
+</body></html>`
+}
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin':  '*',
@@ -83,124 +117,65 @@ Deno.serve(async (req) => {
     } catch { /* ignore */ }
   }
 
-  // ── Build motivational bar (text-safe) ─────────────────────────────────────
-  const barFill  = (pct: number) => Math.round(pct / 100 * 20) // out of 20 chars
-  const studyBar = '█'.repeat(barFill(studioPct)) + '░'.repeat(20 - barFill(studioPct))
-  const readBar  = '█'.repeat(barFill(readiness)) + '░'.repeat(20 - barFill(readiness))
+  // ── Build email HTML via shared baseLayout ─────────────────────────────────
+  const html = baseLayout(`
+    <p style="text-align:center;margin:0 0 4px;">
+      <span style="font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:#d97757;">
+        Oggi è il grande giorno
+      </span>
+    </p>
+    <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#f0ebe6;text-align:center;letter-spacing:-0.02em;line-height:1.3;">
+      In bocca al lupo${userName ? ', ' + userName : ''}!
+    </h1>
 
-  // ── Build email HTML ────────────────────────────────────────────────────────
-  const html = `<!DOCTYPE html>
-<html lang="it">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:32px 16px;">
-    <tr><td align="center">
-      <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;max-width:520px;width:100%;">
+    <hr style="border:none;border-top:1px solid #2a2a2a;margin:20px 0;">
 
-        <!-- Header bar -->
-        <tr>
-          <td style="background:#d97757;padding:20px 32px;">
-            <span style="font-size:22px;font-weight:800;letter-spacing:-0.03em;color:#ffffff;">mnesti</span>
-          </td>
-        </tr>
+    <p style="margin:0 0 20px;font-size:14px;color:#888888;text-align:center;line-height:1.7;">
+      Oggi dai l'esame di <strong style="color:#f0ebe6;">${subject}</strong>${professor ? ` con <strong style="color:#f0ebe6;">${professor}</strong>` : ''}${examDateDisplay ? `<br>${examDateDisplay}` : ''}.
+    </p>
 
-        <!-- Body -->
-        <tr>
-          <td style="padding:32px 32px 8px;">
-            <p style="margin:0 0 6px;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#d97757;">
-              Oggi è il grande giorno
-            </p>
-            <h1 style="margin:0 0 20px;font-size:24px;font-weight:800;color:#1a1a1a;line-height:1.25;letter-spacing:-0.02em;">
-              In bocca al lupo${userName ? ',<br>' + userName : ''}!
-            </h1>
-            <p style="margin:0 0 24px;font-size:15px;color:#444;line-height:1.7;">
-              Oggi dai l'esame di <strong>${subject}</strong>${professor ? ` con ${professor}` : ''}${examDateDisplay ? ` — <strong>${examDateDisplay}</strong>` : ''}.
-              Hai lavorato sodo per arrivare fin qui e i numeri lo dimostrano.
-            </p>
-          </td>
-        </tr>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+      <tr>
+        <td style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;padding:16px 20px;">
+          <p style="margin:0 0 10px;font-size:11px;font-weight:600;color:#555555;letter-spacing:0.08em;text-transform:uppercase;">Il tuo percorso</p>
 
-        <!-- Stats card -->
-        <tr>
-          <td style="padding:0 32px 28px;">
-            <table width="100%" cellpadding="0" cellspacing="0"
-                   style="background:#f8f8f8;border-radius:8px;border:1px solid #ebebeb;overflow:hidden;">
-              <tr>
-                <td style="padding:20px 24px 8px;">
-                  <p style="margin:0 0 4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#888;">
-                    Il tuo percorso
-                  </p>
-                </td>
-              </tr>
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:10px;">
+            <tr>
+              <td style="font-size:13px;color:#888888;">Giorni completati</td>
+              <td align="right" style="font-size:13px;font-weight:700;color:#f0ebe6;">${studioPct}%</td>
+            </tr>
+          </table>
+          <div style="background:#2a2a2a;border-radius:4px;height:5px;overflow:hidden;margin-bottom:14px;">
+            <div style="background:#d97757;height:5px;width:${studioPct}%;border-radius:4px;"></div>
+          </div>
 
-              <!-- Giorni di studio -->
-              <tr>
-                <td style="padding:8px 24px;">
-                  <table width="100%" cellpadding="0" cellspacing="0">
-                    <tr>
-                      <td style="font-size:13px;color:#555;">Giorni di studio completati</td>
-                      <td align="right" style="font-size:14px;font-weight:700;color:#1a1a1a;">${studioPct}%</td>
-                    </tr>
-                  </table>
-                  <div style="margin-top:6px;background:#e8e8e8;border-radius:4px;height:6px;overflow:hidden;">
-                    <div style="background:#d97757;height:6px;width:${studioPct}%;border-radius:4px;"></div>
-                  </div>
-                </td>
-              </tr>
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="font-size:13px;color:#888888;">Preparazione</td>
+              <td align="right" style="font-size:13px;font-weight:700;color:#f0ebe6;">${readiness}%</td>
+            </tr>
+          </table>
+          <div style="background:#2a2a2a;border-radius:4px;height:5px;overflow:hidden;margin-top:6px;">
+            <div style="background:#4a9e6e;height:5px;width:${readiness}%;border-radius:4px;"></div>
+          </div>
+        </td>
+      </tr>
+    </table>
 
-              <!-- Preparazione -->
-              <tr>
-                <td style="padding:12px 24px 20px;">
-                  <table width="100%" cellpadding="0" cellspacing="0">
-                    <tr>
-                      <td style="font-size:13px;color:#555;">Livello di preparazione</td>
-                      <td align="right" style="font-size:14px;font-weight:700;color:#1a1a1a;">${readiness}%</td>
-                    </tr>
-                  </table>
-                  <div style="margin-top:6px;background:#e8e8e8;border-radius:4px;height:6px;overflow:hidden;">
-                    <div style="background:#6c9e6e;height:6px;width:${readiness}%;border-radius:4px;"></div>
-                  </div>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
+    <p style="margin:0 0 28px;font-size:13px;color:#666666;text-align:center;line-height:1.75;font-style:italic;">
+      "Hai usato il metodo giusto — active recall, ripetizioni, autovalutazione.<br>
+      Fidati del lavoro che hai fatto e vai sereno."
+    </p>
 
-        <!-- Message -->
-        <tr>
-          <td style="padding:0 32px 28px;">
-            <p style="margin:0;font-size:14px;color:#444;line-height:1.75;border-left:3px solid #d97757;padding-left:16px;font-style:italic;">
-              "Hai usato il metodo giusto — active recall, ripetizioni, autovalutazione.
-              Fidati del lavoro che hai fatto e vai sereno."
-            </p>
-          </td>
-        </tr>
-
-        <!-- CTA -->
-        <tr>
-          <td style="padding:0 32px 32px;">
-            <a href="https://app.mnesti.it"
-               style="display:inline-block;background:#d97757;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:0.01em;">
-              Apri Mnesti
-            </a>
-          </td>
-        </tr>
-
-        <!-- Footer -->
-        <tr>
-          <td style="background:#f8f8f8;border-top:1px solid #ebebeb;padding:16px 32px;">
-            <p style="margin:0;font-size:11px;color:#aaa;line-height:1.6;">
-              Email automatica inviata alle 08:00 del giorno dell'esame &middot;
-              Mnesti ti manda in bocca al lupo!
-            </p>
-          </td>
-        </tr>
-
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr><td align="center">
+        <a href="${APP_URL}"
+           style="display:inline-block;background:#d97757;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:10px;letter-spacing:-0.01em;">
+          Apri Mnesti →
+        </a>
+      </td></tr>
+    </table>
+  `)
 
   // ── Send via Resend ─────────────────────────────────────────────────────────
   if (!RESEND_KEY) {
