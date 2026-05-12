@@ -7,44 +7,11 @@
 //   RESEND_API_KEY            — Resend sending key
 //   SUPABASE_SERVICE_ROLE_KEY — to verify JWT and fetch user email
 
+import { baseLayout, sendViaResend, APP_URL } from '../_shared/email-layout.ts'
+
 const RESEND_KEY = Deno.env.get('RESEND_API_KEY')            ?? ''
 const SB_URL     = Deno.env.get('SUPABASE_URL')              ?? ''
 const SB_SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-const FROM_EMAIL = 'Mnesti <noreply@mnesti.it>'
-const APP_URL    = 'https://mnesti.it/app.html'
-const LOGO_URL   = 'https://mnesti.it/logo-full.png'
-
-// ── Shared base layout (mirrors lifecycle-emails/index.ts) ──────────────────
-function baseLayout(innerHtml: string): string {
-  return `
-<!DOCTYPE html>
-<html lang="it">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#0d0d0d;">
-<div style="background:#0d0d0d;padding:48px 20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
-  <table cellpadding="0" cellspacing="0" style="max-width:500px;width:100%;">
-
-    <tr><td align="center" style="padding-bottom:28px;">
-      <img src="${LOGO_URL}" alt="Mnesti" height="28" style="display:block;filter:brightness(0) invert(1);" />
-    </td></tr>
-
-    <tr><td style="background:#111111;border:1px solid #2a2a2a;border-radius:16px;padding:40px 36px;">
-      ${innerHtml}
-    </td></tr>
-
-    <tr><td style="padding-top:24px;text-align:center;">
-      <p style="margin:0;font-size:11px;color:#444444;line-height:1.6;">
-        Hai ricevuto questa email perché sei iscritto a Mnesti.<br>
-        Per disiscriverti rispondi a questa email con oggetto "Unsubscribe".
-      </p>
-    </td></tr>
-
-  </table>
-  </td></tr></table>
-</div>
-</body></html>`
-}
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin':  '*',
@@ -187,26 +154,12 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Content-Type':  'application/json',
-        'Authorization': `Bearer ${RESEND_KEY}`,
-      },
-      body: JSON.stringify({
-        from:    FROM_EMAIL,
-        to:      [userEmail],
-        subject: `In bocca al lupo! Oggi e' il giorno di ${subject}`,
-        html,
-      }),
-    })
-
-    if (!res.ok) {
-      const err = await res.text()
-      throw new Error(`Resend ${res.status}: ${err}`)
-    }
-
-    const data = await res.json()
+    const data = await sendViaResend(
+      RESEND_KEY,
+      userEmail,
+      `In bocca al lupo! Oggi e' il giorno di ${subject}`,
+      html,
+    )
     console.info('[exam-goodluck] sent to:', userEmail, 'id:', data.id)
 
     return new Response(JSON.stringify({ sent: true, id: data.id }), {

@@ -9,13 +9,12 @@
 //   SUPABASE_SERVICE_ROLE_KEY — to query DB bypassing RLS
 //   CRON_SECRET             — shared secret to authenticate pg_cron calls
 
+import { baseLayout, sendViaResend, APP_URL } from '../_shared/email-layout.ts'
+
 const RESEND_KEY    = Deno.env.get('RESEND_API_KEY')               ?? ''
 const SB_URL        = Deno.env.get('SUPABASE_URL')                 ?? ''
 const SB_SERVICE    = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')    ?? ''
 const CRON_SECRET   = Deno.env.get('CRON_SECRET')                  ?? ''
-const FROM_EMAIL    = 'Mnesti <noreply@mnesti.it>'
-const APP_URL       = 'https://mnesti.it/app.html'
-const LOGO_URL      = 'https://mnesti.it/logo-full.png'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -48,51 +47,11 @@ async function logEmail(userId: string, emailType: string): Promise<void> {
 }
 
 async function sendEmail(to: string, subject: string, html: string): Promise<void> {
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Content-Type':  'application/json',
-      'Authorization': `Bearer ${RESEND_KEY}`,
-    },
-    body: JSON.stringify({ from: FROM_EMAIL, to: [to], subject, html }),
-  })
-  if (!res.ok) throw new Error(`Resend ${res.status}: ${await res.text()}`)
-  const data = await res.json()
+  const data = await sendViaResend(RESEND_KEY, to, subject, html)
   console.info('[lifecycle-emails] sent to', to, '— id:', data.id)
 }
 
 // ── Email Templates ───────────────────────────────────────────────────────────
-
-function baseLayout(innerHtml: string): string {
-  return `
-<!DOCTYPE html>
-<html lang="it">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#0d0d0d;">
-<div style="background:#0d0d0d;padding:48px 20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
-  <table cellpadding="0" cellspacing="0" style="max-width:500px;width:100%;">
-
-    <tr><td align="center" style="padding-bottom:28px;">
-      <img src="${LOGO_URL}" alt="Mnesti" height="28" style="display:block;filter:brightness(0) invert(1);" />
-    </td></tr>
-
-    <tr><td style="background:#111111;border:1px solid #2a2a2a;border-radius:16px;padding:40px 36px;">
-      ${innerHtml}
-    </td></tr>
-
-    <tr><td style="padding-top:24px;text-align:center;">
-      <p style="margin:0;font-size:11px;color:#444444;line-height:1.6;">
-        Hai ricevuto questa email perché sei iscritto a Mnesti.<br>
-        Per disiscriverti rispondi a questa email con oggetto "Unsubscribe".
-      </p>
-    </td></tr>
-
-  </table>
-  </td></tr></table>
-</div>
-</body></html>`
-}
 
 function noExamNudgeHtml(): string {
   return baseLayout(`
