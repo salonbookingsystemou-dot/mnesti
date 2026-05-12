@@ -59,4 +59,5 @@ jobs:
             sitemap.xml \
             blog-queue.json
           git commit -m "blog: nuovo articolo quotidiano"
+          git pull --rebase origin main
           git push
