@@ -25,7 +25,17 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
+
+      - name: Verifica secrets
+        run: |
+          if [ -z "${{ secrets.PUBLISHER_SECRET }}" ]; then
+            echo "❌ PUBLISHER_SECRET non configurato."
+            echo "   Vai su: Settings → Secrets → Actions → New repository secret"
+            echo "   Name: PUBLISHER_SECRET"
+            exit 1
+          fi
+          echo "✓ PUBLISHER_SECRET presente"
 
       - name: Genera e pubblica articolo
         env:
