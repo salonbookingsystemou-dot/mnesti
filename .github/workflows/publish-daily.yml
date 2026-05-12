@@ -19,8 +19,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          # Usa GITHUB_TOKEN per poter fare push
           token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0   # Storia completa — necessaria per il rebase
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -59,5 +59,6 @@ jobs:
             sitemap.xml \
             blog-queue.json
           git commit -m "blog: nuovo articolo quotidiano"
-          git pull --rebase origin main
-          git push
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
