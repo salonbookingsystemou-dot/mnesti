@@ -8629,3 +8629,139 @@ _loadAccentColor();
 
 // Init sources
 updateSourcesBtn();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// NAMESPACE INDEX — OPT-09
+// Functions remain globally accessible for backward compatibility with
+// HTML onclick="..." attributes and existing call sites.
+// These namespace objects serve as:
+//   1. A structured catalog (replaces grepping for function names)
+//   2. A seam for future unit testing (mock MnestiSync.save in tests)
+//   3. The extraction target for a future ES-module migration (OPT-09 phase 2)
+//
+// Usage:  MnestiSync.save()         — same as saveState()
+//         MnestiAI.verify(...)      — same as verifyAnswer(...)
+//         const { buildDays } = MnestiUI  — destructuring for internal use
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** Timer & study-session time tracking. */
+const MnestiTimer = Object.freeze({
+  start:          timerStart,
+  stop:           timerStop,
+  pause:          timerPause,
+  resume:         timerResume,
+  tick:           timerTick,
+  updateHours:    updateTotalHours,
+  resetHours:     resetTotalHours,
+  formatSeconds,
+  formatHoursMinutes,
+  isRunning:      _timerIsRunning,
+  resetInactivity: _resetInactivity,
+  clearInactivity: _clearInactivity,
+  registry:       TimerRegistry,
+});
+
+/** State persistence, localStorage safety, and Supabase cloud sync. */
+const MnestiSync = Object.freeze({
+  save:           saveState,
+  syncToCloud:    () => window._syncToSupabase?.(),
+  pullFromCloud:  () => window._pullAndReinit?.(),
+  reinit:         () => window._reinitApp?.(),
+  debouncedSync:  _debouncedSync,
+  safeLSSet:      _safeLSSet,
+  compactState:   _compactState,
+  storageUsageKB: _storageUsageKB,
+  showStorageWarning: _showStorageWarning,
+  getSources,
+  saveSources,
+  addSource,
+  removeSource,
+  exportAllData,
+  importAllData,
+});
+
+/** All AI / Claude interactions: questions, verification, plan, quiz, OCR. */
+const MnestiAI = Object.freeze({
+  callClaude:         _callClaude,
+  generateQuestions:  generateQuestionsFromSource,
+  verify:             verifyAnswer,
+  reverify:           reverifyAnswer,
+  showCorrectAnswer,
+  generatePlan:       generateStudyPlan,
+  generateTextbook:   generateTextbookReference,
+  generateQuiz:       startQuiz,
+  buildSourceContext: _buildWeightedSourceContext,
+  getAllSourcesContext,
+  extractJson:        _extractJson,
+  repairQuiz:         _repairAndParseQuiz,
+  tutorSend:          _tutorSend,
+  tutorSpeak:         _tutorSpeak,
+  tutorStopSpeaking:  _tutorStopSpeaking,
+  startOcr:           startPhotoOcr,
+  runOcrVision:       _ocrRunVision,
+});
+
+/** DOM rendering: day cards, navigation, panels, themes, progress. */
+const MnestiUI = Object.freeze({
+  buildDays,
+  buildNav,
+  buildDayCard:     _buildDayCard,
+  patchDay:         _patchDay,
+  wireDayCard:      _wireDayCard,
+  renderQsPanel:    _renderQsPanel,
+  renderReadiness:  renderReadinessPanel,
+  renderSessionRing: _renderSessionRing,
+  renderDayReadiness,
+  showDay,
+  updateProgress,
+  updateTotalHours,
+  updateHeaderTitle,
+  updateMobileExamBanner,
+  updateMobileDayNav,
+  updateApiIndicator,
+  updateSourcesBtn,
+  applyTheme,
+  toggleTheme,
+  applyAccentColor,
+  showWelcomeModal,
+  closeWelcomeModal,
+  toggleTutor,
+  buildNavTooltip:  _showNavTooltip,
+  escHtml,
+});
+
+/** Study session logic: answers, questions, skips, readiness, notes. */
+const MnestiSession = Object.freeze({
+  startDay:         startDaySession,
+  toggleSkip,
+  toggleDoneQ,
+  saveAnswer,
+  saveNotes,
+  advanceQuestion,
+  skipQuestion,
+  resumeSkipped:    resumeSkippedQuestion,
+  autoSetStatus:    _autoSetStatus,
+  calcReadiness:    calcDayReadiness,
+  calculateGlobalReadiness,
+  isDayUnlocked,
+  isDayNavigable,
+  getActiveDays,
+  getObjective,
+  setObjective,
+  getExamInfo,
+  saveExamInfo,
+  startVoiceDictation,
+  pauseVoiceDictation,
+  stopVoiceDictation,
+  startBrainDump,
+  startQuiz,
+  startMemoryCards: typeof startMemoryCards !== 'undefined' ? startMemoryCards : undefined,
+  nextUnverifiedIdx: _nextUnverifiedIdx,
+});
+
+// Expose namespaces globally for console inspection and future test harnesses
+window.MnestiTimer   = MnestiTimer;
+window.MnestiSync    = MnestiSync;
+window.MnestiAI      = MnestiAI;
+window.MnestiUI      = MnestiUI;
+window.MnestiSession = MnestiSession;

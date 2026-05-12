@@ -60,7 +60,7 @@
   - **Fix:** Estrarre il blocco `<style>` in `app.css` e il blocco `<script>` in `app.js`. In `app.html` rimane solo `<link rel="stylesheet" href="app.css">` e `<script src="app.js" defer>`. Aggiornare il Service Worker per cachare i tre file separatamente.
   - **Effort:** ~2h
 
-- [ ] **[OPT-09] Namespace delle 311 funzioni globali in moduli**
+- [x] **[OPT-09] Namespace delle 311 funzioni globali in moduli**
   - **File:** `app.html` (da fare dopo OPT-08)
   - **Problema:** 311 funzioni nello scope globale. Qualsiasi funzione può essere sovrascritta. Impossibile fare testing unitario.
   - **Fix:** Raggruppare in namespace object: `const MnestiSession = {...}`, `const MnestiSync = {...}`, `const MnestiAI = {...}`, `const MnestiUI = {...}`, `const MnestiTimer = {...}`. Fare un alias globale per retrocompatibilità dove necessario: `window.verifyAnswer = MnestiSession.verify`.
