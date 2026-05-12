@@ -45,6 +45,37 @@
   </circle>
 </svg>
 </template>
+
+<!-- ── Day-card templates (OPT-10) ───────────────────────────────────────
+     Used by _buildDayCard() via cloneNode(true).
+     All dynamic text is set via textContent (auto-escaped) — zero XSS risk. -->
+<template id="day-rest-tpl">
+  <div class="day-header">
+    <div>
+      <div class="day-title"></div>
+      <div class="day-subtitle"></div>
+    </div>
+  </div>
+  <div class="rest-day">
+    <div class="big-label">RIPOSO</div>
+    <p class="rest-day-sub" style="color:var(--text-3);font-size:13px;"></p>
+  </div>
+</template>
+
+<template id="day-exam-tpl">
+  <div class="day-header">
+    <div>
+      <div class="day-title"></div>
+      <div class="day-subtitle"><span style="color:var(--accent)" class="exam-title-span"></span></div>
+    </div>
+  </div>
+  <div class="exam-day-content">
+    <div class="big-label">IN BOCCA AL LUPO</div>
+    <p class="exam-subtitle"></p>
+    <p style="margin-top:1rem;color:var(--text-3);font-size:12px;">Hai studiato bene. Fidati del lavoro fatto.</p>
+  </div>
+</template>
+
 <script>
 (function(){
   function fillSpinner(el) {

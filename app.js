@@ -2554,11 +2554,11 @@ function _renderQsPanel(dayId) {
       <div class="q-done-summary" id="done-q-${dayId}-${i}">
         <button class="q-done-toggle" onclick="toggleDoneQ('${dayId}', ${i})">
           <span class="q-done-grade-icon grade-${fb.grade || 'poor'}">${gradeIcon}</span>
-          <span class="q-done-text">${q.text}</span>
+          <span class="q-done-text">${escHtml(q.text)}</span>
           <span class="q-done-chevron">›</span>
         </button>
         <div class="q-done-improving-header">
-          <div class="q-type-badge">${q.type || 'domanda'}</div>
+          <div class="q-type-badge">${escHtml(q.type || 'domanda')}</div>
           <div class="q-full-text">${escHtml(q.text)}</div>
         </div>
         <div class="q-done-body">
@@ -2695,7 +2695,7 @@ function _renderQsPanel(dayId) {
     <div class="q-active-card">
       <div class="q-active-label">In corso — ${activeIdx + 1} di ${qList.length}</div>
       <div class="q-top">
-        <div class="q-text">${q.text}</div>
+        <div class="q-text">${escHtml(q.text)}</div>
         <div class="q-type">${_qTypeBadge(q.type)}</div>
       </div>
       ${_srcTagHtml}
@@ -2727,7 +2727,7 @@ function _renderQsPanel(dayId) {
         <div class="q-verify-row${canVerify ? ' visible' : ''}" id="verify-row-${dayId}-${activeIdx}">
           <button class="q-verify-btn" id="verify-${dayId}-${activeIdx}"
             ${canVerify ? '' : 'disabled'}
-            onclick="verifyAnswer('${dayId}', ${activeIdx}, '${q.text.replace(/'/g,"\\'")}', '${q.type}')">
+            onclick="verifyAnswer('${dayId}', ${activeIdx}, '${q.text.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}', '${(q.type||'').replace(/'/g,"\\'")}')">
             <i data-lucide="check-circle" style="width:14px;height:14px;stroke-width:2.2;flex-shrink:0"></i>
             Verifica risposta
           </button>
@@ -2946,50 +2946,79 @@ function _dayHash(day) {
 
 // ── Single-card factory ───────────────────────────────────────
 // Builds and returns one .day-block element; does NOT touch the DOM.
+// ── _buildDayCard(day) ────────────────────────────────────────
+// Rest/exam cards use <template> + cloneNode (textContent = auto-escaped).
+// Study cards use template literals with explicit escHtml() on all user values.
 function _buildDayCard(day) {
   const block = document.createElement('div');
   block.className = 'day-block';
   block.id = 'block-' + day.id;
 
   if (day.type === 'rest') {
-    block.innerHTML = `
-      <div class="day-header">
-        <div>
-          <div class="day-title">${day.label}</div>
-          <div class="day-subtitle">${day.title}</div>
-        </div>
-      </div>
-      <div class="rest-day">
-        <div class="big-label">RIPOSO</div>
-        <p style="color:var(--text-3);font-size:13px;">${day.subtitle}</p>
-      </div>`;
+    // ── <template> clone — zero XSS risk, all values via textContent ──
+    const tpl = document.getElementById('day-rest-tpl');
+    if (tpl) {
+      const frag = tpl.content.cloneNode(true);
+      frag.querySelector('.day-title').textContent    = day.label;
+      frag.querySelector('.day-subtitle').textContent = day.title;
+      frag.querySelector('.rest-day-sub').textContent = day.subtitle;
+      block.appendChild(frag);
+    } else {
+      // Fallback if template is missing (e.g. partial load)
+      block.innerHTML = `
+        <div class="day-header"><div>
+          <div class="day-title">${escHtml(day.label)}</div>
+          <div class="day-subtitle">${escHtml(day.title)}</div>
+        </div></div>
+        <div class="rest-day">
+          <div class="big-label">RIPOSO</div>
+          <p style="color:var(--text-3);font-size:13px;">${escHtml(day.subtitle)}</p>
+        </div>`;
+    }
+
   } else if (day.type === 'exam') {
-    block.innerHTML = `
-      <div class="day-header">
-        <div>
-          <div class="day-title">${day.label}</div>
-          <div class="day-subtitle"><span style="color:var(--accent)">${day.title}</span></div>
-        </div>
-      </div>
-      <div class="exam-day-content">
-        <div class="big-label">IN BOCCA AL LUPO</div>
-        <p>${day.subtitle}</p>
-        <p style="margin-top:1rem;color:var(--text-3);font-size:12px;">Hai studiato bene. Fidati del lavoro fatto.</p>
-      </div>`;
+    // ── <template> clone ──────────────────────────────────────
+    const tpl = document.getElementById('day-exam-tpl');
+    if (tpl) {
+      const frag = tpl.content.cloneNode(true);
+      frag.querySelector('.day-title').textContent        = day.label;
+      frag.querySelector('.exam-title-span').textContent  = day.title;
+      frag.querySelector('.exam-subtitle').textContent    = day.subtitle;
+      block.appendChild(frag);
+    } else {
+      block.innerHTML = `
+        <div class="day-header"><div>
+          <div class="day-title">${escHtml(day.label)}</div>
+          <div class="day-subtitle"><span style="color:var(--accent)">${escHtml(day.title)}</span></div>
+        </div></div>
+        <div class="exam-day-content">
+          <div class="big-label">IN BOCCA AL LUPO</div>
+          <p>${escHtml(day.subtitle)}</p>
+          <p style="margin-top:1rem;color:var(--text-3);font-size:12px;">Hai studiato bene. Fidati del lavoro fatto.</p>
+        </div>`;
+    }
+
   } else {
+    // ── Study day — template literal with explicit escHtml() ──
     const dayState = state[day.id] || {};
     const notes    = dayState.notes || '';
     const isAiQ    = !!dayState.aiQuestions;
     const _statusLabel = { done: '✓ Completata', partial: '· In corso', skip: '✕ Saltata' };
     const _curStatus   = dayState.status || 'none';
     const _skipBtnTxt  = dayState.status === 'skip' ? '↩ Annulla skip' : 'Salta giornata';
+    // Escape plan-level strings used in HTML context
+    const _eLbl  = escHtml(day.label);
+    const _eSub  = escHtml(day.subtitle);
+    const _eTitle = escHtml(day.title);
+    // Escape title for use inside onclick attribute (single-quote context)
+    const _titleAttr = day.title.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
 
     block.innerHTML = `
       <div class="day-header">
         <div>
-          <div class="day-title">${day.label}</div>
-          <div class="day-subtitle">${day.subtitle}</div>
-          <div class="day-name"><span>${day.title}</span></div>
+          <div class="day-title">${_eLbl}</div>
+          <div class="day-subtitle">${_eSub}</div>
+          <div class="day-name"><span>${_eTitle}</span></div>
         </div>
         <div class="day-status-row">
           <span class="day-status-badge ${_curStatus}" id="statusBadge-${day.id}">${_statusLabel[_curStatus] || ''}</span>
@@ -3007,7 +3036,7 @@ function _buildDayCard(day) {
           <div class="timer-saved">Sessioni salvate: <span id="timerSaved-${day.id}">${formatSeconds(dayState.totalSeconds || 0)}</span></div>
         </div>
       </div>
-      ${day.tip ? `<div class="tip-box"><div class="tip-label"><i data-lucide="lightbulb" style="width:11px;height:11px;stroke-width:2.2;flex-shrink:0"></i>Metodo di studio</div><div class="tip-text">${day.tip}</div></div>` : ''}
+      ${day.tip ? `<div class="tip-box"><div class="tip-label"><i data-lucide="lightbulb" style="width:11px;height:11px;stroke-width:2.2;flex-shrink:0"></i>Metodo di studio</div><div class="tip-text">${escHtml(day.tip)}</div></div>` : ''}
       <div class="day-content-row">
         <div class="section-card day-content-main">
           <div class="section-head">
@@ -3026,12 +3055,12 @@ function _buildDayCard(day) {
                 Cards Autori
               </button>
               <button class="genq-launch-btn" id="bd-btn-${day.id}"
-                onclick="startBrainDump('${day.id}', '${day.title.replace(/'/g, "\\'")}')">
+                onclick="startBrainDump('${day.id}', '${_titleAttr}')">
                 <i data-lucide="brain" style="width:11px;height:11px;stroke-width:2;flex-shrink:0"></i>
                 Brain Dump${(dayState.brainDumpBest != null) ? `<span class="bd-best-score">${dayState.brainDumpBest}%</span>` : ''}
               </button>
               <button class="quiz-launch-btn" id="quiz-btn-${day.id}"
-                onclick="startQuiz('${day.id}', '${day.title.replace(/'/g, "\\'")}')">
+                onclick="startQuiz('${day.id}', '${_titleAttr}')">
                 <i data-lucide="zap" style="width:12px;height:12px;stroke-width:2.2;fill:currentColor;flex-shrink:0"></i>
                 Genera Quiz
               </button>
@@ -3042,7 +3071,7 @@ function _buildDayCard(day) {
             <div id="genq-wrap-${day.id}" style="display:none"></div>
             <div class="notes-area" style="margin-top:14px;">
               <label>Note e punti deboli emersi</label>
-              <textarea placeholder="Scrivi qui cosa non ricordavi, cosa devi ripassare, concetti da approfondire..." onchange="saveNotes('${day.id}', this.value)">${notes}</textarea>
+              <textarea placeholder="Scrivi qui cosa non ricordavi, cosa devi ripassare, concetti da approfondire..." onchange="saveNotes('${day.id}', this.value)">${escHtml(notes)}</textarea>
             </div>
           </div>
         </div>

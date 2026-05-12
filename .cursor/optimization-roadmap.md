@@ -66,7 +66,7 @@
   - **Fix:** Raggruppare in namespace object: `const MnestiSession = {...}`, `const MnestiSync = {...}`, `const MnestiAI = {...}`, `const MnestiUI = {...}`, `const MnestiTimer = {...}`. Fare un alias globale per retrocompatibilità dove necessario: `window.verifyAnswer = MnestiSession.verify`.
   - **Effort:** ~4h
 
-- [ ] **[OPT-10] Sostituire template literals HTML con <template> + cloneNode**
+- [x] **[OPT-10] Sostituire template literals HTML con <template> + cloneNode**
   - **File:** `app.html` — funzione `buildDays()` e `_renderQsPanel()` (i due template più grandi)
   - **Problema:** 4.000+ char di HTML costruito con concatenazione stringhe JS. Nessun syntax highlight, nessun lint HTML, alto rischio XSS da interpolazione non escaped.
   - **Fix:** Aggiungere `<template id="day-card-tpl">` e `<template id="question-card-tpl">` nel HTML statico. In JS: `const tpl = document.getElementById('day-card-tpl').content.cloneNode(true)`. Popolare i campi con `querySelector` + `textContent`/`dataset`. Usare `escHtml()` esistente su tutti i valori utente.
