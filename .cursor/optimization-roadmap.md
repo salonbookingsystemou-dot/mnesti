@@ -46,7 +46,7 @@
 
 ## Performance
 
-- [ ] **[OPT-07] buildDays() dirty-flag: ricostruire solo la card modificata**
+- [x] **[OPT-07] buildDays() dirty-flag: ricostruire solo la card modificata**
   - **File:** `app.html` — funzione `buildDays()` e i suoi 7 punti di chiamata
   - **Problema:** `buildDays()` fa `main.innerHTML = ''` e ricostruisce tutti i giorni. Con 30 giorni genera ~800 nodi DOM ogni interazione → jank su mobile.
   - **Fix:** Mantenere un `Map<dayId, HTMLElement>` delle card già create. Su modifica di un giorno, sostituire solo `container.replaceChild(newCard, oldCard)` invece di ricostruire tutto. `buildDays()` completo solo al primo render.

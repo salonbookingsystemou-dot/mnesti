@@ -9048,11 +9048,150 @@ function _qTypeBadge(type) {
   return `<span class="quiz-diff-badge diff-${m.diff}">${diffLabel}</span><span class="quiz-bloom-tag">${m.icon} ${m.bloom}</span>`;
 }
 
-function buildDays() {
-  const main = document.getElementById('mainContent');
-  main.innerHTML = ''; // reset
+// ── Dirty-flag card cache ─────────────────────────────────────
+// Avoids full DOM rebuild: only cards whose state actually changed get replaced.
+// _dayCardCache: dayId → .day-block HTMLElement currently in the DOM
+// _dayStateHash: dayId → JSON snapshot used to detect changes
+const _dayCardCache = new Map();
+const _dayStateHash = new Map();
+
+function _dayHash(day) {
+  // Covers both plan-level fields (title, sections…) and runtime state (answers, status…)
+  return JSON.stringify({
+    p: { title: day.title, subtitle: day.subtitle, type: day.type,
+         sections: day.sections, tip: day.tip },
+    s: state[day.id] || {}
+  });
+}
+
+// ── Single-card factory ───────────────────────────────────────
+// Builds and returns one .day-block element; does NOT touch the DOM.
+function _buildDayCard(day) {
+  const block = document.createElement('div');
+  block.className = 'day-block';
+  block.id = 'block-' + day.id;
+
+  if (day.type === 'rest') {
+    block.innerHTML = `
+      <div class="day-header">
+        <div>
+          <div class="day-title">${day.label}</div>
+          <div class="day-subtitle">${day.title}</div>
+        </div>
+      </div>
+      <div class="rest-day">
+        <div class="big-label">RIPOSO</div>
+        <p style="color:var(--text-3);font-size:13px;">${day.subtitle}</p>
+      </div>`;
+  } else if (day.type === 'exam') {
+    block.innerHTML = `
+      <div class="day-header">
+        <div>
+          <div class="day-title">${day.label}</div>
+          <div class="day-subtitle"><span style="color:var(--accent)">${day.title}</span></div>
+        </div>
+      </div>
+      <div class="exam-day-content">
+        <div class="big-label">IN BOCCA AL LUPO</div>
+        <p>${day.subtitle}</p>
+        <p style="margin-top:1rem;color:var(--text-3);font-size:12px;">Hai studiato bene. Fidati del lavoro fatto.</p>
+      </div>`;
+  } else {
+    const dayState = state[day.id] || {};
+    const notes    = dayState.notes || '';
+    const isAiQ    = !!dayState.aiQuestions;
+    const _statusLabel = { done: '✓ Completata', partial: '· In corso', skip: '✕ Saltata' };
+    const _curStatus   = dayState.status || 'none';
+    const _skipBtnTxt  = dayState.status === 'skip' ? '↩ Annulla skip' : 'Salta giornata';
+
+    block.innerHTML = `
+      <div class="day-header">
+        <div>
+          <div class="day-title">${day.label}</div>
+          <div class="day-subtitle">${day.subtitle}</div>
+          <div class="day-name"><span>${day.title}</span></div>
+        </div>
+        <div class="day-status-row">
+          <span class="day-status-badge ${_curStatus}" id="statusBadge-${day.id}">${_statusLabel[_curStatus] || ''}</span>
+          <button class="day-skip-btn" id="skipBtn-${day.id}" onclick="toggleSkip('${day.id}')">${_skipBtnTxt}</button>
+        </div>
+      </div>
+      <div class="timer-block" id="timer-${day.id}">
+        <div class="timer-display" id="timerDisplay-${day.id}">00:00:00</div>
+        <div class="timer-controls">
+          <button class="timer-btn timer-resume-btn" id="timerResumeBtn-${day.id}" onclick="timerResume('${day.id}')" style="display:none"><i data-lucide="play" style="width:11px;height:11px;stroke-width:2.2;fill:currentColor"></i> Riprendi</button>
+          <button class="timer-btn pause-btn" id="timerPauseBtn-${day.id}" onclick="timerPause('${day.id}')" style="display:none"><i data-lucide="pause" style="width:11px;height:11px;stroke-width:2.2;fill:currentColor"></i> Pausa</button>
+          <button class="timer-btn stop-btn" id="timerStopBtn-${day.id}" onclick="timerStop('${day.id}')" style="display:none"><i data-lucide="square" style="width:10px;height:10px;stroke-width:2.2;fill:currentColor"></i> Chiudi sessione</button>
+        </div>
+        <div class="timer-meta">
+          <div class="timer-saved">Sessioni salvate: <span id="timerSaved-${day.id}">${formatSeconds(dayState.totalSeconds || 0)}</span></div>
+        </div>
+      </div>
+      ${day.tip ? `<div class="tip-box"><div class="tip-label"><i data-lucide="lightbulb" style="width:11px;height:11px;stroke-width:2.2;flex-shrink:0"></i>Metodo di studio</div><div class="tip-text">${day.tip}</div></div>` : ''}
+      <div class="day-content-row">
+        <div class="section-card day-content-main">
+          <div class="section-head">
+            <div class="section-head-title-row">
+              <span class="section-tag tag-retrieval">retrieval practice</span>
+              <span class="section-title">Domande per questa giornata</span>
+            </div>
+            <div class="section-head-actions" id="section-actions-${day.id}" style="${dayState.sessionStarted ? '' : 'display:none'}">
+              ${day.questions ? `<button class="genq-launch-btn" id="genq-btn-${day.id}" onclick="generateQuestionsFromSource('${day.id}')">
+                <i data-lucide="sparkles" style="width:11px;height:11px;stroke-width:2;flex-shrink:0"></i>
+                ${isAiQ ? 'Aggiungi domande' : 'Genera domande'}
+              </button>` : ''}
+              <button class="genq-launch-btn" id="mc-btn-${day.id}"
+                onclick="startMemoryCards('${day.id}')">
+                <i data-lucide="layers" style="width:11px;height:11px;stroke-width:2;flex-shrink:0"></i>
+                Cards Autori
+              </button>
+              <button class="genq-launch-btn" id="bd-btn-${day.id}"
+                onclick="startBrainDump('${day.id}', '${day.title.replace(/'/g, "\\'")}')">
+                <i data-lucide="brain" style="width:11px;height:11px;stroke-width:2;flex-shrink:0"></i>
+                Brain Dump${(dayState.brainDumpBest != null) ? `<span class="bd-best-score">${dayState.brainDumpBest}%</span>` : ''}
+              </button>
+              <button class="quiz-launch-btn" id="quiz-btn-${day.id}"
+                onclick="startQuiz('${day.id}', '${day.title.replace(/'/g, "\\'")}')">
+                <i data-lucide="zap" style="width:12px;height:12px;stroke-width:2.2;fill:currentColor;flex-shrink:0"></i>
+                Genera Quiz
+              </button>
+            </div>
+          </div>
+          <div class="section-body">
+            <div id="qs-panel-${day.id}"></div>
+            <div id="genq-wrap-${day.id}" style="display:none"></div>
+            <div class="notes-area" style="margin-top:14px;">
+              <label>Note e punti deboli emersi</label>
+              <textarea placeholder="Scrivi qui cosa non ricordavi, cosa devi ripassare, concetti da approfondire..." onchange="saveNotes('${day.id}', this.value)">${notes}</textarea>
+            </div>
+          </div>
+        </div>
+        <div class="day-ring-aside" id="day-ring-${day.id}" style="display:none"></div>
+      </div>`;
+  }
+  return block;
+}
+
+// ── Post-insert wiring for a day card ────────────────────────
+function _wireDayCard(day) {
+  if (day.type === 'rest' || day.type === 'exam') return;
+  _renderQsPanel(day.id);
+  const _ds = state[day.id] || {};
+  if (_ds.sessionStarted || Object.keys(_ds.feedbacks || {}).length > 0) {
+    _renderSessionRing(day.id, false);
+  }
+}
+
+// ── buildDays(opts) ────────────────────────────────────────────
+// opts.force = true  → always do a full DOM rebuild (clears cache).
+// Default            → dirty-flag: only replace cards whose state changed.
+// First render is always a full build (cache is empty).
+function buildDays(opts) {
+  const force = opts && opts.force;
+  const main  = document.getElementById('mainContent');
   const activeDays = getActiveDays();
 
+  // ── Empty-plan state ──────────────────────────────────────
   if (!activeDays.length) {
     main.innerHTML = `
       <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 24px;text-align:center;gap:16px;min-height:300px;">
@@ -9065,141 +9204,76 @@ function buildDays() {
           Crea il mio piano →
         </button>
       </div>`;
+    _dayCardCache.clear();
+    _dayStateHash.clear();
     if (typeof lucide !== 'undefined') lucide.createIcons();
     return;
   }
 
+  // ── Detect plan-structure change (different day set) ──────
+  // If the active day IDs no longer match what's cached, force a full rebuild.
+  const activeIds = activeDays.map(d => d.id).join(',');
+  const cachedIds = [..._dayCardCache.keys()].join(',');
+  const structureChanged = activeIds !== cachedIds;
+
+  if (force || structureChanged || _dayCardCache.size === 0) {
+    // ── Full rebuild ────────────────────────────────────────
+    main.innerHTML = '';
+    _dayCardCache.clear();
+    _dayStateHash.clear();
+    activeDays.forEach(day => {
+      const block = _buildDayCard(day);
+      main.appendChild(block);
+      _dayCardCache.set(day.id, block);
+      _dayStateHash.set(day.id, _dayHash(day));
+      _wireDayCard(day);
+    });
+    lucide.createIcons();
+    return;
+  }
+
+  // ── Incremental update (dirty-flag) ───────────────────────
+  let anyChanged = false;
   activeDays.forEach(day => {
-    const block = document.createElement('div');
-    block.className = 'day-block';
-    block.id = 'block-' + day.id;
+    const hash = _dayHash(day);
+    if (_dayStateHash.get(day.id) === hash) return; // nothing changed for this card
 
-    if (day.type === 'rest') {
-      block.innerHTML = `
-        <div class="day-header">
-          <div>
-            <div class="day-title">${day.label}</div>
-            <div class="day-subtitle">${day.title}</div>
-          </div>
-        </div>
-        <div class="rest-day">
-          <div class="big-label">RIPOSO</div>
-          <p style="color:var(--text-3);font-size:13px;">${day.subtitle}</p>
-        </div>`;
-    } else if (day.type === 'exam') {
-      block.innerHTML = `
-        <div class="day-header">
-          <div>
-            <div class="day-title">${day.label}</div>
-            <div class="day-subtitle"><span style="color:var(--accent)">${day.title}</span></div>
-          </div>
-        </div>
-        <div class="exam-day-content">
-          <div class="big-label">IN BOCCA AL LUPO</div>
-          <p>${day.subtitle}</p>
-          <p style="margin-top:1rem;color:var(--text-3);font-size:12px;">Hai studiato bene. Fidati del lavoro fatto.</p>
-        </div>`;
+    anyChanged = true;
+    const newCard = _buildDayCard(day);
+    const oldCard = _dayCardCache.get(day.id);
+    if (oldCard && oldCard.parentNode === main) {
+      main.replaceChild(newCard, oldCard);
     } else {
-      const dayState = state[day.id] || {};
-      const checks = dayState.checks || {};
-      const notes = dayState.notes || '';
-      const answers = dayState.answers || {};
-      const feedbacks = dayState.feedbacks || {};
-
-      let sectionsHtml = (day.sections || []).map(s => `
-        <div class="section-card">
-          <div class="section-head">
-            <span class="section-tag tag-${s.tag}">${s.tag}</span>
-            <span class="section-title">${s.title}</span>
-          </div>
-          <div class="section-body">
-            <div class="lesson-ref">${s.ref}</div>
-          </div>
-        </div>`).join('');
-
-      const isAiQ = !!dayState.aiQuestions;
-
-      const _statusLabel = { done: '✓ Completata', partial: '· In corso', skip: '✕ Saltata' };
-      const _curStatus   = dayState.status || 'none';
-      const _skipBtnTxt  = dayState.status === 'skip' ? '↩ Annulla skip' : 'Salta giornata';
-
-      block.innerHTML = `
-        <div class="day-header">
-          <div>
-            <div class="day-title">${day.label}</div>
-            <div class="day-subtitle">${day.subtitle}</div>
-            <div class="day-name"><span>${day.title}</span></div>
-          </div>
-          <div class="day-status-row">
-            <span class="day-status-badge ${_curStatus}" id="statusBadge-${day.id}">${_statusLabel[_curStatus] || ''}</span>
-            <button class="day-skip-btn" id="skipBtn-${day.id}" onclick="toggleSkip('${day.id}')">${_skipBtnTxt}</button>
-          </div>
-        </div>
-        <div class="timer-block" id="timer-${day.id}">
-          <div class="timer-display" id="timerDisplay-${day.id}">00:00:00</div>
-          <div class="timer-controls">
-            <button class="timer-btn timer-resume-btn" id="timerResumeBtn-${day.id}" onclick="timerResume('${day.id}')" style="display:none"><i data-lucide="play" style="width:11px;height:11px;stroke-width:2.2;fill:currentColor"></i> Riprendi</button>
-            <button class="timer-btn pause-btn" id="timerPauseBtn-${day.id}" onclick="timerPause('${day.id}')" style="display:none"><i data-lucide="pause" style="width:11px;height:11px;stroke-width:2.2;fill:currentColor"></i> Pausa</button>
-            <button class="timer-btn stop-btn" id="timerStopBtn-${day.id}" onclick="timerStop('${day.id}')" style="display:none"><i data-lucide="square" style="width:10px;height:10px;stroke-width:2.2;fill:currentColor"></i> Chiudi sessione</button>
-          </div>
-          <div class="timer-meta">
-            <div class="timer-saved">Sessioni salvate: <span id="timerSaved-${day.id}">${formatSeconds(dayState.totalSeconds || 0)}</span></div>
-          </div>
-        </div>
-        ${day.tip ? `<div class="tip-box"><div class="tip-label"><i data-lucide="lightbulb" style="width:11px;height:11px;stroke-width:2.2;flex-shrink:0"></i>Metodo di studio</div><div class="tip-text">${day.tip}</div></div>` : ''}
-        <div class="day-content-row">
-          <div class="section-card day-content-main">
-            <div class="section-head">
-              <div class="section-head-title-row">
-                <span class="section-tag tag-retrieval">retrieval practice</span>
-                <span class="section-title">Domande per questa giornata</span>
-              </div>
-              <div class="section-head-actions" id="section-actions-${day.id}" style="${dayState.sessionStarted ? '' : 'display:none'}">
-                ${day.questions ? `<button class="genq-launch-btn" id="genq-btn-${day.id}" onclick="generateQuestionsFromSource('${day.id}')">
-                  <i data-lucide="sparkles" style="width:11px;height:11px;stroke-width:2;flex-shrink:0"></i>
-                  ${isAiQ ? 'Aggiungi domande' : 'Genera domande'}
-                </button>` : ''}
-                <button class="genq-launch-btn" id="mc-btn-${day.id}"
-                  onclick="startMemoryCards('${day.id}')">
-                  <i data-lucide="layers" style="width:11px;height:11px;stroke-width:2;flex-shrink:0"></i>
-                  Cards Autori
-                </button>
-                <button class="genq-launch-btn" id="bd-btn-${day.id}"
-                  onclick="startBrainDump('${day.id}', '${day.title.replace(/'/g, "\\'")}')">
-                  <i data-lucide="brain" style="width:11px;height:11px;stroke-width:2;flex-shrink:0"></i>
-                  Brain Dump${(dayState.brainDumpBest != null) ? `<span class="bd-best-score">${dayState.brainDumpBest}%</span>` : ''}
-                </button>
-                <button class="quiz-launch-btn" id="quiz-btn-${day.id}"
-                  onclick="startQuiz('${day.id}', '${day.title.replace(/'/g, "\\'")}')">
-                  <i data-lucide="zap" style="width:12px;height:12px;stroke-width:2.2;fill:currentColor;flex-shrink:0"></i>
-                  Genera Quiz
-                </button>
-              </div>
-            </div>
-            <div class="section-body">
-              <div id="qs-panel-${day.id}"></div>
-              <div id="genq-wrap-${day.id}" style="display:none"></div>
-              <div class="notes-area" style="margin-top:14px;">
-                <label>Note e punti deboli emersi</label>
-                <textarea placeholder="Scrivi qui cosa non ricordavi, cosa devi ripassare, concetti da approfondire..." onchange="saveNotes('${day.id}', this.value)">${notes}</textarea>
-              </div>
-            </div>
-          </div>
-          <div class="day-ring-aside" id="day-ring-${day.id}" style="display:none"></div>
-        </div>`;
+      main.appendChild(newCard);
     }
-
-    main.appendChild(block);
-    // Populate the dynamic questions panel after block is in DOM
-    if (day.type !== 'rest' && day.type !== 'exam') {
-      _renderQsPanel(day.id);
-      // Show ring if session already started or has any progress
-      const _ds = state[day.id] || {};
-      if (_ds.sessionStarted || Object.keys(_ds.feedbacks || {}).length > 0) {
-        _renderSessionRing(day.id, false);
-      }
-    }
+    _dayCardCache.set(day.id, newCard);
+    _dayStateHash.set(day.id, hash);
+    _wireDayCard(day);
   });
+  if (anyChanged) lucide.createIcons();
+}
+
+// ── _patchDay(dayId) ──────────────────────────────────────────
+// Targeted single-card refresh — use instead of buildDays() when only
+// one day's data changed (e.g. after generateQuestionsFromSource).
+function _patchDay(dayId) {
+  const activeDays = getActiveDays();
+  const day = activeDays.find(d => d.id === dayId);
+  if (!day) { buildDays(); return; } // fallback: full rebuild
+
+  const main    = document.getElementById('mainContent');
+  const newCard = _buildDayCard(day);
+  const oldCard = _dayCardCache.get(dayId) || document.getElementById('block-' + dayId);
+
+  if (oldCard && oldCard.parentNode === main) {
+    main.replaceChild(newCard, oldCard);
+  } else {
+    buildDays(); return; // card not found — fall back to full rebuild
+  }
+
+  _dayCardCache.set(dayId, newCard);
+  _dayStateHash.set(dayId, _dayHash(day));
+  _wireDayCard(day);
   lucide.createIcons();
 }
 
@@ -12969,7 +13043,7 @@ function removeSource(id) {
   saveState();
   renderSourcesList();
   updateSourcesBtn();
-  buildDays();
+  buildDays({ force: true }); // plan structure may have changed
   buildNav();
 }
 
@@ -14124,7 +14198,7 @@ OBBLIGATORIO: includi "sourceRef" per ogni domanda con sezione/slide e estratto 
     // is up to date before any visibility-change pull can overwrite local state.
     TimerRegistry.clear('sync');
     if (typeof window._syncToSupabase === 'function') window._syncToSupabase();
-    buildDays();
+    _patchDay(dayId); // targeted single-card refresh — avoids full DOM rebuild
     buildNav();
     showDay(dayId);
   } catch(e) {
@@ -14314,7 +14388,7 @@ function updateGenPlanStatus() {
 function resetAiPlan() {
   if (!confirm('Ripristinare il piano predefinito? Il piano generato dall\'AI verrà cancellato (le risposte date restano).')) return;
   localStorage.removeItem('psico_ai_plan');
-  buildDays();
+  buildDays({ force: true }); // completely new plan structure
   buildNav();
   updateGenPlanStatus();
   const first = getActiveDays()[0];
@@ -14527,7 +14601,7 @@ REGOLE ASSOLUTE (non derogabili):
 
     // Rebuild UI — new plan starts fresh from day 1
     try { localStorage.removeItem('psico_last_day'); } catch(e) {}
-    buildDays();
+    buildDays({ force: true }); // completely new plan structure
     buildNav();
     updateGenPlanStatus();
     const first = getActiveDays()[0];
