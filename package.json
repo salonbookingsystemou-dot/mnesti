@@ -1,0 +1,14 @@
+{
+  "name": "mnesti-blog-publisher",
+  "version": "1.0.0",
+  "description": "Automated daily blog publisher for mnesti.it",
+  "scripts": {
+    "publish": "node scripts/publish.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

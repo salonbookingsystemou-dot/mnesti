@@ -1,6 +1,10 @@
 # Test scripts con chiavi — non committare
 test-stripe.js
 
+# Node.js
+node_modules/
+package-lock.json
+
 # Supabase local
 supabase/.temp/
 .env

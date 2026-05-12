@@ -1,0 +1,56 @@
+name: Pubblica articolo giornaliero
+
+on:
+  # Ogni giorno alle 09:00 ora italiana (UTC+2 → 07:00 UTC)
+  schedule:
+    - cron: '0 7 * * *'
+
+  # Trigger manuale dalla tab Actions di GitHub (utile per test e recupero)
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write   # Necessario per git push
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Usa GITHUB_TOKEN per poter fare push
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Installa dipendenze
+        run: npm ci
+
+      - name: Genera e pubblica articolo
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: node scripts/publish.js
+
+      - name: Controlla se ci sono modifiche
+        id: changes
+        run: |
+          git diff --quiet && git diff --staged --quiet \
+            && echo "changed=false" >> "$GITHUB_OUTPUT" \
+            || echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Commit e push
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config user.email "publisher@mnesti.it"
+          git config user.name "Mnesti Publisher"
+          git add \
+            "*.html" \
+            sitemap.xml \
+            blog-queue.json
+          git commit -m "blog: nuovo articolo quotidiano"
+          git push
