@@ -253,12 +253,6 @@
            onerror="this.src='logo-mark.png';this.onerror=null;this.style.height='20px'">
     </div>
 
-    <!-- Step dots -->
-    <div class="ob-dots">
-      <div class="ob-dot active" id="obDot1"></div>
-      <div class="ob-dot"       id="obDot2"></div>
-    </div>
-
     <!-- ══ STEP 1 — Welcome / Explainer ══ -->
     <div class="ob-s1" id="obS1">
 
@@ -312,10 +306,17 @@
     <!-- ══ STEP 2 — Setup form ══ -->
     <div class="ob-s2" id="obS2" style="display:none">
 
-      <button class="ob-s2-back" onclick="_obGoStep1()">
-        <i data-lucide="arrow-left" style="width:13px;height:13px;stroke-width:2.5"></i>
-        Indietro
-      </button>
+      <!-- Topbar: back + step dots sulla stessa riga -->
+      <div class="ob-s2-topbar">
+        <button class="ob-s2-back" onclick="_obGoStep1()">
+          <i data-lucide="arrow-left" style="width:13px;height:13px;stroke-width:2.5"></i>
+          Indietro
+        </button>
+        <div class="ob-dots">
+          <div class="ob-dot done"   id="obDot1"></div>
+          <div class="ob-dot active" id="obDot2"></div>
+        </div>
+      </div>
 
       <h2 class="ob-s2-headline">Configura il tuo esame</h2>
       <p class="ob-s2-sub">

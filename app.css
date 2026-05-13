@@ -4558,16 +4558,16 @@
   @media (max-width: 600px) { .ob-box { padding: 36px 20px 32px; margin: 24px auto; } }
 
   /* Logo */
-  .ob-logo { margin-bottom: 40px; }
+  .ob-logo { margin-bottom: 28px; }
   .ob-logo-img {
     height: 22px; width: auto; object-fit: contain;
     filter: invert(1);
   }
   [data-theme="light"] .ob-logo-img { filter: none; }
 
-  /* Step dots */
+  /* Step dots (ora dentro ob-s2-topbar) */
   .ob-dots {
-    display: flex; gap: 7px; align-items: center; margin-bottom: 36px;
+    display: flex; gap: 7px; align-items: center;
   }
   .ob-dot {
     width: 7px; height: 7px; border-radius: 50%;
@@ -4632,10 +4632,14 @@
 
   /* ── Step 2 ── */
   .ob-s2 { animation: ob-step-in 0.28s ease; }
+  .ob-s2-topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 28px;
+  }
   .ob-s2-back {
     display: inline-flex; align-items: center; gap: 6px;
     font-size: 12px; color: var(--text-3); cursor: pointer;
-    margin-bottom: 32px; border: none; background: none;
+    border: none; background: none;
     padding: 0; font-family: inherit; transition: color 0.15s;
   }
   .ob-s2-back:hover { color: var(--text-1); }
