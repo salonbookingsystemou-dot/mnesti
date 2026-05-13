@@ -43,9 +43,9 @@
     "icon": "💡",
     "ctaTitle": "Mnesti ti aiuta a capire, non solo a memorizzare",
     "ctaText": "Le domande aperte di Mnesti ti forzano a spiegare i concetti a parole tue, esattamente come il metodo Feynman. Primo esame gratis.",
-    "status": "pending",
-    "date": null,
-    "publishedAt": null
+    "status": "published",
+    "date": "2026-05-13",
+    "publishedAt": "2026-05-13T09:00:00+02:00"
   },
   {
     "slug": "blog-come-fare-riassunti",

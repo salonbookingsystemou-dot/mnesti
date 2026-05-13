@@ -63,4 +63,13 @@
     <priority>0.7</priority>
   </url>
 
+
+  <!-- Il Metodo Feynman per studiare: spiegalo come se non lo sapessi -->
+  <url>
+    <loc>https://mnesti.it/blog-metodo-feynman.html</loc>
+    <lastmod>2026-05-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
 </urlset>
