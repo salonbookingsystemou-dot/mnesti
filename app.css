@@ -4678,6 +4678,87 @@
   .ob-textarea { min-height: 100px; font-size: 13px; line-height: 1.6; }
   .ob-textarea-tall { min-height: 140px; }
 
+  /* ── Collapsible source items ── */
+  .ob-sources-section {
+    border-top: 1px solid var(--border); padding-top: 4px;
+    display: flex; flex-direction: column;
+  }
+  .ob-source-item {
+    border: 1px solid var(--border); border-radius: 12px;
+    overflow: hidden; transition: border-color 0.2s; margin-top: 8px;
+  }
+  .ob-source-item.open,
+  .ob-source-item.checked-state {
+    border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  }
+  .ob-source-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 14px; cursor: pointer; transition: background 0.15s;
+    user-select: none;
+  }
+  .ob-source-header:hover        { background: var(--surface2); }
+  .ob-source-item.open .ob-source-header { background: var(--surface2); }
+  .ob-source-check {
+    width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;
+    background: transparent; border: 1.5px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .ob-source-check.checked {
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+    border-color: var(--accent);
+  }
+  .ob-source-title  { font-size: 13px; font-weight: 600; color: var(--text-1); flex: 1; }
+  .ob-source-hint   { font-size: 11px; color: var(--accent); font-weight: 500; white-space: nowrap; }
+  .ob-source-chevron { color: var(--text-3); transition: transform 0.2s ease; }
+  .ob-source-item.open .ob-source-chevron { transform: rotate(180deg); }
+  .ob-source-body {
+    padding: 0 14px 14px; display: flex; flex-direction: column; gap: 8px;
+  }
+
+  /* ── Quality meter ── */
+  .ob-quality-meter {
+    padding: 14px 16px; border-radius: 12px;
+    background: var(--accent-bg);
+    border: 1.5px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  }
+  .ob-quality-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .ob-quality-label {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.09em; color: var(--accent);
+  }
+  .ob-quality-badge {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    border-radius: 5px; padding: 2px 7px;
+  }
+  .ob-quality-bars {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px;
+    margin-bottom: 8px;
+  }
+  .ob-quality-bar {
+    height: 6px; border-radius: 3px; background: var(--border);
+    transition: background 0.25s, opacity 0.25s;
+  }
+  .ob-quality-bar.active { background: var(--accent); opacity: 1; }
+  .ob-quality-bar.prev   { background: var(--accent); opacity: 0.55; }
+  .ob-quality-tiers {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px;
+    margin-bottom: 8px;
+  }
+  .ob-quality-tier-name { font-size: 11px; font-weight: 500; color: var(--text-3); transition: color 0.2s; }
+  .ob-quality-tier-sub  { font-size: 10px; color: var(--text-3); transition: color 0.2s; }
+  .ob-quality-tier.active .ob-quality-tier-name  { color: var(--accent); }
+  .ob-quality-tier.current .ob-quality-tier-name { font-weight: 700; }
+  .ob-quality-tier.active .ob-quality-tier-sub   { color: var(--text-2); }
+  .ob-quality-hint { font-size: 11px; color: var(--text-2); margin-top: 2px; }
+
+  /* Legacy ob-materials-section (kept for upload area styles) */
   .ob-materials-section {
     border-top: 1px solid var(--border); padding-top: 14px;
     display: flex; flex-direction: column; gap: 8px;

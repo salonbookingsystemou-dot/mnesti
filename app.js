@@ -653,10 +653,13 @@ function _obValidate() {
   const date        = (document.getElementById('obDate')?.value     || '').trim();
   const hasSyllabus = (document.getElementById('obSyllabus')?.value || '').trim().length > 20;
   const hasFiles    = _obPendingSources.some(s => s.status === 'done');
-  const cta = document.getElementById('obCta');
+  const cta         = document.getElementById('obCta');
   if (!cta) return;
 
   const hasExam = !!(subject && date);
+  cta.disabled  = !hasExam;
+
+  // Legacy hidden step bar (kept for JS compat)
   const s2 = document.getElementById('obStep2');
   const s3 = document.getElementById('obStep3');
   const s4 = document.getElementById('obStep4');
@@ -664,7 +667,87 @@ function _obValidate() {
   if (s3) s3.className = 'ob-step' + (hasSyllabus ? ' done' : '');
   if (s4) s4.className = 'ob-step' + (hasFiles    ? ' done' : '');
 
-  cta.disabled = !(hasExam && hasSyllabus && hasFiles);
+  // Source check-circle indicators
+  _obUpdateSourceCheck('obSylCheck',   hasSyllabus);
+  _obUpdateSourceCheck('obFilesCheck', hasFiles);
+
+  // Show/hide "+" hints
+  const sylHint   = document.getElementById('obSylHint');
+  const filesHint = document.getElementById('obFilesHint');
+  if (sylHint)   sylHint.style.display   = hasSyllabus ? 'none' : '';
+  if (filesHint) filesHint.style.display = hasFiles    ? 'none' : '';
+
+  // Accent border on checked source items
+  const sylItem   = document.getElementById('obSylItem');
+  const filesItem = document.getElementById('obFilesItem');
+  if (sylItem)   sylItem.classList.toggle('checked-state',   hasSyllabus);
+  if (filesItem) filesItem.classList.toggle('checked-state', hasFiles);
+
+  // Quality meter
+  _obUpdateQuality(hasExam, hasSyllabus, hasFiles);
+}
+
+function _obUpdateSourceCheck(id, filled) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (filled) {
+    el.classList.add('checked');
+    el.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+  } else {
+    el.classList.remove('checked');
+    el.innerHTML = '';
+  }
+}
+
+function _obUpdateQuality(hasExam, hasSyllabus, hasFiles) {
+  const meter = document.getElementById('obQualityMeter');
+  if (!meter) return;
+  meter.style.display = hasExam ? '' : 'none';
+
+  const tier = hasFiles ? 3 : hasSyllabus ? 2 : 1;
+
+  for (let i = 1; i <= 3; i++) {
+    const bar = document.getElementById('obQBar' + i);
+    if (bar) {
+      bar.classList.remove('active', 'prev');
+      if (tier >= i) bar.classList.add(tier === i ? 'active' : 'prev');
+    }
+    const tierEl = document.getElementById('obQTier' + i);
+    if (tierEl) {
+      tierEl.classList.toggle('active',  tier >= i);
+      tierEl.classList.toggle('current', tier === i);
+    }
+  }
+
+  const badge = document.getElementById('obQualityBadge');
+  if (badge) badge.textContent = tier === 3 ? 'Ottima' : tier === 2 ? 'Buona' : 'Base';
+
+  const hint = document.getElementById('obQualityHint');
+  if (hint) {
+    if (tier === 1) hint.textContent = 'Aggiungi il programma per domande calibrate sul tuo corso.';
+    else if (tier === 2) hint.textContent = 'Carica le dispense per domande che citano i tuoi materiali.';
+    else hint.textContent = 'Piano alla qualità massima — domande dal tuo specifico materiale.';
+  }
+}
+
+function _obToggleSyl() {
+  const body = document.getElementById('obSylBody');
+  const item = document.getElementById('obSylItem');
+  if (!body) return;
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : '';
+  item.classList.toggle('open', !isOpen);
+  if (!isOpen && window.lucide) lucide.createIcons();
+}
+
+function _obToggleFiles() {
+  const body = document.getElementById('obFilesBody');
+  const item = document.getElementById('obFilesItem');
+  if (!body) return;
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : '';
+  item.classList.toggle('open', !isOpen);
+  if (!isOpen && window.lucide) lucide.createIcons();
 }
 
 function _obHandleFileInput(input) {
@@ -770,15 +853,6 @@ async function _runOnboarding() {
     if (errEl) errEl.textContent = 'Materia e data esame sono obbligatorie.';
     return;
   }
-  if (!syllabus || syllabus.length < 20) {
-    if (errEl) errEl.textContent = 'Incolla il programma del corso prima di procedere.';
-    return;
-  }
-  const readyFiles = _obPendingSources.filter(s => s.status === 'done');
-  if (!readyFiles.length) {
-    if (errEl) errEl.textContent = 'Carica almeno un file di dispense prima di procedere.';
-    return;
-  }
 
   const examDate = new Date(date);
   const today = new Date(); today.setHours(0,0,0,0);
@@ -791,16 +865,19 @@ async function _runOnboarding() {
   // 1. Save exam info
   _safeLSSet('psico_exam_info', JSON.stringify({ subject, professor, date }));
 
-  // 2. Build sources array: syllabus first, then uploaded files
+  // 2. Build sources array (both optional — included only if provided)
   const sources = [];
-  sources.push({
-    id: 'ob-syllabus',
-    title: 'Programma del corso',
-    content: syllabus.slice(0, 14000),
-    sizeBytes: syllabus.length,
-    type: 'text',
-    addedAt: Date.now()
-  });
+  if (syllabus.length > 20) {
+    sources.push({
+      id: 'ob-syllabus',
+      title: 'Programma del corso',
+      content: syllabus.slice(0, 14000),
+      sizeBytes: syllabus.length,
+      type: 'text',
+      addedAt: Date.now()
+    });
+  }
+  const readyFiles = _obPendingSources.filter(s => s.status === 'done');
   readyFiles.forEach(f => {
     sources.push({
       id: f.id,
