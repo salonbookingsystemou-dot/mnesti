@@ -4680,9 +4680,10 @@
 
   /* ── Collapsible source items ── */
   .ob-sources-section {
-    border-top: 1px solid var(--border); padding-top: 4px;
-    display: flex; flex-direction: column;
+    border-top: 1px solid var(--border); padding-top: 18px;
+    display: flex; flex-direction: column; gap: 0;
   }
+  .ob-sources-section > .ob-section-title { margin-bottom: 4px; }
   .ob-source-item {
     border: 1px solid var(--border); border-radius: 12px;
     overflow: hidden; transition: border-color 0.2s; margin-top: 8px;
