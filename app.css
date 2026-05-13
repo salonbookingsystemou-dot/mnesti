@@ -4953,6 +4953,16 @@
     letter-spacing: -0.01em; min-height: 48px;
   }
   .welcome-close-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+  .welcome-secondary-link {
+    display: none; text-align: center; width: 100%;
+    font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500;
+    color: var(--text-3); text-decoration: none; cursor: pointer;
+    padding: 8px 0 2px; letter-spacing: -0.01em;
+    transition: color 0.15s;
+  }
+  .welcome-secondary-link:hover { color: var(--text-2); text-decoration: underline; }
+  .welcome-secondary-link.show { display: block; }
+  .welcome-hero-number.emoji { font-size: 68px; letter-spacing: 0; }
   .welcome-exam-badge {
     display: none; align-items: center; gap: 5px; justify-content: center;
     font-family: 'Inter', sans-serif; font-size: 11px;

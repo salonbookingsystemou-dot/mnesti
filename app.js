@@ -2337,8 +2337,8 @@ function showWelcomeModal() {
     heroNum.className   = 'welcome-hero-number good';
     heroLabel.innerHTML = 'giorni al tuo esame';
   } else if (daysLeft <= 0) {
-    heroNum.textContent = '!';
-    heroNum.className   = 'welcome-hero-number urgent';
+    heroNum.textContent = '🤞';
+    heroNum.className   = 'welcome-hero-number urgent emoji';
     heroLabel.innerHTML = '<strong>Oggi è il giorno dell\'esame</strong>';
   } else if (daysLeft === 1) {
     heroNum.textContent = '1';
@@ -2391,6 +2391,23 @@ function showWelcomeModal() {
     } else {
       badgeEl.classList.remove('show');
     }
+  }
+
+  // ── ⑤ CTA + secondary link (exam day vs normal) ──────────────
+  const ctaBtn = document.getElementById('welcomeCloseBtn');
+  const secLink = document.getElementById('welcomeSecondaryLink');
+  if (daysLeft !== null && daysLeft <= 0) {
+    if (ctaBtn) {
+      ctaBtn.textContent = 'Crea nuovo esame';
+      ctaBtn.onclick = () => { closeWelcomeModal(); _showOnboarding(); };
+    }
+    if (secLink) secLink.classList.add('show');
+  } else {
+    if (ctaBtn) {
+      ctaBtn.textContent = 'Inizia a studiare →';
+      ctaBtn.onclick = closeWelcomeModal;
+    }
+    if (secLink) secLink.classList.remove('show');
   }
 
   overlay.classList.add('open');
