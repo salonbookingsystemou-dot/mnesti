@@ -4739,7 +4739,7 @@
     border-radius: 5px; padding: 2px 7px;
   }
   .ob-quality-bars {
-    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
     margin-bottom: 8px;
   }
   .ob-quality-bar {
@@ -4749,7 +4749,7 @@
   .ob-quality-bar.active { background: var(--accent); opacity: 1; }
   .ob-quality-bar.prev   { background: var(--accent); opacity: 0.55; }
   .ob-quality-tiers {
-    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
     margin-bottom: 8px;
   }
   .ob-quality-tier-name { font-size: 11px; font-weight: 500; color: var(--text-3); transition: color 0.2s; }

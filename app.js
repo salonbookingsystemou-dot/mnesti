@@ -653,6 +653,7 @@ function _obValidate() {
   const date        = (document.getElementById('obDate')?.value     || '').trim();
   const hasSyllabus = (document.getElementById('obSyllabus')?.value || '').trim().length > 20;
   const hasFiles    = _obPendingSources.some(s => s.status === 'done');
+  const hasBooks    = (document.getElementById('obBooks')?.value    || '').trim().length > 10;
   const cta         = document.getElementById('obCta');
   if (!cta) return;
 
@@ -670,21 +671,26 @@ function _obValidate() {
   // Source check-circle indicators
   _obUpdateSourceCheck('obSylCheck',   hasSyllabus);
   _obUpdateSourceCheck('obFilesCheck', hasFiles);
+  _obUpdateSourceCheck('obBooksCheck', hasBooks);
 
   // Show/hide "+" hints
   const sylHint   = document.getElementById('obSylHint');
   const filesHint = document.getElementById('obFilesHint');
+  const booksHint = document.getElementById('obBooksHint');
   if (sylHint)   sylHint.style.display   = hasSyllabus ? 'none' : '';
   if (filesHint) filesHint.style.display = hasFiles    ? 'none' : '';
+  if (booksHint) booksHint.style.display = hasBooks    ? 'none' : '';
 
   // Accent border on checked source items
   const sylItem   = document.getElementById('obSylItem');
   const filesItem = document.getElementById('obFilesItem');
+  const booksItem = document.getElementById('obBooksItem');
   if (sylItem)   sylItem.classList.toggle('checked-state',   hasSyllabus);
   if (filesItem) filesItem.classList.toggle('checked-state', hasFiles);
+  if (booksItem) booksItem.classList.toggle('checked-state', hasBooks);
 
   // Quality meter
-  _obUpdateQuality(hasExam, hasSyllabus, hasFiles);
+  _obUpdateQuality(hasExam, hasSyllabus, hasFiles, hasBooks);
 }
 
 function _obUpdateSourceCheck(id, filled) {
@@ -699,14 +705,15 @@ function _obUpdateSourceCheck(id, filled) {
   }
 }
 
-function _obUpdateQuality(hasExam, hasSyllabus, hasFiles) {
+function _obUpdateQuality(hasExam, hasSyllabus, hasFiles, hasBooks) {
   const meter = document.getElementById('obQualityMeter');
   if (!meter) return;
   meter.style.display = hasExam ? '' : 'none';
 
-  const tier = hasFiles ? 3 : hasSyllabus ? 2 : 1;
+  const tier = hasBooks ? 4 : hasFiles ? 3 : hasSyllabus ? 2 : 1;
+  const labels = ['Base', 'Buona', 'Ottima', 'Massima'];
 
-  for (let i = 1; i <= 3; i++) {
+  for (let i = 1; i <= 4; i++) {
     const bar = document.getElementById('obQBar' + i);
     if (bar) {
       bar.classList.remove('active', 'prev');
@@ -720,13 +727,14 @@ function _obUpdateQuality(hasExam, hasSyllabus, hasFiles) {
   }
 
   const badge = document.getElementById('obQualityBadge');
-  if (badge) badge.textContent = tier === 3 ? 'Ottima' : tier === 2 ? 'Buona' : 'Base';
+  if (badge) badge.textContent = labels[tier - 1];
 
   const hint = document.getElementById('obQualityHint');
   if (hint) {
     if (tier === 1) hint.textContent = 'Aggiungi il programma per domande calibrate sul tuo corso.';
     else if (tier === 2) hint.textContent = 'Carica le dispense per domande che citano i tuoi materiali.';
-    else hint.textContent = 'Piano alla qualità massima — domande dal tuo specifico materiale.';
+    else if (tier === 3) hint.textContent = 'Aggiungi i manuali di testo per citazioni precise nelle risposte.';
+    else hint.textContent = 'Qualità massima — il piano cita autori e capitoli specifici del tuo corso.';
   }
 }
 
@@ -743,6 +751,16 @@ function _obToggleSyl() {
 function _obToggleFiles() {
   const body = document.getElementById('obFilesBody');
   const item = document.getElementById('obFilesItem');
+  if (!body) return;
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : '';
+  item.classList.toggle('open', !isOpen);
+  if (!isOpen && window.lucide) lucide.createIcons();
+}
+
+function _obToggleBooks() {
+  const body = document.getElementById('obBooksBody');
+  const item = document.getElementById('obBooksItem');
   if (!body) return;
   const isOpen = body.style.display !== 'none';
   body.style.display = isOpen ? 'none' : '';
@@ -847,6 +865,7 @@ async function _runOnboarding() {
   const professor = (document.getElementById('obProfessor')?.value || '').trim();
   const date      = (document.getElementById('obDate')?.value      || '').trim();
   const syllabus  = (document.getElementById('obSyllabus')?.value  || '').trim();
+  const books     = (document.getElementById('obBooks')?.value     || '').trim();
   const errEl     = document.getElementById('obError');
 
   if (!subject || !date) {
@@ -888,6 +907,16 @@ async function _runOnboarding() {
       addedAt: Date.now()
     });
   });
+  if (books.length > 10) {
+    sources.push({
+      id: 'ob-books',
+      title: 'Manuali di testo',
+      content: books.slice(0, 8000),
+      sizeBytes: books.length,
+      type: 'text',
+      addedAt: Date.now()
+    });
+  }
   _safeLSSet('psico_sources', JSON.stringify(sources));
 
   // 3. Reset pending list, close onboarding, generate plan

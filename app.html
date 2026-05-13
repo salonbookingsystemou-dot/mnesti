@@ -403,6 +403,22 @@
               <div class="ob-files-list" id="obFilesList"></div>
             </div>
           </div>
+
+          <!-- Manuali di testo -->
+          <div class="ob-source-item" id="obBooksItem">
+            <div class="ob-source-header" onclick="_obToggleBooks()">
+              <div class="ob-source-check" id="obBooksCheck"></div>
+              <span class="ob-source-title">Manuali di testo</span>
+              <span class="ob-source-hint" id="obBooksHint">+ citazioni precise</span>
+              <i data-lucide="chevron-down" class="ob-source-chevron" id="obBooksChevron"
+                 style="width:14px;height:14px;stroke-width:2;flex-shrink:0"></i>
+            </div>
+            <div class="ob-source-body" id="obBooksBody" style="display:none">
+              <textarea class="ob-textarea" id="obBooks"
+                        placeholder="Es: Kandel, Principi di Neuroscienze — cap. 4, 7, 12&#10;Atkinson, Introduzione alla Psicologia — cap. 2&#10;…"
+                        oninput="_obValidate()"></textarea>
+            </div>
+          </div>
         </div>
 
         <!-- Quality meter (visibile solo con materia+data compilati) -->
@@ -415,6 +431,7 @@
             <div class="ob-quality-bar" id="obQBar1"></div>
             <div class="ob-quality-bar" id="obQBar2"></div>
             <div class="ob-quality-bar" id="obQBar3"></div>
+            <div class="ob-quality-bar" id="obQBar4"></div>
           </div>
           <div class="ob-quality-tiers">
             <div class="ob-quality-tier" id="obQTier1">
@@ -428,6 +445,10 @@
             <div class="ob-quality-tier" id="obQTier3">
               <div class="ob-quality-tier-name">Ottima</div>
               <div class="ob-quality-tier-sub">+ dispense</div>
+            </div>
+            <div class="ob-quality-tier" id="obQTier4">
+              <div class="ob-quality-tier-name">Massima</div>
+              <div class="ob-quality-tier-sub">+ manuali</div>
             </div>
           </div>
           <div class="ob-quality-hint" id="obQualityHint">
