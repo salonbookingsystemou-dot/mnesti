@@ -1,15 +1,18 @@
 -- ─────────────────────────────────────────────────────────────────────────────
--- Mnesti — pg_cron jobs per lifecycle emails
+-- Mnesti — Rotate CRON_SECRET nei pg_cron job
 --
--- PREREQUISITI:
---   1. Abilitare pg_cron e pg_net da: Supabase Dashboard → Extensions
---   2. Impostare il secret CRON_SECRET in: Dashboard → Edge Functions → Secrets
---   3. Aver già eseguito 009_lifecycle_emails.sql
+-- Il vecchio secret era esposto in chiaro nel repository git.
+-- Questa migrazione aggiorna i cron job con il nuovo secret.
+--
+-- IMPORTANTE: prima di eseguire questo SQL devi aggiornare il secret
+-- CRON_SECRET nella Supabase Dashboard:
+--   Dashboard → Edge Functions → Secrets → CRON_SECRET
+--   Nuovo valore: a4bc9570d280f3be593756df46a4c09555739fe866fc99b43332e252a491c4f1
 --
 -- Eseguire in: Supabase Dashboard → SQL Editor
 -- ─────────────────────────────────────────────────────────────────────────────
 
--- Rimuovi job esistenti se presenti (idempotente)
+-- Rimuovi i job esistenti con il vecchio secret
 SELECT cron.unschedule('mnesti-daily-reminder') WHERE EXISTS (
   SELECT 1 FROM cron.job WHERE jobname = 'mnesti-daily-reminder'
 );
@@ -17,6 +20,7 @@ SELECT cron.unschedule('mnesti-no-exam-nudge') WHERE EXISTS (
   SELECT 1 FROM cron.job WHERE jobname = 'mnesti-no-exam-nudge'
 );
 
+-- Ricrea con il nuovo secret
 -- Daily reminder — ogni giorno alle 09:00 ora italiana (07:00 UTC)
 SELECT cron.schedule(
   'mnesti-daily-reminder',
@@ -30,7 +34,7 @@ SELECT cron.schedule(
   $$
 );
 
--- No-exam nudge — ogni ora al minuto :05 (intercetta i nuovi iscritti)
+-- No-exam nudge — ogni ora al minuto :05
 SELECT cron.schedule(
   'mnesti-no-exam-nudge',
   '5 * * * *',
