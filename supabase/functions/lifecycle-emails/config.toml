@@ -1,0 +1,6 @@
+[functions.lifecycle-emails]
+# JWT verification is disabled: the gateway lets requests through without a
+# Supabase JWT. Authentication is handled internally via the x-cron-secret
+# header checked in the function code — so only pg_cron (and authorized
+# callers that know the secret) can trigger email sends.
+verify_jwt = false
