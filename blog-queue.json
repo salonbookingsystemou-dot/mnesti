@@ -67,9 +67,9 @@
     "icon": "✏️",
     "ctaTitle": "Smetti di copiare dispense. Inizia a ricordare.",
     "ctaText": "Mnesti genera domande dalle tue dispense così non devi fare riassunti inutili. Primo esame gratis.",
-    "status": "pending",
-    "date": null,
-    "publishedAt": null
+    "status": "published",
+    "date": "2026-05-14",
+    "publishedAt": "2026-05-14T09:00:00+02:00"
   },
   {
     "slug": "blog-esame-orale",
