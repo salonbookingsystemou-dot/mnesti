@@ -268,6 +268,8 @@ const _ACCENT_PRESETS = [
       console.warn('[user_exams] sync exception:', e);
     }
   }
+  // Expose so generateStudyPlan (outside this IIFE) can call it after plan creation
+  window._syncExamInfoToSupabase = _syncExamInfoToSupabase;
 
   let _logoutInProgress = false;
   async function _bootstrap(session, isNewLogin) {
@@ -8883,7 +8885,9 @@ REGOLE ASSOLUTE (non derogabili):
     _safeLSSet('psico_ai_plan', JSON.stringify(plan));
 
     // Sync exam to Supabase user_exams (for admin dashboard tracking)
-    _syncExamInfoToSupabase(window._currentUserId);
+    if (typeof window._syncExamInfoToSupabase === 'function') {
+      window._syncExamInfoToSupabase(window._currentUserId);
+    }
 
     _setPlanGenUI('Piano completato ✓', `${normalizedDays.length} giorni pianificati fino all\'esame.`, 100, 'Caricamento…');
     const _studyDays = normalizedDays.filter(d => d.type === 'studio' || d.type === 'revision').length;
