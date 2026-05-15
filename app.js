@@ -13,6 +13,16 @@ const _ACCENT_PRESETS = [
   '#0ea5e9', // sky
 ];
 
+// ── Plan / source quality tiers (single source of truth) ──────
+// Used by: header quality widget, onboarding quality meter, confirm-overwrite dialog.
+// Tier 1 = no sources  →  Tier 4 = dispense + manuali
+const _PLAN_QUALITY = [
+  { label: 'Solo materia', color: '#6b7280', hint: 'Piano basato sulla conoscenza di Claude — aggiungi dispense per domande personalizzate.' },
+  { label: 'Con programma', color: '#d97757', hint: 'Piano con argomenti del programma — carica le dispense PDF per domande mirate.' },
+  { label: 'Con dispense', color: '#3b82f6', hint: 'Piano costruito sulle tue dispense — aggiungi i manuali di testo per citazioni precise.' },
+  { label: 'Ottimale', color: '#f59e0b', hint: 'Qualità massima — domande basate su dispense e manuali del tuo corso.' },
+];
+
 // ── Supabase Auth + Cloud Sync ───────────────────────────────
 (function() {
 
@@ -713,7 +723,7 @@ function _obUpdateQuality(hasExam, hasSyllabus, hasFiles, hasBooks) {
   meter.style.display = hasExam ? '' : 'none';
 
   const tier = hasBooks ? 4 : hasFiles ? 3 : hasSyllabus ? 2 : 1;
-  const labels = ['Base', 'Buona', 'Ottima', 'Massima'];
+  const labels = _PLAN_QUALITY.map(q => q.label);
 
   for (let i = 1; i <= 4; i++) {
     const bar = document.getElementById('obQBar' + i);
@@ -8501,16 +8511,7 @@ function updateGenPlanBtn() {
   btn.title = hint;
 }
 
-// ── Plan quality tier ────────────────────────────────────────
-// Same 4-tier scale used by the onboarding quality meter.
-// 1 Solo materia | 2 Con programma | 3 Con dispense | 4 Ottimale
-const _PLAN_QUALITY = [
-  { label: 'Solo materia', color: '#6b7280', hint: 'Piano basato sulla conoscenza di Claude — aggiungi dispense per domande personalizzate.' },
-  { label: 'Con programma', color: '#d97757', hint: 'Piano con argomenti del programma — carica le dispense PDF per domande mirate.' },
-  { label: 'Con dispense', color: '#3b82f6', hint: 'Piano costruito sulle tue dispense — aggiungi i manuali di testo per citazioni precise.' },
-  { label: 'Ottimale', color: '#f59e0b', hint: 'Qualità massima — domande basate su dispense e manuali del tuo corso.' },
-];
-
+// ── Plan quality tier ─────────────────────────────────────────
 function _calcSourceQualityTier() {
   const sources  = getSources();
   const primary  = sources.filter(s => s.type !== 'textbook-ref' && (s.content || '').trim().length > 100);
@@ -8518,7 +8519,7 @@ function _calcSourceQualityTier() {
   const hasSyllabus = primary.length > 0;
   const hasFiles    = totalPri >= 3000;
   const hasBooks    = sources.some(s => s.type === 'textbook-ref' && (s.title || s.content || '').trim().length > 3);
-  return (hasFiles && hasBooks) ? 4 : hasFiles ? 3 : hasSyllabus ? 2 : 1;
+  return hasBooks ? 4 : hasFiles ? 3 : hasSyllabus ? 2 : 1;
 }
 
 function updatePlanQualityWidget() {
