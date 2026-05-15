@@ -77,8 +77,6 @@ Deno.serve(async (req) => {
         }, 429)
       }
     } catch (rateErr) {
-      // If we cannot read usage data, deny the request rather than silently allowing it.
-      // This prevents unbounded API calls when the DB is degraded or the table is missing.
       console.error('[claude-proxy] Rate limit check failed — denying request:', rateErr?.message)
       return json({
         error: 'Servizio temporaneamente non disponibile. Riprova tra qualche minuto.',
@@ -94,21 +92,35 @@ Deno.serve(async (req) => {
     }
 
     // ── 4. Parse & forward to Anthropic ──────────────────────────
-    let payload: unknown
+    let rawPayload: unknown
     try {
-      payload = await req.json()
+      rawPayload = await req.json()
     } catch {
       return json({ error: 'Richiesta malformata (JSON non valido)', code: 'BAD_REQUEST' }, 400)
     }
+
+    const p = rawPayload as Record<string, unknown>
+
+    // Extract the stream flag explicitly — do NOT rely on it being present
+    // in the forwarded payload, since that caused the bug where Anthropic
+    // received stream:true and returned SSE but the proxy tried to JSON-parse it.
+    const wantsStream = p.stream === true
+
+    // Build the Anthropic payload: always set stream explicitly based on wantsStream
+    // so there is a single source of truth between what we send and what we expect back.
+    const anthropicPayload = { ...p, stream: wantsStream }
 
     const anthropicCall = () => fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
+        // Updated to 2024-02-15 — required for Claude 3.5+ and Claude 4.x models.
+        // The 2023-06-01 version header was causing silent incompatibilities with
+        // newer model IDs (claude-sonnet-4-x, claude-opus-4-x).
+        'anthropic-version': '2024-02-15',
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(anthropicPayload),
     })
 
     // Retry up to 3 times with exponential backoff on 529 Overloaded
@@ -122,10 +134,12 @@ Deno.serve(async (req) => {
     }
 
     // ── 4b. Streaming passthrough ─────────────────────────────────
-    // If the client requested stream:true, pipe the Anthropic SSE stream
-    // directly back — this prevents the 150-second idle timeout because
-    // data flows continuously instead of the proxy waiting in silence.
-    if ((payload as Record<string, unknown>).stream === true) {
+    // Dual-check: honour the client's stream flag AND the actual Anthropic
+    // Content-Type — this guards against the stream flag being lost or
+    // mismatched, which previously caused "Errore Anthropic (200) — risposta non valida".
+    const anthropicIsStream = (anthropicRes.headers.get('content-type') ?? '').includes('text/event-stream')
+
+    if (wantsStream || anthropicIsStream) {
       if (anthropicRes.status === 529) {
         return json({ error: 'Il servizio AI è sovraccarico. Riprova tra qualche minuto.', code: 'OVERLOADED' }, 503)
       }
@@ -184,8 +198,9 @@ Deno.serve(async (req) => {
     try {
       data = await anthropicRes.json()
     } catch {
-      console.error('[claude-proxy] Anthropic returned non-JSON response, status:', anthropicRes.status)
-      return json({ error: `Errore Anthropic (${anthropicRes.status}) — risposta non valida`, code: 'ANTHROPIC_ERROR' }, 502)
+      const ct = anthropicRes.headers.get('content-type') ?? 'unknown'
+      console.error('[claude-proxy] Anthropic returned non-JSON response, status:', anthropicRes.status, 'content-type:', ct)
+      return json({ error: `Errore Anthropic (${anthropicRes.status}) — risposta non valida (content-type: ${ct})`, code: 'ANTHROPIC_ERROR' }, 502)
     }
 
     // Log Anthropic-level errors for debugging
