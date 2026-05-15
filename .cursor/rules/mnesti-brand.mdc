@@ -1,0 +1,69 @@
+---
+description: Mnesti brand assets, colori ufficiali e come usare il logo
+alwaysApply: true
+---
+
+# Mnesti — Brand Assets
+
+## Logo ufficiale
+
+I file logo si trovano nella root del progetto:
+
+| File | Uso |
+|------|-----|
+| `logo-white.png` (284×152 px) | Wordmark bianco — header, splash, email (su sfondo scuro) |
+| `logo-mark.png` (284×152 px) | Identico al wordmark — alias usato in contesti specifici |
+| `logo-full.png` | Versione estesa |
+| `logo-login.png` | Variante per la schermata di login |
+| `apple-touch-icon.png` / `icon-192.png` / `icon-512.png` | Icone app PWA |
+
+**Come incorporare il logo in HTML/CSS:**
+```html
+<img src="logo-white.png" alt="Mnesti" height="32">
+```
+
+**In canvas `.canvas.tsx` le img con path locali non funzionano.**  
+Usare `base64` oppure un SVG inline che riproduca il wordmark:
+- Font: Inter 800, colore `#e7e0d8`
+- Testo: `Mnesti` (capitale M, resto minuscolo)
+- Accento: cerchio arancio `#d97757` a fianco o sopra la lettera finale
+
+## Colori ufficiali (dark mode — default)
+
+```
+--bg:            #1c1917   /* stone-900 — sfondo principale */
+--surface:       #231f1c   /* stone-850 */
+--surface2:      #292522   /* stone-800 */
+--surface3:      #312d29   /* stone-750 — hover, input */
+--text:          #e7e0d8   /* stone-100 */
+--text-2:        #a8a099   /* stone-400 */
+--text-3:        #65605b   /* stone-500 */
+--accent:        #d97757   /* arancio Mnesti */
+--accent-bg:     rgba(217,119,87,0.10)
+--accent-border: rgba(217,119,87,0.25)
+--border:        rgba(255,255,255,0.07)
+```
+
+## Colori ufficiali (light mode)
+
+```
+--bg:            #faf9f7
+--surface:       #f5f3f0
+--surface2:      #ede9e4
+--accent:        #c2603d   /* arancio leggermente più scuro */
+--text:          #1c1917
+--text-2:        #57534e
+--text-3:        #a8a29e
+```
+
+## Tipografia
+
+- Font principale: **Inter** (caricato da Google Fonts)
+- Pesi usati: 400, 500, 600, 700, 800, 900
+- Letter-spacing titoli: `-0.02em` / `-0.04em`
+
+## Regole di stile
+
+- Border-radius card: `22px` (modali principali), `10–12px` (card interne)
+- Nessun gradiente, nessun box-shadow esterno
+- Accent usato con parsimonia — solo su CTA primari, progressi, alert
