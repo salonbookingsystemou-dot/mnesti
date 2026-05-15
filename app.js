@@ -1962,11 +1962,15 @@ function updateHeaderTitle() {
 function updateProgress() {
   const activeDays = getActiveDays();
   const studyDays = activeDays.filter(d => d.type !== 'rest' && d.type !== 'exam');
-  const done = studyDays.filter(d => state[d.id]?.status === 'done').length;
+  const done  = studyDays.filter(d => state[d.id]?.status === 'done').length;
   const total = studyDays.length || 1;
-  const pct = Math.round((done / total) * 100);
-  document.getElementById('progressFill').style.width = pct + '%';
-  document.getElementById('progressLabel').textContent = done + ' / ' + total + ' giorni';
+  const pct   = Math.round((done / total) * 100);
+  // These elements are kept hidden in the DOM for compat; null-safe either way
+  const fill  = document.getElementById('progressFill');
+  const label = document.getElementById('progressLabel');
+  if (fill)  fill.style.width       = pct + '%';
+  if (label) label.textContent      = done + ' / ' + total + ' giorni';
+  updatePlanQualityWidget();
   updateMobileExamBanner();
 }
 
@@ -8497,6 +8501,55 @@ function updateGenPlanBtn() {
   btn.title = hint;
 }
 
+// ── Plan quality tier ────────────────────────────────────────
+// Same 4-tier scale used by the onboarding quality meter.
+// 1 Solo materia | 2 Con programma | 3 Con dispense | 4 Ottimale
+const _PLAN_QUALITY = [
+  { label: 'Solo materia', color: '#6b7280', hint: 'Piano basato sulla conoscenza di Claude — aggiungi dispense per domande personalizzate.' },
+  { label: 'Con programma', color: '#d97757', hint: 'Piano con argomenti del programma — carica le dispense PDF per domande mirate.' },
+  { label: 'Con dispense', color: '#3b82f6', hint: 'Piano costruito sulle tue dispense — aggiungi i manuali di testo per citazioni precise.' },
+  { label: 'Ottimale', color: '#f59e0b', hint: 'Qualità massima — domande basate su dispense e manuali del tuo corso.' },
+];
+
+function _calcSourceQualityTier() {
+  const sources  = getSources();
+  const primary  = sources.filter(s => s.type !== 'textbook-ref' && (s.content || '').trim().length > 100);
+  const totalPri = primary.reduce((sum, s) => sum + (s.content || '').length, 0);
+  const hasSyllabus = primary.length > 0;
+  const hasFiles    = totalPri >= 3000;
+  const hasBooks    = sources.some(s => s.type === 'textbook-ref' && (s.title || s.content || '').trim().length > 3);
+  return (hasFiles && hasBooks) ? 4 : hasFiles ? 3 : hasSyllabus ? 2 : 1;
+}
+
+function updatePlanQualityWidget() {
+  const dot       = document.getElementById('hpqDot');
+  const lbl       = document.getElementById('hpqLabel');
+  const badge     = document.getElementById('hpqUpdateBtn');
+  const container = document.getElementById('hdrPlanQual');
+  if (!dot || !lbl) return;
+
+  const planRaw = localStorage.getItem('psico_ai_plan');
+  if (!planRaw) {
+    dot.style.background = '#4b5563';
+    lbl.textContent = 'Nessun piano';
+    if (badge)     badge.style.display = 'none';
+    if (container) container.title = '';
+    return;
+  }
+
+  let planTier = 1;
+  try { planTier = JSON.parse(planRaw).sourceTier || 1; } catch { /* leave default */ }
+
+  const t = _PLAN_QUALITY[planTier - 1];
+  dot.style.background = t.color;
+  lbl.textContent      = t.label;
+  if (container) container.title = t.hint;
+
+  // Badge: current sources are better than when the plan was generated
+  const currentTier = _calcSourceQualityTier();
+  if (badge) badge.style.display = currentTier > planTier ? 'inline-flex' : 'none';
+}
+
 function updateGenPlanStatus() {
   const statusEl = document.getElementById('genPlanStatus');
   const resetEl  = document.getElementById('genPlanReset');
@@ -8516,6 +8569,7 @@ function updateGenPlanStatus() {
     statusEl.className = 'gen-plan-status';
     if (resetEl) resetEl.style.display = 'none';
   }
+  updatePlanQualityWidget();
 }
 
 function resetAiPlan() {
@@ -8731,6 +8785,28 @@ async function generateStudyPlan(fromOnboarding = false) {
     alert('Per generare il piano completa i seguenti campi:\n\n' + _missing.join('\n'));
     return;
   }
+
+  // ── Confirm overwrite if a plan already exists ─────────────────────────────
+  if (!fromOnboarding) {
+    const existingRaw = localStorage.getItem('psico_ai_plan');
+    if (existingRaw) {
+      let ex; try { ex = JSON.parse(existingRaw); } catch { ex = {}; }
+      const genDate = ex.generatedAt
+        ? new Date(ex.generatedAt).toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' })
+        : null;
+      const currentTier = _calcSourceQualityTier();
+      const planTier    = ex.sourceTier || 1;
+      const tierLabel   = _PLAN_QUALITY[currentTier - 1]?.label || '';
+      const improvement = currentTier > planTier
+        ? `\n\nCon le fonti attuali la qualità migliorerà a "${tierLabel}".`
+        : '';
+      const msg = `Esiste già un piano per "${ex.subject || info.subject.trim()}"` +
+        (genDate ? ` (generato il ${genDate})` : '') + '.' +
+        improvement +
+        '\n\nRigenerare il piano? Le risposte già date verranno conservate.';
+      if (!confirm(msg)) return;
+    }
+  }
   // ──────────────────────────────────────────────────────────────────────────
 
   // primaryOnly: il piano di studio deve strutturarsi sulle dispense caricate,
@@ -8878,11 +8954,13 @@ REGOLE ASSOLUTE (non derogabili):
     const plan = {
       subject,
       professor,
-      examDate: info.date,
+      examDate:    info.date,
       generatedAt: new Date().toISOString(),
-      days: normalizedDays
+      sourceTier:  _calcSourceQualityTier(), // snapshot of source quality at generation
+      days:        normalizedDays
     };
     _safeLSSet('psico_ai_plan', JSON.stringify(plan));
+    updatePlanQualityWidget();
 
     // Sync exam to Supabase user_exams (for admin dashboard tracking)
     if (typeof window._syncExamInfoToSupabase === 'function') {

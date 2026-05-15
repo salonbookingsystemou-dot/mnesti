@@ -198,23 +198,27 @@
   <!-- Divider -->
   <div class="header-vdiv header-hide-mobile"></div>
 
-  <!-- Progress -->
-  <div class="progress-bar-wrap header-hide-mobile">
-    <div class="header-stat-label">Piano di studio</div>
-    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
-    <div class="progress-label" id="progressLabel">0 / 17 giorni</div>
+  <!-- Plan quality widget -->
+  <div class="header-plan-qual header-hide-mobile" id="hdrPlanQual">
+    <div class="header-stat-label">Qualità piano</div>
+    <div class="hpq-row">
+      <span class="hpq-dot" id="hpqDot"></span>
+      <span class="hpq-label" id="hpqLabel">—</span>
+      <button class="hpq-update-btn" id="hpqUpdateBtn"
+        onclick="openSetupDrawer('fonti')"
+        title="Hai aggiunto fonti dopo la generazione — rigenera il piano per migliorarlo"
+        style="display:none">
+        <i data-lucide="sparkles" style="width:9px;height:9px;stroke-width:2.5;pointer-events:none"></i>
+        Aggiorna
+      </button>
+    </div>
   </div>
 
-  <!-- Divider -->
-  <div class="header-vdiv header-hide-mobile"></div>
-
-  <!-- Hours -->
-  <div class="header-stat header-hide-mobile">
-    <div class="header-stat-label">Ore studiate</div>
-    <div class="header-stat-val">
-      <span id="totalHoursDisplay">0h 00m</span>
-      <button onclick="resetTotalHours()" style="font-family:'Inter',sans-serif;font-size:9px;padding:2px 5px;border-radius:3px;border:1px solid var(--border);background:none;color:var(--text-3);cursor:pointer;display:flex;align-items:center;" title="Azzera"><i data-lucide="rotate-ccw" style="width:9px;height:9px;stroke-width:2.5"></i></button>
-    </div>
+  <!-- Hidden compat elements (used by updateProgress / updateTotalHoursDisplay JS) -->
+  <div style="display:none">
+    <div id="progressFill"></div>
+    <div id="progressLabel"></div>
+    <span id="totalHoursDisplay"></span>
   </div>
 
   <!-- Divider -->
