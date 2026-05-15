@@ -6641,6 +6641,23 @@ function _extractJson(raw) {
     try { return JSON.parse(s.slice(start, end + 1)); } catch { /* fall through */ }
   }
 
+  // 5. Partial recovery: handle streaming truncation mid-array.
+  // Find the last complete object "}" and close the array there.
+  // This saves plans where max_tokens cuts the response before the final "]".
+  if (start !== -1 && closing === ']') {
+    const chunk = s.slice(start);
+    // Try closing after last "}," (item followed by comma → more items were cut)
+    const lastCommaObj = chunk.lastIndexOf('},');
+    if (lastCommaObj !== -1) {
+      try { return JSON.parse(chunk.slice(0, lastCommaObj + 1) + ']'); } catch { /* fall through */ }
+    }
+    // Try closing after last lone "}" (last object, no comma)
+    const lastBrace = chunk.lastIndexOf('}');
+    if (lastBrace !== -1) {
+      try { return JSON.parse(chunk.slice(0, lastBrace + 1) + ']'); } catch { /* fall through */ }
+    }
+  }
+
   throw new Error('JSON non valido: ' + raw.slice(0, 120) + '…');
 }
 
@@ -8690,7 +8707,12 @@ function _shortLabel(d) {
   return `${d.getDate()}/${d.getMonth()+1}`;
 }
 function _isoDate(d) {
-  return d.toISOString().slice(0, 10);
+  // Use local-time getters to avoid UTC offset shifting the date
+  // (toISOString() returns UTC: at midnight in UTC+2, midnight local = 22:00 UTC → previous day)
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 async function generateStudyPlan(fromOnboarding = false) {

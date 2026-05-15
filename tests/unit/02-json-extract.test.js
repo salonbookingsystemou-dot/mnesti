@@ -58,6 +58,34 @@ describe('_extractJson — happy paths', () => {
   });
 });
 
+describe('_extractJson — partial recovery (streaming truncation)', () => {
+  // Simulates what happens when max_tokens is hit mid-response.
+
+  test('array troncato dopo ultimo },  → recupera oggetti completi', () => {
+    const truncated = '```json\n[\n  {"date":"2026-06-01","type":"studio"},\n  {"date":"2026-06-02","type":"rest"},\n  {"date":"2026-06-03","type":"stu';
+    const result = _extractJson(truncated);
+    assert.ok(Array.isArray(result), 'deve restituire un array');
+    assert.equal(result.length, 2, 'deve contenere 2 oggetti completi');
+    assert.equal(result[0].date, '2026-06-01');
+    assert.equal(result[1].type, 'rest');
+  });
+
+  test('array troncato subito dopo { → recupera almeno 1 oggetto', () => {
+    const truncated = '[{"date":"2026-06-01","type":"exam","questions":[]},{"date":"2026-06-02","type":"stu';
+    const result = _extractJson(truncated);
+    assert.ok(Array.isArray(result));
+    assert.ok(result.length >= 1);
+    assert.equal(result[0].date, '2026-06-01');
+  });
+
+  test('array con code fence troncato → recupera oggetti', () => {
+    const truncated = '```json\n[{"a":1},{"b":2},{"c":';
+    const result = _extractJson(truncated);
+    assert.ok(Array.isArray(result));
+    assert.equal(result.length, 2);
+  });
+});
+
 describe('_extractJson — edge cases', () => {
   test('array multiriga con oggetti complessi', () => {
     const raw = JSON.stringify([

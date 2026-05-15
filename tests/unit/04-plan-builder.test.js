@@ -11,14 +11,22 @@ const { _isoDate, _dateRange, _formatDateLabel, _shortLabel } = loadUtils(
 );
 
 describe('_isoDate', () => {
-  // _isoDate calls .toISOString() which always returns UTC.
-  // Use Date.UTC() to create timezone-agnostic timestamps.
+  // _isoDate now uses local-time getters (getFullYear/getMonth/getDate)
+  // so new Date(y, m, d) works correctly regardless of timezone.
   test('formato YYYY-MM-DD', () => {
-    assert.equal(_isoDate(new Date(Date.UTC(2026, 4, 15))), '2026-05-15');
+    assert.equal(_isoDate(new Date(2026, 4, 15)), '2026-05-15'); // mese 0-indexed
   });
 
   test('padding mese e giorno', () => {
-    assert.equal(_isoDate(new Date(Date.UTC(2026, 0, 5))), '2026-01-05');
+    assert.equal(_isoDate(new Date(2026, 0, 5)), '2026-01-05');
+  });
+
+  test('mezzanotte in UTC+2 → data locale corretta (no off-by-one)', () => {
+    // new Date(2026, 4, 15) = 2026-05-15T00:00:00 ora locale
+    // Con .toISOString() darebbe "2026-05-14" in UTC+2 — il bug che stiamo correggendo
+    const midnight = new Date(2026, 4, 15);
+    midnight.setHours(0, 0, 0, 0);
+    assert.equal(_isoDate(midnight), '2026-05-15');
   });
 });
 
@@ -34,11 +42,10 @@ describe('_formatDateLabel', () => {
 });
 
 describe('_dateRange', () => {
-  // Use Date.UTC() throughout to avoid local-timezone offset issues
-  // (_isoDate calls .toISOString() which outputs UTC).
+  // _isoDate now uses local getters — standard new Date(y, m, d) works fine.
   test('include sia start che end', () => {
-    const start = new Date(Date.UTC(2026, 4, 15));
-    const end   = new Date(Date.UTC(2026, 4, 17));
+    const start = new Date(2026, 4, 15);
+    const end   = new Date(2026, 4, 17);
     const range = _dateRange(start, end);
     assert.equal(range.length, 3);
     assert.equal(_isoDate(range[0]), '2026-05-15');
@@ -46,13 +53,13 @@ describe('_dateRange', () => {
   });
 
   test('stesso giorno → 1 elemento', () => {
-    const d = new Date(Date.UTC(2026, 5, 10));
+    const d = new Date(2026, 5, 10);
     assert.equal(_dateRange(d, d).length, 1);
   });
 
   test('30 giorni → 31 elementi', () => {
-    const start = new Date(Date.UTC(2026, 4, 1));
-    const end   = new Date(Date.UTC(2026, 4, 31));
+    const start = new Date(2026, 4, 1);
+    const end   = new Date(2026, 4, 31);
     assert.equal(_dateRange(start, end).length, 31);
   });
 });
