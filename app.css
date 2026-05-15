@@ -3537,7 +3537,14 @@
   }
 
   .timer-display.running { color: var(--accent); }
-  .timer-display.paused { color: var(--text-2); }
+  .timer-display.paused  { color: var(--text-2); }
+  .timer-display.timer-warning { color: #e74c3c; animation: timer-pulse 1s ease-in-out infinite; }
+  @keyframes timer-pulse { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
+
+  .timer-countdown-label {
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--text-3); margin-bottom: 2px;
+  }
 
   .timer-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
@@ -4454,6 +4461,31 @@
     transition: opacity 0.15s;
   }
   .coach-cta:hover { opacity: 0.88; }
+
+  /* ── Session end summary modal ───────────────────────────── */
+  .session-end-modal {
+    max-width: 380px;
+    text-align: center;
+  }
+  .session-end-time {
+    font-size: 11px; font-weight: 600; color: var(--text-3);
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .session-end-stats {
+    display: flex; justify-content: center; gap: 24px;
+    padding: 18px 0 10px;
+  }
+  .se-stat {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+  }
+  .se-num {
+    font-size: 2rem; font-weight: 700; line-height: 1;
+    color: var(--text); letter-spacing: -0.02em;
+  }
+  .se-lbl {
+    font-size: 10px; color: var(--text-3); text-align: center; line-height: 1.4;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
 
   /* Countdown progress bar at the very bottom of the modal */
   .coach-timer-bar {

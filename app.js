@@ -3246,14 +3246,15 @@ function _buildDayCard(day) {
         </div>
       </div>
       <div class="timer-block" id="timer-${day.id}">
-        <div class="timer-display" id="timerDisplay-${day.id}">00:00:00</div>
+        <div class="timer-countdown-label">⏱ Tempo rimanente</div>
+        <div class="timer-display" id="timerDisplay-${day.id}">${formatSeconds(SESSION_DURATION)}</div>
         <div class="timer-controls">
           <button class="timer-btn timer-resume-btn" id="timerResumeBtn-${day.id}" onclick="timerResume('${day.id}')" style="display:none"><i data-lucide="play" style="width:11px;height:11px;stroke-width:2.2;fill:currentColor"></i> Riprendi</button>
           <button class="timer-btn pause-btn" id="timerPauseBtn-${day.id}" onclick="timerPause('${day.id}')" style="display:none"><i data-lucide="pause" style="width:11px;height:11px;stroke-width:2.2;fill:currentColor"></i> Pausa</button>
-          <button class="timer-btn stop-btn" id="timerStopBtn-${day.id}" onclick="timerStop('${day.id}')" style="display:none"><i data-lucide="square" style="width:10px;height:10px;stroke-width:2.2;fill:currentColor"></i> Chiudi sessione</button>
+          <button class="timer-btn stop-btn" id="timerStopBtn-${day.id}" onclick="timerStop('${day.id}')" style="display:none"><i data-lucide="square" style="width:10px;height:10px;stroke-width:2.2;fill:currentColor"></i> Termina</button>
         </div>
         <div class="timer-meta">
-          <div class="timer-saved">Sessioni salvate: <span id="timerSaved-${day.id}">${formatSeconds(dayState.totalSeconds || 0)}</span></div>
+          <div class="timer-saved">Tempo studiato: <span id="timerSaved-${day.id}">${formatSeconds(dayState.totalSeconds || 0)}</span></div>
         </div>
       </div>
       ${day.tip ? `<div class="tip-box"><div class="tip-label"><i data-lucide="lightbulb" style="width:11px;height:11px;stroke-width:2.2;flex-shrink:0"></i>Metodo di studio</div><div class="tip-text">${escHtml(day.tip)}</div></div>` : ''}
@@ -3420,6 +3421,7 @@ function formatHoursMinutes(secs) {
 }
 
 const timerState = {};
+const SESSION_DURATION = 3 * 60 * 60; // 3-hour countdown (seconds)
 
 // ── Focus mode helpers ─────────────────────────────────────────
 function _focusModeOn() {
@@ -4461,12 +4463,18 @@ function timerStart(dayId) {
   timerState[dayId].startedAt = Date.now() - (timerState[dayId].elapsed * 1000);
   timerState[dayId].interval = setInterval(function() { timerTick(dayId); }, 1000);
   var disp = document.getElementById('timerDisplay-' + dayId);
-  disp.classList.add('running');
-  disp.classList.remove('paused');
+  if (disp) {
+    const alreadyElapsed = timerState[dayId].elapsed || 0;
+    disp.textContent = formatSeconds(Math.max(SESSION_DURATION - alreadyElapsed, 0));
+    disp.classList.add('running');
+    disp.classList.remove('paused', 'timer-warning');
+  }
   var resumeBtn = document.getElementById('timerResumeBtn-' + dayId);
   if (resumeBtn) resumeBtn.style.display = 'none';
-  document.getElementById('timerPauseBtn-' + dayId).style.display = '';
-  document.getElementById('timerStopBtn-' + dayId).style.display = '';
+  var pauseBtn = document.getElementById('timerPauseBtn-' + dayId);
+  if (pauseBtn) pauseBtn.style.display = '';
+  var stopBtn = document.getElementById('timerStopBtn-' + dayId);
+  if (stopBtn) stopBtn.style.display = '';
   _focusModeOn();
   _autoSetStatus(dayId);
   _activeTimerDayId = dayId;
@@ -4476,13 +4484,20 @@ function timerStart(dayId) {
 function timerTick(dayId) {
   var elapsed = Math.floor((Date.now() - timerState[dayId].startedAt) / 1000);
   timerState[dayId].elapsed = elapsed;
+  var remaining = Math.max(SESSION_DURATION - elapsed, 0);
   var el = document.getElementById('timerDisplay-' + dayId);
-  if (el) el.textContent = formatSeconds(elapsed);
-  // Keep global hours counter in sync with live session
-  updateTotalHours();
+  if (el) {
+    el.textContent = formatSeconds(remaining);
+    // Warning color when < 30 minutes remaining
+    el.classList.toggle('timer-warning', remaining > 0 && remaining <= 30 * 60);
+  }
   // Checkpoint: persist elapsed every 60s so PWA kills don't lose time
   if (elapsed > 0 && elapsed % 60 === 0) {
     _saveTimerCheckpoint(dayId, elapsed);
+  }
+  // Countdown expired → show session summary
+  if (remaining === 0) {
+    _onCountdownExpired(dayId);
   }
 }
 
@@ -4543,7 +4558,11 @@ function timerResume(dayId) {
   var tb = document.getElementById('timer-' + dayId);
   if (tb) { tb.classList.remove('timer-idle'); tb.classList.add('timer-active'); }
   var disp = document.getElementById('timerDisplay-' + dayId);
-  if (disp) { disp.classList.add('running'); disp.classList.remove('paused'); }
+  if (disp) {
+    const alreadyElapsed = timerState[dayId].elapsed || 0;
+    disp.textContent = formatSeconds(Math.max(SESSION_DURATION - alreadyElapsed, 0));
+    disp.classList.add('running'); disp.classList.remove('paused');
+  }
   var resumeBtn = document.getElementById('timerResumeBtn-' + dayId);
   if (resumeBtn) resumeBtn.style.display = 'none';
   var pauseBtn = document.getElementById('timerPauseBtn-' + dayId);
@@ -4565,7 +4584,7 @@ function timerStop(dayId) {
   state[dayId].totalSeconds = (state[dayId].totalSeconds || 0) + sessionSecs;
   timerState[dayId] = { elapsed: 0, running: false };
   var disp = document.getElementById('timerDisplay-' + dayId);
-  if (disp) { disp.textContent = '00:00:00'; disp.classList.remove('running', 'paused'); }
+  if (disp) { disp.textContent = formatSeconds(SESSION_DURATION); disp.classList.remove('running', 'paused', 'timer-warning'); }
   var pauseBtn = document.getElementById('timerPauseBtn-' + dayId);
   if (pauseBtn) { pauseBtn.style.display = 'none'; pauseBtn.textContent = 'Pausa'; }
   var stopBtn2 = document.getElementById('timerStopBtn-' + dayId);
@@ -4600,6 +4619,106 @@ function timerStop(dayId) {
   if (typeof _renderQsPanel === 'function' && !document.querySelector('.q-done-edit-area.open')) {
     _renderQsPanel(dayId);
   }
+}
+
+// ── Countdown expired ─────────────────────────────────────────
+function _onCountdownExpired(dayId) {
+  // Stop the interval but save the full 3h as elapsed
+  if (timerState[dayId]) {
+    clearInterval(timerState[dayId].interval);
+    timerState[dayId].running = false;
+    timerState[dayId].elapsed = SESSION_DURATION;
+  }
+  if (!state[dayId]) state[dayId] = {};
+  state[dayId].totalSeconds = (state[dayId].totalSeconds || 0) + SESSION_DURATION;
+  timerState[dayId] = { elapsed: 0, running: false };
+
+  // Reset timer UI
+  var disp = document.getElementById('timerDisplay-' + dayId);
+  if (disp) { disp.textContent = '0:00:00'; disp.classList.remove('running', 'paused', 'timer-warning'); }
+  var pauseBtn  = document.getElementById('timerPauseBtn-' + dayId);
+  var stopBtn   = document.getElementById('timerStopBtn-' + dayId);
+  var resumeBtn = document.getElementById('timerResumeBtn-' + dayId);
+  if (pauseBtn)  pauseBtn.style.display  = 'none';
+  if (stopBtn)   stopBtn.style.display   = 'none';
+  if (resumeBtn) resumeBtn.style.display = 'none';
+  var tb = document.getElementById('timer-' + dayId);
+  if (tb) tb.style.display = 'none';
+  var sAct = document.getElementById('section-actions-' + dayId);
+  if (sAct) sAct.style.display = 'none';
+
+  state[dayId].sessionStarted = false;
+  _focusModeOff();
+  _clearInactivity();
+  TimerRegistry.clearSession();
+  _activeTimerDayId = null;
+  _hiddenAt = null;
+  saveState();
+  TimerRegistry.clear('sync');
+  if (typeof window._syncToSupabase === 'function') window._syncToSupabase();
+  if (!document.querySelector('.q-done-edit-area.open')) _renderQsPanel(dayId);
+
+  // Show summary modal (slightly delayed so DOM settles)
+  setTimeout(() => _showSessionEndModal(dayId, SESSION_DURATION), 300);
+}
+
+// ── Session end summary modal ─────────────────────────────────
+// Reuses the coachOverlay CSS + _renderSessionRing data.
+function _showSessionEndModal(dayId, elapsedSecs) {
+  const dayState  = state[dayId] || {};
+  const day       = getActiveDays().find(d => d.id === dayId);
+  const qList     = dayState.aiQuestions || day?.questions || [];
+  const feedbacks = dayState.feedbacks   || {};
+  const total     = qList.length;
+  const verified  = Object.keys(feedbacks).length;
+
+  const WEIGHT = { good: 1.0, partial: 0.6, poor: 0.25 };
+  let weightedSum = 0;
+  qList.forEach((_, i) => { const fb = feedbacks[i]; if (fb) weightedSum += WEIGHT[fb.grade] || 0; });
+  const coveragePct = total ? Math.round((weightedSum / total) * 100) : 0;
+  const goodCount   = Object.values(feedbacks).filter(f => f.grade === 'good').length;
+  const partialCount= Object.values(feedbacks).filter(f => f.grade === 'partial').length;
+
+  // Grade tier for color
+  const grade = coveragePct >= 75 ? 'ottimo' : coveragePct >= 40 ? 'buono' : verified > 0 ? 'parziale' : '';
+
+  const statsHtml = total
+    ? `<div class="session-end-stats">
+        <div class="se-stat"><span class="se-num">${verified}</span><span class="se-lbl">domande<br>verificate</span></div>
+        <div class="se-stat"><span class="se-num">${coveragePct}%</span><span class="se-lbl">copertura<br>degli argomenti</span></div>
+        ${goodCount > 0 ? `<div class="se-stat"><span class="se-num">${goodCount}</span><span class="se-lbl">risposte<br>ottime</span></div>` : ''}
+      </div>`
+    : '';
+
+  const bodyMsg = verified > 0
+    ? `${goodCount > 0 ? `Hai risposto ottimamente a <strong>${goodCount}</strong> domande${partialCount > 0 ? ` e parzialmente a <strong>${partialCount}</strong>` : ''}. ` : ''}Salva i punti deboli emersi nelle note prima di chiudere.`
+    : `Hai completato 3 ore di studio. Segnati nelle note i concetti che vuoi ripassare.`;
+
+  let overlay = document.getElementById('sessionEndOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'sessionEndOverlay';
+    overlay.className = 'coach-overlay'; // reuse overlay style
+    document.body.appendChild(overlay);
+  }
+  overlay.innerHTML = `
+    <div class="coach-modal session-end-modal grade-${grade || 'buono'}" id="sessionEndModal">
+      <div class="coach-top">
+        <span class="coach-grade-label ${grade || 'buono'}">⏱ Sessione completata</span>
+        <span class="session-end-time">3 ore di studio</span>
+      </div>
+      ${statsHtml}
+      <div class="coach-body">
+        <div class="coach-text">${bodyMsg}</div>
+      </div>
+      <div class="coach-actions">
+        <button class="coach-cta" onclick="document.getElementById('sessionEndOverlay').style.display='none'">
+          Continua a studiare
+        </button>
+      </div>
+    </div>`;
+  overlay.style.display = 'flex';
+  overlay.onclick = e => { if (e.target === overlay) overlay.style.display = 'none'; };
 }
 
 function updateTotalHours() {
