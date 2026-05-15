@@ -8469,11 +8469,13 @@ function updateGenPlanBtn() {
   const btn  = document.getElementById('genPlanBtn');
   if (!btn) return;
   const info = getExamInfo();
-  const hasSources = getSources().length > 0;
+  const hasSubject = !!(info.subject || '').trim();
   const hasDate    = !!info.date;
-  btn.disabled = !(hasSources && hasDate);
-  const hint = !hasSources ? 'Aggiungi almeno una fonte per abilitare la generazione'
-             : !hasDate    ? 'Inserisci la data dell\'esame per continuare'
+  const hasUsableSources = getSources().filter(s => (s.content || '').trim().length > 100).length > 0;
+  btn.disabled = !(hasSubject && hasDate && hasUsableSources);
+  const hint = !hasUsableSources ? 'Aggiungi almeno una fonte (programma o PDF) per abilitare la generazione'
+             : !hasSubject       ? 'Inserisci il titolo della materia per continuare'
+             : !hasDate          ? 'Inserisci la data dell\'esame per continuare'
              : '';
   btn.title = hint;
 }
@@ -8553,7 +8555,21 @@ function _isoDate(d) {
 async function generateStudyPlan(fromOnboarding = false) {
 
   const info = getExamInfo();
-  if (!info.date) { alert('Inserisci prima la data dell\'esame.'); return; }
+
+  // ── Pre-flight validation ──────────────────────────────────────────────────
+  // Collect every missing required field and surface them in a single alert so
+  // the user knows exactly what to fill before retrying — avoids sending a
+  // malformed/empty prompt to the Edge Function (which causes resource errors).
+  const _missing = [];
+  if (!(info.subject || '').trim())  _missing.push('• Titolo materia (es. Psicologia Cognitiva)');
+  if (!info.date)                    _missing.push('• Data dell\'esame');
+  const _usableSources = getSources().filter(s => (s.content || '').trim().length > 100);
+  if (!_usableSources.length)        _missing.push('• Programma o dispense caricate (almeno una fonte con contenuto testuale)');
+  if (_missing.length) {
+    alert('Per generare il piano completa i seguenti campi:\n\n' + _missing.join('\n'));
+    return;
+  }
+  // ──────────────────────────────────────────────────────────────────────────
 
   // primaryOnly: il piano di studio deve strutturarsi sulle dispense caricate,
   // non sul programma del manuale che Claude già conosce.
@@ -8565,7 +8581,7 @@ async function generateStudyPlan(fromOnboarding = false) {
   if (examDate <= today) { alert('La data dell\'esame deve essere nel futuro.'); return; }
 
   const totalDays = Math.round((examDate - today) / (1000 * 60 * 60 * 24));
-  const subject   = info.subject   || 'la materia';
+  const subject   = info.subject.trim();
   const professor = info.professor || '';
 
   if (totalDays < 3) { alert('La data dell\'esame è troppo vicina. Inserisci una data ad almeno 3 giorni di distanza.'); return; }
