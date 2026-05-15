@@ -3310,6 +3310,48 @@ function _wireDayCard(day) {
   if (_ds.sessionStarted || Object.keys(_ds.feedbacks || {}).length > 0) {
     _renderSessionRing(day.id, false);
   }
+  // Restore timer UI if session was active (handles page reload and _patchDay rebuilds)
+  if (_ds.sessionStarted) {
+    _restoreTimerUI(day.id);
+  }
+}
+
+// ── Restore timer block visibility after a DOM rebuild ────────
+// Called by _wireDayCard whenever sessionStarted = true.
+// Handles: page reload, incremental dirty-rebuild, _patchDay after AI question generation.
+function _restoreTimerUI(dayId) {
+  const tb = document.getElementById('timer-' + dayId);
+  if (!tb) return;
+  tb.style.display = '';
+  tb.classList.remove('timer-idle');
+  tb.classList.add('timer-active');
+
+  const ts = timerState[dayId];
+  const isRunning = ts && ts.running;
+  const isPaused  = ts && !ts.running && (ts.elapsed || 0) > 0;
+  const elapsed   = (ts && ts.elapsed) || 0;
+
+  const disp      = document.getElementById('timerDisplay-' + dayId);
+  const pauseBtn  = document.getElementById('timerPauseBtn-'  + dayId);
+  const stopBtn   = document.getElementById('timerStopBtn-'   + dayId);
+  const resumeBtn = document.getElementById('timerResumeBtn-' + dayId);
+  const sAct      = document.getElementById('section-actions-' + dayId);
+
+  if (disp) {
+    disp.textContent = formatSeconds(Math.max(SESSION_DURATION - elapsed, 0));
+    disp.classList.toggle('running', isRunning);
+    disp.classList.toggle('paused',  isPaused);
+    disp.classList.toggle('timer-warning', isRunning && (SESSION_DURATION - elapsed) <= 30 * 60);
+  }
+  if (pauseBtn)  pauseBtn.style.display  = isRunning ? '' : 'none';
+  if (stopBtn)   stopBtn.style.display   = (isRunning || isPaused) ? '' : 'none';
+  if (resumeBtn) resumeBtn.style.display = isPaused ? '' : 'none';
+  if (sAct)      sAct.style.display      = '';
+
+  // If no timer is running (page reload), start a fresh countdown
+  if (!isRunning && !isPaused) {
+    timerStart(dayId);
+  }
 }
 
 // ── buildDays(opts) ────────────────────────────────────────────
