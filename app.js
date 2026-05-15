@@ -2295,6 +2295,14 @@ function showWelcomeModal() {
   const overlay = document.getElementById('welcomeOverlay');
   if (!overlay) return;
 
+  // If the exam date is strictly in the past, hand off to the outcome modal
+  // instead of showing "Oggi è il giorno dell'esame" for stale dates.
+  const _preInfo = getExamInfo();
+  if (_preInfo.date && _examDateHasPassed(_preInfo.date)) {
+    window._maybeShowExamOutcomeModal?.();
+    return;
+  }
+
   // ── Exam days calculation ────────────────────────────────────
   const info = getExamInfo();
   let daysLeft = null;
