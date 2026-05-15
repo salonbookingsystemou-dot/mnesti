@@ -731,9 +731,9 @@ function _obUpdateQuality(hasExam, hasSyllabus, hasFiles, hasBooks) {
 
   const hint = document.getElementById('obQualityHint');
   if (hint) {
-    if (tier === 1) hint.textContent = 'Aggiungi il programma per domande calibrate sul tuo corso.';
-    else if (tier === 2) hint.textContent = 'Carica le dispense per domande che citano i tuoi materiali.';
-    else if (tier === 3) hint.textContent = 'Aggiungi i manuali di testo per citazioni precise nelle risposte.';
+    if (tier === 1) hint.textContent = 'Carica le dispense o indica i manuali per un piano basato sul tuo corso specifico.';
+    else if (tier === 2) hint.textContent = 'Carica le dispense PDF per domande che citano esattamente il tuo materiale.';
+    else if (tier === 3) hint.textContent = 'Aggiungi i manuali di testo per citazioni precise di autori e capitoli nelle risposte.';
     else hint.textContent = 'Qualità massima — il piano cita autori e capitoli specifici del tuo corso.';
   }
 }
@@ -8471,11 +8471,9 @@ function updateGenPlanBtn() {
   const info = getExamInfo();
   const hasSubject = !!(info.subject || '').trim();
   const hasDate    = !!info.date;
-  const hasUsableSources = getSources().filter(s => (s.content || '').trim().length > 100).length > 0;
-  btn.disabled = !(hasSubject && hasDate && hasUsableSources);
-  const hint = !hasUsableSources ? 'Aggiungi almeno una fonte (programma o PDF) per abilitare la generazione'
-             : !hasSubject       ? 'Inserisci il titolo della materia per continuare'
-             : !hasDate          ? 'Inserisci la data dell\'esame per continuare'
+  btn.disabled = !(hasSubject && hasDate);
+  const hint = !hasSubject ? 'Inserisci il titolo della materia per continuare'
+             : !hasDate    ? 'Inserisci la data dell\'esame per continuare'
              : '';
   btn.title = hint;
 }
@@ -8492,9 +8490,10 @@ function updateGenPlanStatus() {
     statusEl.className = 'gen-plan-status has-plan';
     if (resetEl) resetEl.style.display = 'block';
   } else {
-    statusEl.textContent = getSources().length > 0
-      ? 'Inserisci la data dell\'esame e clicca "Sviluppa piano di studio"'
-      : '';
+    const info = getExamInfo();
+    statusEl.textContent = (info.subject && info.date)
+      ? 'Clicca "Sviluppa piano di studio" per generare il piano.'
+      : 'Inserisci materia e data esame per abilitare la generazione.';
     statusEl.className = 'gen-plan-status';
     if (resetEl) resetEl.style.display = 'none';
   }
@@ -8557,14 +8556,11 @@ async function generateStudyPlan(fromOnboarding = false) {
   const info = getExamInfo();
 
   // ── Pre-flight validation ──────────────────────────────────────────────────
-  // Collect every missing required field and surface them in a single alert so
-  // the user knows exactly what to fill before retrying — avoids sending a
-  // malformed/empty prompt to the Edge Function (which causes resource errors).
+  // Only subject and date are strictly required. Sources improve quality but
+  // are optional — the system falls back to Claude's knowledge of the subject.
   const _missing = [];
-  if (!(info.subject || '').trim())  _missing.push('• Titolo materia (es. Psicologia Cognitiva)');
-  if (!info.date)                    _missing.push('• Data dell\'esame');
-  const _usableSources = getSources().filter(s => (s.content || '').trim().length > 100);
-  if (!_usableSources.length)        _missing.push('• Programma o dispense caricate (almeno una fonte con contenuto testuale)');
+  if (!(info.subject || '').trim()) _missing.push('• Titolo materia (es. Psicologia Cognitiva)');
+  if (!info.date)                   _missing.push('• Data dell\'esame');
   if (_missing.length) {
     alert('Per generare il piano completa i seguenti campi:\n\n' + _missing.join('\n'));
     return;
@@ -8603,8 +8599,8 @@ async function generateStudyPlan(fromOnboarding = false) {
   });
 
   const sourcePart = sourceCtx
-    ? `${sourceRule}\n\nFONTI DEL CORSO (usa queste per costruire i contenuti delle giornate — priorità assoluta alle fonti primarie):\n--- INIZIO FONTI ---\n${sourceCtx}\n--- FINE FONTI ---\n\n`
-    : `NESSUNA FONTE CARICATA: genera un piano strutturato basandoti sulla tua conoscenza della materia "${subject}". Distribuisci i topic principali della disciplina in modo progressivo, dal più fondamentale al più avanzato. Le domande devono essere pertinenti alla materia e di livello universitario.\n\n`;
+    ? `${sourceRule}\n\nFONTI DEL CORSO (usa queste per costruire i contenuti delle giornate — priorità assoluta alle fonti primarie):\n--- INIZIO FONTI ---\n${sourceCtx}\n--- FINE FONTI ---\n\nIMPORTANTE — struttura implicita: se le fonti non contengono un programma o indice esplicito (solo dispense, slide o capitoli di libro), ricava tu stesso la struttura degli argomenti dai titoli di sezione, capitoli, intestazioni e contenuti. Usa questa struttura implicita per organizzare le giornate in ordine progressivo (dalle basi agli approfondimenti).\n\n`
+    : `NESSUNA FONTE CARICATA: genera un piano strutturato basandoti sulla tua conoscenza della materia "${subject}". Distribuisci i topic principali della disciplina in modo progressivo, dal più fondamentale al più avanzato, seguendo la struttura tipica di un corso universitario italiano su questo argomento. Le domande devono essere pertinenti alla materia e di livello universitario.\n\n`;
 
   const systemPrompt = `Sei un pedagogista esperto di pianificazione universitaria. Il tuo compito è costruire un piano di studio ottimale per uno studente universitario che deve prepararsi a un esame.
 
