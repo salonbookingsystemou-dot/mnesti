@@ -31,13 +31,17 @@ In HTML/app:
 <img src="logo-white.png" alt="Mnesti" height="32">
 ```
 
-In canvas `.canvas.tsx` (path locali non funzionano, riusare lo stesso file già esistente via URL pubblico):
+In canvas `.canvas.tsx` (il canvas non supporta network calls per policy):
+```bash
+# Generare il data URI dal file già esistente nel repo:
+B64=$(base64 -i logo-white.png | tr -d '\n')
+```
 ```tsx
-const LOGO_URL = 'https://salonbookingsystemou-dot.github.io/smart-student/logo-white.png';
-<img src={LOGO_URL} alt="Mnesti" style={{ height: 28, width: 'auto' }} />
+const LOGO_SRC = `data:image/png;base64,${B64}`;  // incollare il valore del comando shell
+<img src={LOGO_SRC} alt="Mnesti" style={{ height: 28, width: 'auto', display: 'block' }} />
 ```
 
-Non duplicare il logo, non generare SVG — usare sempre il file che già esiste.
+Non generare SVG, non inventare colori — il file sorgente è sempre `logo-white.png` nella root del repo.
 
 ## Colori ufficiali (dark mode — default)
 
