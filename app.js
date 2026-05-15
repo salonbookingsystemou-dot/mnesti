@@ -2545,6 +2545,79 @@ async function _callClaude(payload, signal) {
   return data;
 }
 
+// ── Streaming Claude call (for long requests like plan generation) ────────────
+// Sends stream:true, reads Anthropic SSE events, returns the same shape as
+// _callClaude so callers can be swapped without other changes.
+async function _callClaudeStream(payload) {
+  const token = window._getSBToken ? await window._getSBToken() : null;
+  if (!token) throw new Error('Sessione scaduta — effettua di nuovo il login.');
+
+  let res;
+  try {
+    res = await fetch(`${window._SB_URL}/functions/v1/claude-proxy`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ ...payload, stream: true }),
+    });
+  } catch (netErr) {
+    throw new Error(`Errore di rete — controlla la connessione. (${netErr.message})`);
+  }
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    const msg = data?.error?.message || data?.error || data?.message || `Errore API (${res.status})`;
+    if (data?.code === 'RATE_LIMIT') {
+      throw new Error(`⚠️ Limite giornaliero raggiunto. Riprova domani. (${data.calls_today}/${data.limit} chiamate)`);
+    }
+    if (data?.code === 'UNAUTHORIZED') throw new Error('Sessione scaduta — effettua di nuovo il login.');
+    if (data?.code === 'OVERLOADED' || res.status === 529) {
+      const e = new Error('Il servizio AI è momentaneamente sovraccarico. Riprova tra qualche secondo.');
+      e.name = 'OverloadedError';
+      throw e;
+    }
+    throw new Error(msg);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let fullText = '';
+  let inputTokens = 0, outputTokens = 0;
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    const lines = buffer.split('\n');
+    buffer = lines.pop() ?? '';
+
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const s = line.slice(6).trim();
+      if (s === '[DONE]') continue;
+      try {
+        const ev = JSON.parse(s);
+        if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') {
+          fullText += ev.delta.text;
+        }
+        if (ev.type === 'message_start') inputTokens  = ev.message?.usage?.input_tokens  ?? 0;
+        if (ev.type === 'message_delta') outputTokens = ev.usage?.output_tokens ?? 0;
+      } catch { /* ignore malformed SSE lines */ }
+    }
+  }
+
+  if (!fullText) throw new Error('Risposta AI vuota — riprova.');
+
+  return {
+    content: [{ text: fullText }],
+    usage:   { input_tokens: inputTokens, output_tokens: outputTokens },
+  };
+}
+
 // ── Session-based question panel ─────────────────────────────
 
 const MIN_ANSWER_CHARS = 40;
@@ -8566,7 +8639,7 @@ REGOLE ASSOLUTE (non derogabili):
   _setPlanGenUI('Generazione piano…', 'Claude sta costruendo il calendario e le domande…', 30, 'Chiamata API…');
 
   try {
-    const data = await _callClaude({
+    const data = await _callClaudeStream({
       model: 'claude-sonnet-4-6',
       max_tokens: 12000,
       temperature: 0.7,

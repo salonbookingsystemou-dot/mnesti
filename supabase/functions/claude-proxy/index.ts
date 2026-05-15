@@ -121,6 +121,65 @@ Deno.serve(async (req) => {
       anthropicRes = await anthropicCall()
     }
 
+    // ── 4b. Streaming passthrough ─────────────────────────────────
+    // If the client requested stream:true, pipe the Anthropic SSE stream
+    // directly back — this prevents the 150-second idle timeout because
+    // data flows continuously instead of the proxy waiting in silence.
+    if ((payload as Record<string, unknown>).stream === true) {
+      if (anthropicRes.status === 529) {
+        return json({ error: 'Il servizio AI è sovraccarico. Riprova tra qualche minuto.', code: 'OVERLOADED' }, 503)
+      }
+      if (!anthropicRes.ok) {
+        let errData: Record<string, unknown> = {}
+        try { errData = await anthropicRes.json() } catch { /* ignore */ }
+        console.error('[claude-proxy] Anthropic stream error:', anthropicRes.status, JSON.stringify(errData))
+        return json({
+          error: (errData as Record<string, { message?: string }>)?.error?.message ?? `Errore Anthropic (${anthropicRes.status})`,
+          code: 'ANTHROPIC_ERROR',
+        }, 502)
+      }
+
+      // Intercept usage events while passing all chunks through unchanged
+      let inputTokens = 0, outputTokens = 0
+      const today = new Date().toISOString().split('T')[0]
+      const transform = new TransformStream<Uint8Array, Uint8Array>({
+        transform(chunk, controller) {
+          const text = new TextDecoder().decode(chunk)
+          for (const line of text.split('\n')) {
+            if (!line.startsWith('data: ')) continue
+            const s = line.slice(6).trim()
+            if (s === '[DONE]') continue
+            try {
+              const ev = JSON.parse(s)
+              if (ev.type === 'message_start') inputTokens  = ev.message?.usage?.input_tokens  ?? 0
+              if (ev.type === 'message_delta') outputTokens = ev.usage?.output_tokens ?? 0
+            } catch { /* ignore malformed SSE lines */ }
+          }
+          controller.enqueue(chunk)
+        },
+        flush() {
+          ;(async () => {
+            const { error: rpcErr } = await sb.rpc('increment_api_usage', {
+              p_user_id: user.id, p_date: today,
+              p_calls: 1, p_input_tokens: inputTokens, p_output_tokens: outputTokens,
+            })
+            if (rpcErr) console.warn('[claude-proxy] usage log failed (stream):', rpcErr.message)
+          })()
+        },
+      })
+
+      anthropicRes.body!.pipeTo(transform.writable)
+      return new Response(transform.readable, {
+        headers: {
+          ...CORS,
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'X-Accel-Buffering': 'no',
+        },
+      })
+    }
+
+    // ── 4c. Non-streaming: parse full JSON response ────────────────
     let data: Record<string, unknown>
     try {
       data = await anthropicRes.json()
