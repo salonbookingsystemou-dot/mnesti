@@ -115,10 +115,7 @@ Deno.serve(async (req) => {
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
-        // Updated to 2024-02-15 — required for Claude 3.5+ and Claude 4.x models.
-        // The 2023-06-01 version header was causing silent incompatibilities with
-        // newer model IDs (claude-sonnet-4-x, claude-opus-4-x).
-        'anthropic-version': '2024-02-15',
+        'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify(anthropicPayload),
     })
