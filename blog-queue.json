@@ -91,9 +91,9 @@
     "icon": "🎤",
     "ctaTitle": "Allenati con domande aperte simulate",
     "ctaText": "Mnesti genera domande aperte dalle tue dispense e valuta le risposte come farebbe il professore. Primo esame gratis.",
-    "status": "pending",
-    "date": null,
-    "publishedAt": null
+    "status": "published",
+    "date": "2026-05-15",
+    "publishedAt": "2026-05-15T09:00:00+02:00"
   },
   {
     "slug": "blog-ansia-esame",
