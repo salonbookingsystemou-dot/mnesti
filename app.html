@@ -992,13 +992,44 @@
 <!-- Plan Generation Overlay -->
 <div class="plan-gen-overlay" id="planGenOverlay">
   <div class="plan-gen-box">
-    <div class="quiz-spinner" style="width:30px;height:30px;margin:0 auto 16px" role="status" aria-label="Generazione piano"></div>
-    <div class="plan-gen-title" id="planGenTitle">Generazione piano…</div>
-    <div class="plan-gen-msg" id="planGenMsg">Claude sta analizzando le tue fonti e costruendo il calendario di studio…</div>
-    <div class="plan-gen-bar-wrap">
-      <div class="plan-gen-bar" id="planGenBar"></div>
+    <img src="logo-white.png" alt="Mnesti" class="plan-gen-logo">
+    <p class="plan-gen-headline">Stiamo preparando il tuo piano di studio</p>
+
+    <div class="plan-gen-card">
+      <div class="plan-gen-phase-row">
+        <span class="pgdot"></span>
+        <span class="pgdot"></span>
+        <span class="pgdot"></span>
+        <span class="plan-gen-phase-text" id="planGenPhase">Analisi fonti…</span>
+        <span class="plan-gen-step-tok" id="planGenStep"></span>
+      </div>
+      <div class="plan-gen-cal-hdr">
+        <span>L</span><span>M</span><span>M</span><span>G</span><span>V</span><span>S</span><span>D</span>
+      </div>
+      <div class="plan-gen-cal-grid" id="planGenCalGrid"></div>
+      <div class="plan-gen-bar-wrap">
+        <div class="plan-gen-bar" id="planGenBar"></div>
+      </div>
     </div>
-    <div class="plan-gen-step" id="planGenStep">Avvio…</div>
+
+    <div class="plan-gen-stats">
+      <div class="plan-gen-stat plan-gen-stat--hi">
+        <div class="pgs-label">GIORNI STUDIO</div>
+        <div class="pgs-val" id="planStatDays">—</div>
+      </div>
+      <div class="plan-gen-stat">
+        <div class="pgs-label">ARGOMENTI</div>
+        <div class="pgs-val" id="planStatTopics">—</div>
+      </div>
+      <div class="plan-gen-stat">
+        <div class="pgs-label">SETTIMANE</div>
+        <div class="pgs-val" id="planStatWeeks">—</div>
+      </div>
+    </div>
+
+    <!-- Backward-compat hidden elements used by _setPlanGenUI -->
+    <div id="planGenTitle" style="display:none"></div>
+    <div id="planGenMsg"   style="display:none"></div>
   </div>
 </div>
 

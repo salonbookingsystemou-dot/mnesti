@@ -2481,35 +2481,113 @@
   }
   .gen-plan-reset:hover { color: var(--text-2); }
   /* Plan generation overlay */
+  /* ── Plan generation overlay (animata) ─────────────────────── */
   .plan-gen-overlay {
     display: none; position: fixed; inset: 0; z-index: 9999;
-    background: rgba(0,0,0,0.55); align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.72);
+    align-items: center; justify-content: center;
   }
   .plan-gen-overlay.active { display: flex; }
+
   .plan-gen-box {
-    background: var(--surface2); border-radius: 16px;
-    padding: 36px 40px; max-width: 380px; width: 90%;
+    background: var(--surface2); border-radius: 20px;
+    padding: 28px 24px 20px; max-width: 400px; width: 92%;
     text-align: center; border: 1px solid var(--border);
   }
-  .plan-gen-title {
-    font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 700;
-    color: var(--text-1); margin-bottom: 10px; letter-spacing: -0.02em;
+  .plan-gen-logo {
+    height: 22px; width: auto; display: block;
+    margin: 0 auto 18px;
+    filter: brightness(0) invert(1);
   }
-  .plan-gen-msg {
-    font-family: 'Inter', sans-serif; font-size: 12px; color: var(--text-3);
-    line-height: 1.6; margin-bottom: 20px;
+  .plan-gen-headline {
+    font-size: 14px; font-weight: 500; color: var(--text-1);
+    margin: 0 0 16px; letter-spacing: -0.01em; line-height: 1.45;
   }
+
+  /* Animation card */
+  .plan-gen-card {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 14px; padding: 14px 14px 12px; margin-bottom: 14px;
+  }
+
+  /* Phase dots */
+  .plan-gen-phase-row {
+    display: flex; align-items: center; gap: 5px; margin-bottom: 12px;
+  }
+  .pgdot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent); flex-shrink: 0;
+    animation: pgdotPulse 1.4s ease-in-out infinite;
+  }
+  .pgdot:nth-child(2) { animation-delay: 0.22s; }
+  .pgdot:nth-child(3) { animation-delay: 0.44s; background: var(--border); }
+  @keyframes pgdotPulse {
+    0%, 100% { opacity: 0.35; transform: scale(0.85); }
+    50%       { opacity: 1;    transform: scale(1.1);  }
+  }
+  .plan-gen-phase-text {
+    font-size: 12px; font-weight: 500; color: var(--text-1);
+    flex: 1; text-align: left; margin-left: 3px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .plan-gen-step-tok {
+    font-size: 11px; color: var(--text-3); flex-shrink: 0;
+  }
+
+  /* Calendar mini-grid */
+  .plan-gen-cal-hdr {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    gap: 3px; margin-bottom: 3px;
+  }
+  .plan-gen-cal-hdr span {
+    font-size: 9px; font-weight: 700; color: var(--text-3); text-align: center;
+  }
+  .plan-gen-cal-grid {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    gap: 3px; margin-bottom: 12px;
+  }
+  .pgcal-cell {
+    aspect-ratio: 1; border-radius: 4px;
+    background: var(--border-subtle); border: 1px solid var(--border);
+    transition: background 0.4s ease, border-color 0.4s ease;
+  }
+  .pgcal-cell--active {
+    background: rgba(217,119,87,0.28); border-color: rgba(217,119,87,0.55);
+  }
+  .pgcal-cell--rest {
+    background: var(--border-subtle); border-color: var(--border-subtle);
+    opacity: 0.4;
+  }
+
+  /* Progress bar */
   .plan-gen-bar-wrap {
-    width: 100%; height: 5px; background: var(--border);
-    border-radius: 3px; overflow: hidden; margin-bottom: 10px;
+    width: 100%; height: 3px; background: var(--border);
+    border-radius: 2px; overflow: hidden;
   }
   .plan-gen-bar {
     height: 100%; width: 0%; background: var(--accent);
-    border-radius: 3px; transition: width 0.5s ease;
+    border-radius: 2px; transition: width 0.6s ease;
   }
-  .plan-gen-step {
-    font-family: 'Inter', sans-serif; font-size: 11px; color: var(--text-3);
+
+  /* Stats */
+  .plan-gen-stats {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
   }
+  .plan-gen-stat {
+    background: var(--border-subtle); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 6px;
+  }
+  .plan-gen-stat--hi {
+    background: var(--accent-bg); border-color: var(--accent-border);
+  }
+  .pgs-label {
+    font-size: 8px; font-weight: 700; color: var(--text-3);
+    letter-spacing: 0.07em; margin-bottom: 5px; text-transform: uppercase;
+  }
+  .pgs-val {
+    font-size: 22px; font-weight: 700; color: var(--text-1); line-height: 1;
+  }
+  .plan-gen-stat--hi .pgs-val { color: var(--accent); }
 
   .sources-footer {
     padding: 14px 20px; border-top: 1px solid var(--border-subtle);
@@ -5618,8 +5696,10 @@
     .quiz-bloom-row  { flex-wrap: nowrap; }
 
     /* Plan gen overlay */
-    .plan-gen-box { width: 92vw; padding: 24px 16px; }
-    .plan-gen-title { font-size: 15px; }
+    .plan-gen-box { width: 94vw; padding: 22px 14px 16px; }
+    .plan-gen-headline { font-size: 13px; }
+    .pgs-val { font-size: 18px; }
+    .pgs-label { font-size: 7px; }
 
     /* Login */
     .login-box { padding: 24px 18px 20px; gap: 12px; }

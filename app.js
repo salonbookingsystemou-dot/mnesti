@@ -8510,19 +8510,125 @@ function resetAiPlan() {
 }
 
 // ── Generate study plan ──────────────────────────────────────
+// ── Plan generation animation controller ─────────────────────────────────────
+const _planAnim = {
+  _phases: [
+    'Analisi fonti…',
+    'Strutturazione degli argomenti…',
+    'Creazione domande…',
+    'Ottimizzazione piano…',
+  ],
+  _phaseIdx: 0,
+  _phaseTimer: null,
+  _calTimer: null,
+  _progressTimer: null,
+  _calTotal: 14,
+  _calFilled: 0,
+  _progress: 0,
+  _running: false,
+
+  start() {
+    if (this._running) return;
+    this._running = true;
+    this._phaseIdx = 0;
+    this._calFilled = 0;
+    this._progress = 0;
+    this._buildCalGrid();
+    this._fillCalCell(0); this._calFilled = 1; // primo giorno subito
+    this._updatePhase();
+
+    this._phaseTimer = setInterval(() => {
+      this._phaseIdx = (this._phaseIdx + 1) % this._phases.length;
+      this._updatePhase();
+    }, 12000);
+
+    this._calTimer = setInterval(() => {
+      if (this._calFilled < this._calTotal) {
+        this._fillCalCell(this._calFilled++);
+      }
+    }, 5000);
+
+    // Fake progress: 0 → 85% in ~90s
+    this._progressTimer = setInterval(() => {
+      if (this._progress < 85) {
+        this._progress = Math.min(85, this._progress + 0.7);
+        const b = document.getElementById('planGenBar');
+        if (b) b.style.width = this._progress + '%';
+      }
+    }, 700);
+  },
+
+  stop() {
+    this._running = false;
+    clearInterval(this._phaseTimer);
+    clearInterval(this._calTimer);
+    clearInterval(this._progressTimer);
+    this._phaseTimer = this._calTimer = this._progressTimer = null;
+  },
+
+  setProgress(pct) {
+    if (pct > this._progress) {
+      this._progress = pct;
+      const b = document.getElementById('planGenBar');
+      if (b) b.style.width = pct + '%';
+    }
+  },
+
+  showStats(days, topics, weeks) {
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    set('planStatDays', days);
+    set('planStatTopics', topics);
+    set('planStatWeeks', weeks);
+  },
+
+  resetStats() {
+    ['planStatDays','planStatTopics','planStatWeeks'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.textContent = '—';
+    });
+  },
+
+  _updatePhase() {
+    const el = document.getElementById('planGenPhase');
+    if (el) el.textContent = this._phases[this._phaseIdx];
+  },
+
+  _buildCalGrid() {
+    const grid = document.getElementById('planGenCalGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    for (let i = 0; i < this._calTotal; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'pgcal-cell';
+      cell.id = 'pgcal-' + i;
+      grid.appendChild(cell);
+    }
+  },
+
+  _fillCalCell(idx) {
+    const cell = document.getElementById('pgcal-' + idx);
+    if (!cell) return;
+    cell.classList.add((idx % 7 === 6) ? 'pgcal-cell--rest' : 'pgcal-cell--active');
+  }
+};
+
 function _setPlanGenUI(title, msg, pct, step) {
   const overlay = document.getElementById('planGenOverlay');
+  const wasActive = overlay && overlay.classList.contains('active');
   if (overlay) overlay.classList.add('active');
+  if (!wasActive) _planAnim.start();
+  if (typeof pct === 'number') _planAnim.setProgress(pct);
+  const s = document.getElementById('planGenStep');
+  if (s) s.textContent = step || '';
+  // hidden compat
   const t = document.getElementById('planGenTitle');
   const m = document.getElementById('planGenMsg');
-  const b = document.getElementById('planGenBar');
-  const s = document.getElementById('planGenStep');
   if (t) t.textContent = title;
   if (m) m.textContent = msg;
-  if (b) b.style.width = pct + '%';
-  if (s) s.textContent = step;
 }
+
 function _hidePlanGenUI() {
+  _planAnim.stop();
+  _planAnim.resetStats();
   const overlay = document.getElementById('planGenOverlay');
   if (overlay) overlay.classList.remove('active');
 }
@@ -8722,7 +8828,11 @@ REGOLE ASSOLUTE (non derogabili):
     _syncExamInfoToSupabase(window._currentUserId);
 
     _setPlanGenUI('Piano completato ✓', `${normalizedDays.length} giorni pianificati fino all\'esame.`, 100, 'Caricamento…');
-    await new Promise(r => setTimeout(r, 800));
+    const _studyDays = normalizedDays.filter(d => d.type === 'studio' || d.type === 'revision').length;
+    const _topicCount = normalizedDays.filter(d => d.type === 'studio').length;
+    const _weeks = Math.ceil(totalDays / 7);
+    _planAnim.showStats(_studyDays, _topicCount, _weeks);
+    await new Promise(r => setTimeout(r, 1200));
 
     // Rebuild UI — new plan starts fresh from day 1
     try { localStorage.removeItem('psico_last_day'); } catch(e) {}
