@@ -8511,105 +8511,141 @@ function resetAiPlan() {
 
 // ── Generate study plan ──────────────────────────────────────
 // ── Plan generation animation controller ─────────────────────────────────────
-const _planAnim = {
-  _phases: [
-    'Analisi fonti…',
-    'Strutturazione degli argomenti…',
-    'Creazione domande…',
-    'Ottimizzazione piano…',
-  ],
-  _phaseIdx: 0,
-  _phaseTimer: null,
-  _calTimer: null,
-  _progressTimer: null,
-  _calTotal: 14,
-  _calFilled: 0,
-  _progress: 0,
-  _running: false,
+const _planAnim = (() => {
+  // 4 weeks × 7 days — replica il pattern del canvas preview
+  const PLAN = [
+    'studio','studio','studio','studio','studio','riposo','riposo',
+    'studio','studio','studio','riposo','studio','riposo','riposo',
+    'studio','studio','studio','studio','riposo','riposo','riposo',
+    'riposo','studio','studio','studio','riposo','studio','esame',
+  ];
+  const PHASES = [
+    { at: 0,    msg: 'Analisi della materia…'               },
+    { at: 0.20, msg: 'Strutturazione degli argomenti…'      },
+    { at: 0.46, msg: 'Costruzione del calendario…'          },
+    { at: 0.68, msg: 'Generazione domande per ogni giorno…' },
+    { at: 0.88, msg: 'Ottimizzazione finale del piano…'     },
+  ];
+  const TOTAL = PLAN.length; // 28
 
-  start() {
-    if (this._running) return;
-    this._running = true;
-    this._phaseIdx = 0;
-    this._calFilled = 0;
-    this._progress = 0;
-    this._buildCalGrid();
-    this._fillCalCell(0); this._calFilled = 1; // primo giorno subito
-    this._updatePhase();
+  return {
+    _phaseTimer: null,
+    _calTimer: null,
+    _progressTimer: null,
+    _tokTimer: null,
+    _calFilled: 0,
+    _progress: 0,
+    _tokens: 0,
+    _running: false,
 
-    this._phaseTimer = setInterval(() => {
-      this._phaseIdx = (this._phaseIdx + 1) % this._phases.length;
+    start() {
+      if (this._running) return;
+      this._running = true;
+      this._calFilled = 0;
+      this._progress = 0;
+      this._tokens = 0;
+      this._buildCalGrid();
+      // Prima cella subito visibile
+      this._fillCalCell(0); this._calFilled = 1;
       this._updatePhase();
-    }, 12000);
 
-    this._calTimer = setInterval(() => {
-      if (this._calFilled < this._calTotal) {
-        this._fillCalCell(this._calFilled++);
-      }
-    }, 5000);
+      // Fase basata sul progresso reale
+      this._phaseTimer = setInterval(() => this._updatePhase(), 800);
 
-    // Fake progress: 0 → 85% in ~90s
-    this._progressTimer = setInterval(() => {
-      if (this._progress < 85) {
-        this._progress = Math.min(85, this._progress + 0.7);
+      // Calendario: una cella ogni ~3s (28 celle × 3s = 84s)
+      this._calTimer = setInterval(() => {
+        if (this._calFilled < TOTAL) this._fillCalCell(this._calFilled++);
+      }, 3000);
+
+      // Fake progress: 0 → 85% in ~90s
+      this._progressTimer = setInterval(() => {
+        if (this._progress < 85) {
+          this._progress = Math.min(85, this._progress + 0.65);
+          const b = document.getElementById('planGenBar');
+          if (b) b.style.width = this._progress + '%';
+        }
+      }, 700);
+
+      // Token counter (decorativo, come nel canvas)
+      this._tokTimer = setInterval(() => {
+        this._tokens += Math.floor(Math.random() * 15 + 5);
+        const s = document.getElementById('planGenStep');
+        if (s && s.textContent !== 'Caricamento…') {
+          s.textContent = this._tokens.toLocaleString('it') + ' tok';
+        }
+      }, 72);
+    },
+
+    stop() {
+      this._running = false;
+      [this._phaseTimer, this._calTimer, this._progressTimer, this._tokTimer]
+        .forEach(t => clearInterval(t));
+      this._phaseTimer = this._calTimer = this._progressTimer = this._tokTimer = null;
+    },
+
+    setProgress(pct) {
+      if (pct > this._progress) {
+        this._progress = pct;
         const b = document.getElementById('planGenBar');
-        if (b) b.style.width = this._progress + '%';
+        if (b) b.style.width = pct + '%';
       }
-    }, 700);
-  },
+    },
 
-  stop() {
-    this._running = false;
-    clearInterval(this._phaseTimer);
-    clearInterval(this._calTimer);
-    clearInterval(this._progressTimer);
-    this._phaseTimer = this._calTimer = this._progressTimer = null;
-  },
+    showStats(days, topics, weeks) {
+      const _count = (id, target) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        let v = 0;
+        const step = Math.ceil(target / 30);
+        const tid = setInterval(() => {
+          v = Math.min(target, v + step);
+          el.textContent = v;
+          if (v >= target) clearInterval(tid);
+        }, 55);
+      };
+      _count('planStatDays', days);
+      _count('planStatTopics', topics);
+      _count('planStatWeeks', weeks);
+    },
 
-  setProgress(pct) {
-    if (pct > this._progress) {
-      this._progress = pct;
-      const b = document.getElementById('planGenBar');
-      if (b) b.style.width = pct + '%';
+    resetStats() {
+      ['planStatDays','planStatTopics','planStatWeeks'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.textContent = '—';
+      });
+    },
+
+    _updatePhase() {
+      const p = this._progress / 100;
+      let msg = PHASES[0].msg;
+      for (const ph of PHASES) { if (p >= ph.at) msg = ph.msg; }
+      const el = document.getElementById('planGenPhase');
+      if (el && el.textContent !== msg) el.textContent = msg;
+    },
+
+    _buildCalGrid() {
+      const grid = document.getElementById('planGenCalGrid');
+      if (!grid) return;
+      grid.innerHTML = '';
+      for (let i = 0; i < TOTAL; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'pgcal-cell';
+        cell.id = 'pgcal-' + i;
+        grid.appendChild(cell);
+      }
+    },
+
+    _fillCalCell(idx) {
+      const cell = document.getElementById('pgcal-' + idx);
+      if (!cell) return;
+      const type = PLAN[idx] || 'studio';
+      cell.classList.add(
+        type === 'esame'  ? 'pgcal-cell--exam' :
+        type === 'riposo' ? 'pgcal-cell--rest' :
+                            'pgcal-cell--active'
+      );
     }
-  },
-
-  showStats(days, topics, weeks) {
-    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-    set('planStatDays', days);
-    set('planStatTopics', topics);
-    set('planStatWeeks', weeks);
-  },
-
-  resetStats() {
-    ['planStatDays','planStatTopics','planStatWeeks'].forEach(id => {
-      const el = document.getElementById(id); if (el) el.textContent = '—';
-    });
-  },
-
-  _updatePhase() {
-    const el = document.getElementById('planGenPhase');
-    if (el) el.textContent = this._phases[this._phaseIdx];
-  },
-
-  _buildCalGrid() {
-    const grid = document.getElementById('planGenCalGrid');
-    if (!grid) return;
-    grid.innerHTML = '';
-    for (let i = 0; i < this._calTotal; i++) {
-      const cell = document.createElement('div');
-      cell.className = 'pgcal-cell';
-      cell.id = 'pgcal-' + i;
-      grid.appendChild(cell);
-    }
-  },
-
-  _fillCalCell(idx) {
-    const cell = document.getElementById('pgcal-' + idx);
-    if (!cell) return;
-    cell.classList.add((idx % 7 === 6) ? 'pgcal-cell--rest' : 'pgcal-cell--active');
-  }
-};
+  };
+})();
 
 function _setPlanGenUI(title, msg, pct, step) {
   const overlay = document.getElementById('planGenOverlay');

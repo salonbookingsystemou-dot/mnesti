@@ -2537,26 +2537,37 @@
   /* Calendar mini-grid */
   .plan-gen-cal-hdr {
     display: grid; grid-template-columns: repeat(7, 1fr);
-    gap: 3px; margin-bottom: 3px;
+    gap: 4px; margin-bottom: 4px;
   }
   .plan-gen-cal-hdr span {
     font-size: 9px; font-weight: 700; color: var(--text-3); text-align: center;
+    letter-spacing: 0.08em;
   }
+  .plan-gen-cal-hdr span.pgcal-weekend { opacity: 0.45; }
   .plan-gen-cal-grid {
     display: grid; grid-template-columns: repeat(7, 1fr);
-    gap: 3px; margin-bottom: 12px;
+    gap: 4px; margin-bottom: 12px;
   }
   .pgcal-cell {
-    aspect-ratio: 1; border-radius: 4px;
-    background: var(--border-subtle); border: 1px solid var(--border);
-    transition: background 0.4s ease, border-color 0.4s ease;
+    height: 26px; border-radius: 5px;
+    background: transparent;
+    border: 1px solid var(--border);
+    opacity: 0.14;
+    transform: scale(0.65);
+    transition: opacity 0.14s ease, transform 0.14s ease,
+                background 0.2s ease, border-color 0.2s ease;
   }
   .pgcal-cell--active {
-    background: rgba(217,119,87,0.28); border-color: rgba(217,119,87,0.55);
+    background: rgba(217,119,87,0.25); border-color: rgba(217,119,87,0.55);
+    opacity: 1; transform: scale(1);
   }
   .pgcal-cell--rest {
-    background: var(--border-subtle); border-color: var(--border-subtle);
-    opacity: 0.4;
+    background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.10);
+    opacity: 1; transform: scale(1);
+  }
+  .pgcal-cell--exam {
+    background: rgba(185,60,48,0.22); border-color: rgba(220,80,60,0.55);
+    opacity: 1; transform: scale(1);
   }
 
   /* Progress bar */
