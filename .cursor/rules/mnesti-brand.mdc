@@ -22,11 +22,26 @@ I file logo si trovano nella root del progetto:
 <img src="logo-white.png" alt="Mnesti" height="32">
 ```
 
-**In canvas `.canvas.tsx` le img con path locali non funzionano.**  
-Usare `base64` oppure un SVG inline che riproduca il wordmark:
-- Font: Inter 800, colore `#e7e0d8`
-- Testo: `Mnesti` (capitale M, resto minuscolo)
-- Accento: cerchio arancio `#d97757` a fianco o sopra la lettera finale
+**Regola assoluta: usare SEMPRE il logo PNG ufficiale, mai SVG generato o testo stilizzato.**
+
+In HTML/app: `<img src="logo-white.png" alt="Mnesti" height="32">`
+
+In canvas `.canvas.tsx` (path locali non funzionano): leggere il base64 ufficiale dal file
+`.cursor/brand/logo-white.b64` e incorporarlo come data URI:
+
+```bash
+# Come recuperare il base64 (eseguire in shell quando serve):
+cat /Users/macbookpro/Desktop/Student2026/smart-student/.cursor/brand/logo-white.b64
+```
+
+```tsx
+// Uso nel canvas:
+const LOGO = '<contenuto di logo-white.b64>';
+<img src={`data:image/png;base64,${LOGO}`} alt="Mnesti" style={{ height: 28 }} />
+```
+
+Il file `.cursor/brand/logo-white.b64` è la fonte di verità per il logo base64.
+Non generare mai il logo da zero — leggere sempre da quel file.
 
 ## Colori ufficiali (dark mode — default)
 
