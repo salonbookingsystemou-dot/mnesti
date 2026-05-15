@@ -201,16 +201,24 @@
   <!-- Plan quality widget -->
   <div class="header-plan-qual header-hide-mobile" id="hdrPlanQual">
     <div class="header-stat-label">Qualità piano</div>
-    <div class="hpq-row">
-      <span class="hpq-dot" id="hpqDot"></span>
-      <span class="hpq-label" id="hpqLabel">—</span>
-      <button class="hpq-update-btn" id="hpqUpdateBtn"
-        onclick="openSetupDrawer('fonti')"
-        title="Hai aggiunto fonti dopo la generazione — rigenera il piano per migliorarlo"
-        style="display:none">
-        <i data-lucide="sparkles" style="width:9px;height:9px;stroke-width:2.5;pointer-events:none"></i>
-        Aggiorna
-      </button>
+    <div class="hpq-body">
+      <!-- 4-segment rating bar -->
+      <div class="hpq-bars">
+        <span class="hpq-bar" id="hpqBar1"></span>
+        <span class="hpq-bar" id="hpqBar2"></span>
+        <span class="hpq-bar" id="hpqBar3"></span>
+        <span class="hpq-bar" id="hpqBar4"></span>
+      </div>
+      <!-- Label + CTA -->
+      <div class="hpq-text-row">
+        <span class="hpq-label" id="hpqLabel">—</span>
+        <button class="hpq-cta" id="hpqCta"
+          onclick="openSetupDrawer('fonti')"
+          style="display:none">
+          <i data-lucide="arrow-up-right" style="width:10px;height:10px;stroke-width:2.5;pointer-events:none"></i>
+          Migliora il piano
+        </button>
+      </div>
     </div>
   </div>
 

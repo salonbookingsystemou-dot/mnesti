@@ -17,10 +17,10 @@ const _ACCENT_PRESETS = [
 // Used by: header quality widget, onboarding quality meter, confirm-overwrite dialog.
 // Tier 1 = no sources  →  Tier 4 = dispense + manuali
 const _PLAN_QUALITY = [
-  { label: 'Solo materia', color: '#6b7280', hint: 'Piano basato sulla conoscenza di Claude — aggiungi dispense per domande personalizzate.' },
-  { label: 'Con programma', color: '#d97757', hint: 'Piano con argomenti del programma — carica le dispense PDF per domande mirate.' },
-  { label: 'Con dispense', color: '#3b82f6', hint: 'Piano costruito sulle tue dispense — aggiungi i manuali di testo per citazioni precise.' },
-  { label: 'Ottimale', color: '#f59e0b', hint: 'Qualità massima — domande basate su dispense e manuali del tuo corso.' },
+  { label: 'Base',         shortDesc: 'solo materia',          color: '#6b7280', hint: 'Piano basato sulla conoscenza di Claude — aggiungi dispense per domande personalizzate.' },
+  { label: 'Strutturato',  shortDesc: 'programma indicato',    color: '#d97757', hint: 'Piano con argomenti del programma — carica le dispense PDF per domande mirate.' },
+  { label: 'Con dispense', shortDesc: 'PDF caricati',          color: '#3b82f6', hint: 'Piano costruito sulle tue dispense — aggiungi i manuali di testo per citazioni precise.' },
+  { label: 'Ottimale',     shortDesc: 'dispense + manuali',    color: '#f59e0b', hint: 'Qualità massima — domande basate su dispense e manuali del tuo corso.' },
 ];
 
 // ── Supabase Auth + Cloud Sync ───────────────────────────────
@@ -8523,32 +8523,63 @@ function _calcSourceQualityTier() {
 }
 
 function updatePlanQualityWidget() {
-  const dot       = document.getElementById('hpqDot');
   const lbl       = document.getElementById('hpqLabel');
-  const badge     = document.getElementById('hpqUpdateBtn');
+  const cta       = document.getElementById('hpqCta');
   const container = document.getElementById('hdrPlanQual');
-  if (!dot || !lbl) return;
+  if (!lbl) return;
 
   const planRaw = localStorage.getItem('psico_ai_plan');
+
+  // Helper: paint the 4-segment bar
+  function _paintBars(tier, color) {
+    for (let i = 1; i <= 4; i++) {
+      const bar = document.getElementById('hpqBar' + i);
+      if (!bar) continue;
+      bar.classList.remove('active', 'prev');
+      if (i < tier)  bar.classList.add('prev');
+      if (i === tier) bar.classList.add('active');
+    }
+    // Set CSS variable for color-mix fallback
+    const barsEl = document.querySelector('.hpq-bars');
+    if (barsEl) barsEl.style.setProperty('--hpq-color', color);
+  }
+
   if (!planRaw) {
-    dot.style.background = '#4b5563';
-    lbl.textContent = 'Nessun piano';
-    if (badge)     badge.style.display = 'none';
+    _paintBars(0, '#6b7280');
+    lbl.textContent = 'Nessun piano generato';
+    lbl.style.color = 'var(--text-3)';
+    if (cta) cta.style.display = 'none';
     if (container) container.title = '';
     return;
   }
 
   let planTier = 1;
   try { planTier = JSON.parse(planRaw).sourceTier || 1; } catch { /* leave default */ }
+  planTier = Math.min(Math.max(planTier, 1), 4);
 
   const t = _PLAN_QUALITY[planTier - 1];
-  dot.style.background = t.color;
-  lbl.textContent      = t.label;
+  _paintBars(planTier, t.color);
+
+  // Label: "Base — solo materia"
+  lbl.textContent = `${t.label} — ${t.shortDesc}`;
+  lbl.style.color = planTier === 1 ? 'var(--text-3)' : 'var(--text-2)';
   if (container) container.title = t.hint;
 
-  // Badge: current sources are better than when the plan was generated
+  // CTA: show if plan is improvable (< Ottimale) and current sources > planTier
   const currentTier = _calcSourceQualityTier();
-  if (badge) badge.style.display = currentTier > planTier ? 'inline-flex' : 'none';
+  const canImprove  = planTier < 4;
+  if (cta) {
+    cta.style.display = canImprove ? 'inline-flex' : 'none';
+    if (canImprove && currentTier > planTier) {
+      // Sources already improved — suggest regenerating
+      cta.textContent = '↑ Rigenera il piano';
+      cta.onclick = () => document.getElementById('genPlanBtn')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else if (canImprove) {
+      cta.innerHTML = '<i data-lucide="arrow-up-right" style="width:10px;height:10px;stroke-width:2.5;pointer-events:none"></i> Migliora il piano';
+      cta.onclick = () => openSetupDrawer('fonti');
+      if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [cta] });
+    }
+  }
 }
 
 function updateGenPlanStatus() {
