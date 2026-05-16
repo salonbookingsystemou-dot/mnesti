@@ -2232,11 +2232,13 @@
   .session-progress-dots {
     display: flex; align-items: center;
     gap: 3px; flex-wrap: nowrap;
+    max-width: 260px;
   }
   .session-dot {
-    height: 5px; flex: 1 1 0;
+    height: 5px;
+    flex: 1 1 0; max-width: 40px;
     border-radius: 3px;
-    background: var(--surface3); flex-shrink: 0;
+    background: var(--surface3);
     transition: background 0.35s, transform 0.2s;
   }
   .session-dot.answered { background: var(--border-subtle); filter: brightness(1.4); }
