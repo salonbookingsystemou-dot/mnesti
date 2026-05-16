@@ -115,9 +115,9 @@
     "icon": "🧘",
     "ctaTitle": "Preparazione sistematica = meno ansia",
     "ctaText": "L'ansia da esame scende quando sei davvero preparato. Mnesti ti dà un piano giorno per giorno così arrivi all'appello senza sorprese. Primo esame gratis.",
-    "status": "pending",
-    "date": null,
-    "publishedAt": null
+    "status": "published",
+    "date": "2026-05-16",
+    "publishedAt": "2026-05-16T09:00:00+02:00"
   },
   {
     "slug": "blog-metodo-cornell",

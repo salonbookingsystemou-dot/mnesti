@@ -90,4 +90,13 @@
     <priority>0.7</priority>
   </url>
 
+
+  <!-- Ansia da esame universitario: cause, sintomi e strategie efficaci -->
+  <url>
+    <loc>https://mnesti.it/blog-ansia-esame.html</loc>
+    <lastmod>2026-05-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
 </urlset>
