@@ -9,7 +9,7 @@
 
 export const FROM_EMAIL = 'Mnesti <noreply@mnesti.it>'
 export const APP_URL    = 'https://mnesti.it/app.html'
-export const LOGO_URL   = 'https://mnesti.it/logo-login.png'  // white wordmark for dark bg
+export const LOGO_URL   = 'https://mnesti.it/logo-white.png'  // white wordmark for dark bg
 
 // ── Base layout ───────────────────────────────────────────────────────────────
 // Dark-themed email shell matching the Mnesti brand.
@@ -24,7 +24,7 @@ export function baseLayout(innerHtml: string): string {
   <table cellpadding="0" cellspacing="0" style="max-width:500px;width:100%;">
 
     <tr><td align="center" style="padding-bottom:28px;">
-      <img src="${LOGO_URL}" alt="Mnesti" height="28" style="display:block;" />
+      <img src="${LOGO_URL}" alt="Mnesti" height="36" width="67" style="display:block;" />
     </td></tr>
 
     <tr><td style="background:#111111;border:1px solid #2a2a2a;border-radius:16px;padding:40px 36px;">
