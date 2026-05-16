@@ -2177,31 +2177,45 @@
 
   /* Pre-session prompt */
   .session-prompt {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    /* section-body already has 14px padding; session-prompt is flush */
     padding: 0 0 4px;
   }
 
-  /* ── Info row: question count (left) + hours badge (right) ── */
-  .session-info-row {
+  /* ── Two-column layout ── */
+  .session-layout {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    align-items: flex-start;
+    gap: 20px;
   }
+  /* Left: big number + label + dots + legend */
+  .session-left {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  /* Right: badge + button — stacked, aligned end */
+  .session-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  /* Big question count */
   .session-q-stat {
     display: flex;
-    align-items: baseline;
-    gap: 8px;
+    flex-direction: column;
+    gap: 2px;
   }
   .session-q-num {
-    font-size: 2rem;
+    font-size: 3.2rem;
     font-weight: 800;
     color: var(--text);
     letter-spacing: -0.04em;
     line-height: 1;
+    font-style: italic;
   }
   .session-q-sub {
     font-size: 13px;
@@ -2209,13 +2223,12 @@
     font-weight: 400;
   }
 
-  /* ── Progress wrap: dots + legend ── */
+  /* Progress wrap: dots + legend */
   .session-progress-wrap {
     display: flex;
     flex-direction: column;
     gap: 7px;
   }
-  /* Progress segments */
   .session-progress-dots {
     display: flex; align-items: center;
     gap: 3px; flex-wrap: nowrap;
@@ -2230,7 +2243,7 @@
   .session-dot.poor     { background: #c0392b; }
   .session-dot.partial  { background: #f39c12; }
   .session-dot.done, .session-dot.good { background: #27ae60; }
-  /* Legend */
+
   .session-progress-legend {
     display: flex;
     align-items: center;
@@ -2243,24 +2256,23 @@
     gap: 5px;
     font-size: 11px;
     color: var(--text-3);
-    font-family: 'Inter', sans-serif;
   }
   .sp-dot {
     width: 7px; height: 7px;
     border-radius: 50%;
     flex-shrink: 0;
   }
-  .sp-dot-pending { background: var(--border); filter: brightness(1.6); }
+  .sp-dot-pending { background: var(--text-3); }
   .sp-dot-done    { background: var(--accent); }
 
-  /* ── CTA button — full width ── */
+  /* CTA button */
   .session-start-btn {
-    display: flex; align-items: center; justify-content: center; gap: 7px;
-    width: 100%;
+    display: inline-flex; align-items: center; gap: 7px;
     background: var(--accent); color: #fff;
     border: none; border-radius: 8px;
-    padding: 11px 20px; font-size: 13px; font-weight: 700;
+    padding: 10px 18px; font-size: 13px; font-weight: 700;
     cursor: pointer; letter-spacing: -0.01em;
+    white-space: nowrap;
     transition: opacity 0.15s, transform 0.1s;
   }
   .session-start-btn:hover { opacity: 0.88; transform: translateY(-1px); }
@@ -5402,14 +5414,11 @@
       display: flex;
       flex-direction: column;
     }
-    /* Session prompt: natural flow on mobile, no forced centering */
-    .session-prompt {
-      flex: 1;
-      padding: 14px 12px;
-      gap: 12px;
-    }
-    .session-q-num { font-size: 1.65rem; }
-    .session-info-row { flex-wrap: wrap; gap: 8px; }
+    /* Session prompt: stack columns on small screens */
+    .session-prompt { flex: 1; padding: 0 0 4px; }
+    .session-layout { gap: 14px; }
+    .session-q-num { font-size: 2.4rem; }
+    .session-right { align-items: flex-end; }
     /* Notes area stays natural height at bottom */
     .notes-area { flex-shrink: 0; }
 

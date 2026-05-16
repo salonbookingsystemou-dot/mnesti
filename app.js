@@ -2835,21 +2835,25 @@ function _renderQsPanel(dayId) {
       : '';
     container.innerHTML = `
       <div class="session-prompt">
-        <div class="session-info-row">
-          <div class="session-q-stat">
-            <span class="session-q-num">${pendingCount}</span>
-            <span class="session-q-sub">${pendingCount === 1 ? 'domanda da rispondere' : 'domande da rispondere'}</span>
+        <div class="session-layout">
+          <div class="session-left">
+            <div class="session-q-stat">
+              <span class="session-q-num">${pendingCount}</span>
+              <span class="session-q-sub">${pendingCount === 1 ? 'domanda da rispondere' : 'domande da rispondere'}</span>
+            </div>
+            <div class="session-progress-wrap">
+              <div class="session-progress-dots">${dots}</div>
+              <div class="session-progress-legend">
+                <span class="sp-legend-item"><span class="sp-dot sp-dot-pending"></span>${pendingCount} da completare</span>
+                <span class="sp-legend-item"><span class="sp-dot sp-dot-done"></span>${completedCount} completate</span>
+              </div>
+            </div>
           </div>
-          ${hoursBadge}
-        </div>
-        <div class="session-progress-wrap">
-          <div class="session-progress-dots">${dots}</div>
-          <div class="session-progress-legend">
-            <span class="sp-legend-item"><span class="sp-dot sp-dot-pending"></span>${pendingCount} da completare</span>
-            <span class="sp-legend-item"><span class="sp-dot sp-dot-done"></span>${completedCount} completate</span>
+          <div class="session-right">
+            ${hoursBadge}
+            <button class="session-start-btn" onclick="startDaySession('${dayId}')">${btnLabel}</button>
           </div>
         </div>
-        <button class="session-start-btn" onclick="startDaySession('${dayId}')">${btnLabel}</button>
       </div>
       ${completedCount > 0 ? `<div class="done-questions-area"><div class="done-qs-header">Completate</div>${_completedHtml()}</div>` : ''}`;
     lucide.createIcons();
