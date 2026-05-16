@@ -1070,33 +1070,38 @@
   .quiz-source-ref-wrap.open .quiz-source-ref-btn { background: color-mix(in srgb, var(--accent) 15%, transparent); }
 
   .notes-area {
-    margin-top: 10px;
+    border-top: 1px solid var(--border);
+    padding: 14px 14px 12px;
+    /* extend to card edges, overriding section-body lateral padding */
+    margin: 10px -14px -14px;
   }
 
   .notes-area label {
-    font-family: 'Inter', monospace;
+    font-family: 'Inter', sans-serif;
     font-size: 10px;
     text-transform: uppercase;
+    letter-spacing: 0.07em;
     color: var(--text-3);
     display: block;
-    margin-bottom: 6px;
+    margin-bottom: 7px;
   }
 
   .notes-area textarea {
     width: 100%;
     background: var(--surface2);
     border: 1px solid var(--border);
-    border-radius: 4px;
+    border-radius: 6px;
     color: var(--text);
     font-family: 'Inter', sans-serif;
     font-size: 13px;
-    padding: 8px 10px;
+    padding: 9px 11px;
     resize: vertical;
-    min-height: 80px;
+    min-height: 76px;
     max-height: 180px;
     outline: none;
     transition: border-color 0.15s;
     box-sizing: border-box;
+    line-height: 1.55;
   }
 
   .notes-area textarea:focus { border-color: var(--accent); }
@@ -2172,17 +2177,51 @@
 
   /* Pre-session prompt */
   .session-prompt {
-    text-align: center;
-    padding: 22px 20px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    /* section-body already has 14px padding; session-prompt is flush */
+    padding: 0 0 4px;
   }
-  /* Progress segments (looks like a progress bar, not carousel) */
+
+  /* ── Info row: question count (left) + hours badge (right) ── */
+  .session-info-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .session-q-stat {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .session-q-num {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.04em;
+    line-height: 1;
+  }
+  .session-q-sub {
+    font-size: 13px;
+    color: var(--text-2);
+    font-weight: 400;
+  }
+
+  /* ── Progress wrap: dots + legend ── */
+  .session-progress-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  /* Progress segments */
   .session-progress-dots {
-    display: flex; align-items: center; justify-content: center;
-    gap: 3px; margin-bottom: 8px; flex-wrap: wrap;
-    max-width: 340px; margin-left: auto; margin-right: auto;
+    display: flex; align-items: center;
+    gap: 3px; flex-wrap: nowrap;
   }
   .session-dot {
-    height: 6px; flex: 1 1 18px; max-width: 32px;
+    height: 5px; flex: 1 1 0;
     border-radius: 3px;
     background: var(--border); flex-shrink: 0;
     transition: background 0.35s, transform 0.2s;
@@ -2191,18 +2230,38 @@
   .session-dot.poor     { background: #c0392b; }
   .session-dot.partial  { background: #f39c12; }
   .session-dot.done, .session-dot.good { background: #27ae60; }
-  .session-progress-label {
-    font-size: 11px; color: var(--text-3); margin-bottom: 14px;
-    font-family: 'Inter', sans-serif; letter-spacing: 0.02em;
+  /* Legend */
+  .session-progress-legend {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
   }
+  .sp-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--text-3);
+    font-family: 'Inter', sans-serif;
+  }
+  .sp-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .sp-dot-pending { background: var(--border); filter: brightness(1.6); }
+  .sp-dot-done    { background: var(--accent); }
+
+  /* ── CTA button — full width ── */
   .session-start-btn {
-    display: inline-flex; align-items: center; gap: 7px;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    width: 100%;
     background: var(--accent); color: #fff;
     border: none; border-radius: 8px;
-    padding: 9px 20px; font-size: 13px; font-weight: 700;
+    padding: 11px 20px; font-size: 13px; font-weight: 700;
     cursor: pointer; letter-spacing: -0.01em;
     transition: opacity 0.15s, transform 0.1s;
-    align-self: flex-start;
   }
   .session-start-btn:hover { opacity: 0.88; transform: translateY(-1px); }
 
@@ -5343,14 +5402,14 @@
       display: flex;
       flex-direction: column;
     }
-    /* Session prompt fills and centers content vertically */
+    /* Session prompt: natural flow on mobile, no forced centering */
     .session-prompt {
       flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
+      padding: 14px 12px;
+      gap: 12px;
     }
+    .session-q-num { font-size: 1.65rem; }
+    .session-info-row { flex-wrap: wrap; gap: 8px; }
     /* Notes area stays natural height at bottom */
     .notes-area { flex-shrink: 0; }
 
@@ -5488,10 +5547,9 @@
     }
 
     /* ── Pre-session prompt ── */
-    .session-progress-label {
-      /* "X domande" count label → 11px → 12px */
-      font-size: 12px;
-    }
+    .session-progress-label { font-size: 12px; }
+    .sp-legend-item { font-size: 11px; }
+    .session-start-btn { padding: 12px 20px; min-height: 46px; }
 
     /* ── Section header tag ── */
     .section-tag {

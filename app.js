@@ -2822,22 +2822,33 @@ function _renderQsPanel(dayId) {
 
   // ── Pre-session state ────────────────────────────────────────
   if (!sessionStarted) {
-    const btnLabel = completedCount > 0 ? '<i data-lucide="play" style="width:13px;height:13px;stroke-width:2.2;fill:currentColor;flex-shrink:0"></i> Riprendi sessione' : '<i data-lucide="play" style="width:13px;height:13px;stroke-width:2.2;fill:currentColor;flex-shrink:0"></i> Inizia sessione';
+    const btnLabel = completedCount > 0
+      ? '<i data-lucide="play" style="width:13px;height:13px;stroke-width:2.2;fill:currentColor;flex-shrink:0"></i> Riprendi sessione'
+      : '<i data-lucide="play" style="width:13px;height:13px;stroke-width:2.2;fill:currentColor;flex-shrink:0"></i> Inizia sessione';
     const dots = qList.map((q, i) =>
       `<span class="session-dot${feedbacks[i] ? ' done ' + feedbacks[i].grade : skipped[i] ? ' skipped' : (answers[i] && answers[i].trim().length > 15 ? ' answered' : '')}"></span>`
     ).join('');
-    const progressLabel = completedCount > 0
-      ? `${completedCount} di ${qList.length} domande completate`
-      : `${qList.length} domande`;
+    const pendingCount = qList.length - completedCount;
     const savedSecs = state[dayId]?.totalSeconds || 0;
     const hoursBadge = savedSecs > 0
       ? `<div class="session-hours-badge"><i data-lucide="timer" style="width:11px;height:11px;stroke-width:2;vertical-align:middle"></i> ${formatSeconds(savedSecs)} già studiate</div>`
       : '';
     container.innerHTML = `
       <div class="session-prompt">
-        ${hoursBadge}
-        <div class="session-progress-dots">${dots}</div>
-        <div class="session-progress-label">${progressLabel}</div>
+        <div class="session-info-row">
+          <div class="session-q-stat">
+            <span class="session-q-num">${pendingCount}</span>
+            <span class="session-q-sub">${pendingCount === 1 ? 'domanda da rispondere' : 'domande da rispondere'}</span>
+          </div>
+          ${hoursBadge}
+        </div>
+        <div class="session-progress-wrap">
+          <div class="session-progress-dots">${dots}</div>
+          <div class="session-progress-legend">
+            <span class="sp-legend-item"><span class="sp-dot sp-dot-pending"></span>${pendingCount} da completare</span>
+            <span class="sp-legend-item"><span class="sp-dot sp-dot-done"></span>${completedCount} completate</span>
+          </div>
+        </div>
         <button class="session-start-btn" onclick="startDaySession('${dayId}')">${btnLabel}</button>
       </div>
       ${completedCount > 0 ? `<div class="done-questions-area"><div class="done-qs-header">Completate</div>${_completedHtml()}</div>` : ''}`;
@@ -3290,7 +3301,7 @@ function _buildDayCard(day) {
           <div class="section-body">
             <div id="qs-panel-${day.id}"></div>
             <div id="genq-wrap-${day.id}" style="display:none"></div>
-            <div class="notes-area" style="margin-top:14px;">
+            <div class="notes-area">
               <label>Note e punti deboli emersi</label>
               <textarea placeholder="Scrivi qui cosa non ricordavi, cosa devi ripassare, concetti da approfondire..." onchange="saveNotes('${day.id}', this.value)">${escHtml(notes)}</textarea>
             </div>
