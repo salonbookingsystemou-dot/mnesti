@@ -2833,6 +2833,33 @@ function _renderQsPanel(dayId) {
     const hoursBadge = savedSecs > 0
       ? `<div class="session-hours-badge"><i data-lucide="timer" style="width:11px;height:11px;stroke-width:2;vertical-align:middle"></i> ${formatSeconds(savedSecs)} già studiate</div>`
       : '';
+
+    // ── Topics list ──────────────────────────────────────────
+    const _tagIcon = { retrieval: 'refresh-cw', studio: 'book-open',
+                       ripasso: 'repeat-2',     revisione: 'repeat-2',
+                       simulazione: 'zap',      integrazione: 'layers' };
+    let topicsHtml = '';
+    if (day.sections && day.sections.length > 0) {
+      topicsHtml = day.sections.map(s => {
+        const icon = _tagIcon[s.tag] || 'circle';
+        const refHtml = s.ref
+          ? `<span class="session-topic-ref">${escHtml(s.ref)}</span>`
+          : '';
+        return `<div class="session-topic-item">
+          <i data-lucide="${icon}" style="width:11px;height:11px;stroke-width:2;flex-shrink:0"></i>
+          <span class="session-topic-label">${escHtml(s.title || s.label)}</span>
+          ${refHtml}
+        </div>`;
+      }).join('');
+    } else if (day.subtitle) {
+      topicsHtml = day.subtitle.split('·').map(t => t.trim()).filter(Boolean).map(t =>
+        `<div class="session-topic-item">
+          <i data-lucide="circle" style="width:6px;height:6px;stroke-width:0;fill:var(--text-3);flex-shrink:0"></i>
+          <span class="session-topic-label">${escHtml(t)}</span>
+        </div>`
+      ).join('');
+    }
+
     container.innerHTML = `
       <div class="session-prompt">
         <div class="session-layout">
@@ -2841,6 +2868,7 @@ function _renderQsPanel(dayId) {
               <span class="session-q-num">${pendingCount}</span>
               <span class="session-q-sub">${pendingCount === 1 ? 'domanda da rispondere' : 'domande da rispondere'}</span>
             </div>
+            ${topicsHtml ? `<div class="session-topics">${topicsHtml}</div>` : ''}
             <div class="session-progress-wrap">
               <div class="session-progress-dots">${dots}</div>
               <div class="session-progress-legend">

@@ -2237,6 +2237,35 @@
     font-weight: 400;
   }
 
+  /* Topics list */
+  .session-topics {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 10px 0 2px;
+    border-top: 1px solid var(--border);
+  }
+  .session-topic-item {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    color: var(--text-2);
+    line-height: 1.4;
+  }
+  .session-topic-item i { margin-top: 2px; color: var(--text-3); }
+  .session-topic-label {
+    font-size: 12px;
+    flex: 1;
+    min-width: 0;
+  }
+  .session-topic-ref {
+    font-size: 10px;
+    font-family: 'Inter', monospace;
+    color: var(--text-3);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
   /* Progress wrap: dots + legend */
   .session-progress-wrap {
     display: flex;
