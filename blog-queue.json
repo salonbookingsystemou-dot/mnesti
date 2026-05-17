@@ -139,9 +139,9 @@
     "icon": "📓",
     "ctaTitle": "Dal foglio Cornell alle domande di esame in automatico",
     "ctaText": "Mnesti trasforma le tue dispense in domande aperte senza bisogno di riorganizzare gli appunti a mano. Primo esame gratis.",
-    "status": "pending",
-    "date": null,
-    "publishedAt": null
+    "status": "published",
+    "date": "2026-05-17",
+    "publishedAt": "2026-05-17T09:00:00+02:00"
   },
   {
     "slug": "blog-come-studiare-diritto",
