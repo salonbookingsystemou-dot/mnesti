@@ -623,11 +623,15 @@ function _showOnboarding(startStep) {
   if (info.professor) { const f = document.getElementById('obProfessor'); if (f) f.value = info.professor; }
   if (info.date)      { const f = document.getElementById('obDate');      if (f) f.value = info.date; }
   _obValidate();
-  // Mostra "Salta per ora" solo se l'utente ha già un piano attivo
+  // Mostra "Salta per ora" se l'utente ha un piano attivo o esami in archivio
   const skipLink = document.getElementById('obSkipLink');
   if (skipLink) {
-    const hasPlan = !!localStorage.getItem('psico_ai_plan');
-    skipLink.style.display = hasPlan ? 'block' : 'none';
+    const hasPlan    = !!localStorage.getItem('psico_ai_plan');
+    const hasArchive = (() => {
+      try { return JSON.parse(localStorage.getItem('psico_exams_archive') || '[]').length > 0; }
+      catch { return false; }
+    })();
+    skipLink.style.display = (hasPlan || hasArchive) ? 'block' : 'none';
   }
   if (window.lucide) lucide.createIcons();
 }
@@ -957,13 +961,21 @@ function _skipOnboardingToExam() {
   _closeOnboarding();
   const activeDays = typeof getActiveDays === 'function' ? getActiveDays() : [];
   if (activeDays.length) {
-    // Ha già un piano: torna al giorno attivo
+    // Ha un piano attivo: torna al giorno di studio corrente
     if (typeof _resolveStartDay === 'function' && typeof showDay === 'function') {
       const target = _resolveStartDay();
       if (target) showDay(target.id);
     }
   } else {
-    // Nessun piano: imposta skip flag per non rivedere l'onboarding
+    // Nessun piano attivo: apri l'archivio esami se ci sono esami salvati
+    try {
+      const archive = JSON.parse(localStorage.getItem('psico_exams_archive') || '[]');
+      if (archive.length > 0 && typeof _openExamsArchive === 'function') {
+        _openExamsArchive();
+        return;
+      }
+    } catch {}
+    // Nessun piano né archivio: imposta skip flag
     localStorage.setItem('psico_ob_skipped', '1');
   }
 }
