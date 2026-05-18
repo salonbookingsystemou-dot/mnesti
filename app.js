@@ -7900,8 +7900,8 @@ async function _loadAccountPane() {
   try {
     const planMeta = {
       free:    { badge: 'FREE',  name: 'Piano gratuito',      desc: '150 chiamate/giorno · 1 esame · 5 MB',               color: 'var(--text-3)' },
-      exam:    { badge: 'ESAME', name: 'Piano per esame (€30)',     desc: '500 chiamate/giorno · 2 esami · 50 MB · 90 giorni',  color: '#27ae60' },
-      monthly: { badge: 'PRO',   name: 'Abbonamento mensile (€15/mese)', desc: '1000 chiamate/giorno · esami illimitati · 200 MB',   color: 'var(--accent)' },
+      exam:    { badge: 'ESAME', name: 'Piano per esame (€29,99)',  desc: '500 chiamate/giorno · 2 esami · 50 MB · 90 giorni',  color: '#27ae60' },
+      monthly: { badge: 'PRO',   name: 'Abbonamento mensile (€9,99/mese)', desc: '1000 chiamate/giorno · esami illimitati · 200 MB',   color: 'var(--accent)' },
     };
     const meta = planMeta[planType] || planMeta.free;
 
@@ -8051,8 +8051,8 @@ function _pwSelectPlan(plan) {
 
   if (ctaLabel) {
     ctaLabel.textContent = plan === 'monthly'
-      ? 'Abbonati — €15/mese'
-      : 'Acquista esame singolo — €30';
+      ? 'Abbonati — €9,99/mese'
+      : 'Acquista esame singolo — €29,99';
   }
 }
 

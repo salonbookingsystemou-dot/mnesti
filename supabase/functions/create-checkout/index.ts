@@ -12,11 +12,11 @@ const SUPABASE_SERVICE  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const APP_URL           = Deno.env.get('APP_URL') ?? 'https://mnesti.it';
 
 // ── Prezzi (in centesimi) ────────────────────────────────────────
-// Esame singolo: €30.00  →  3000
-// Pro mensile:   €15.00  →  1500
+// Esame singolo: €29.99  →  2999
+// Pro mensile:   €9.99   →   999
 const PRICES = {
-  exam:    { amount: 3000, currency: 'eur', mode: 'payment'      as const },
-  monthly: { amount: 1500, currency: 'eur', mode: 'subscription' as const },
+  exam:    { amount: 2999, currency: 'eur', mode: 'payment'      as const },
+  monthly: { amount:  999, currency: 'eur', mode: 'subscription' as const },
 } as const;
 
 const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2024-06-20' });
