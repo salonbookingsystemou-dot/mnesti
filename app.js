@@ -1987,19 +1987,29 @@ function _renderSessionRing(dayId, animate) {
 
 function updateHeaderTitle() {
   try {
-    const info = JSON.parse(localStorage.getItem('psico_exam_info') || '{}');
+    const hasPlan = !!localStorage.getItem('psico_ai_plan');
+    const info    = JSON.parse(localStorage.getItem('psico_exam_info') || '{}');
     const titleEl = document.getElementById('headerTitle');
     const dateEl  = document.getElementById('headerExamDate');
-    if (titleEl && info.subject) {
-      const parts = [info.subject];
-      if (info.professor) parts.push('Prof. ' + info.professor);
-      titleEl.textContent = parts.join(' — ');
+    if (titleEl) {
+      if (hasPlan && info.subject) {
+        const parts = [info.subject];
+        if (info.professor) parts.push('Prof. ' + info.professor);
+        titleEl.textContent = parts.join(' — ');
+      } else {
+        titleEl.textContent = '';
+      }
     }
-    if (dateEl && info.date) {
-      const d = new Date(info.date);
-      const months = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
-      dateEl.textContent = 'Esame: ' + d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
-      dateEl.classList.add('visible');
+    if (dateEl) {
+      if (hasPlan && info.date) {
+        const d = new Date(info.date);
+        const months = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+        dateEl.textContent = 'Esame: ' + d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+        dateEl.classList.add('visible');
+      } else {
+        dateEl.textContent = '';
+        dateEl.classList.remove('visible');
+      }
     }
   } catch(e) {}
 }
