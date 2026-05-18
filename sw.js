@@ -1,5 +1,5 @@
 // Mnesti Service Worker — offline shell cache
-const CACHE = 'mnesti-v53';
+const CACHE = 'mnesti-v54';
 const SHELL = [
   '/',
   '/index.html',

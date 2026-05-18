@@ -132,7 +132,7 @@ const _PLAN_QUALITY = [
       // Only select columns guaranteed to exist in the schema
       const { data, error } = await _sb
         .from('user_data')
-        .select('psico_state,psico_sources,psico_exam_info,psico_ai_plan,psico_objective')
+        .select('psico_state,psico_sources,psico_exam_info,psico_ai_plan,psico_objective,psico_exams_archive')
         .eq('user_id', userId)
         .single();
 
@@ -204,6 +204,37 @@ const _PLAN_QUALITY = [
         localStorage.setItem('psico_objective', data.psico_objective);
         loaded = true;
       }
+      // Restore exam archive (list of completed/past exams)
+      if (data.psico_exams_archive && Array.isArray(data.psico_exams_archive) && data.psico_exams_archive.length) {
+        // Merge with any local archive (keep entries from both, prefer remote if same id)
+        let localArchive = [];
+        try { localArchive = JSON.parse(localStorage.getItem('psico_exams_archive') || '[]'); } catch {}
+        const merged = [...data.psico_exams_archive];
+        localArchive.forEach(localEntry => {
+          if (!merged.find(r => r.id === localEntry.id)) merged.push(localEntry);
+        });
+        localStorage.setItem('psico_exams_archive', JSON.stringify(merged));
+        loaded = true;
+
+        // Fetch per-exam plans from user_exam_plans for any exam not already in localStorage
+        const missingIds = data.psico_exams_archive
+          .map(e => e.id)
+          .filter(id => id && !localStorage.getItem('psico_ai_plan_' + id));
+        if (missingIds.length) {
+          const { data: examRows } = await _sb
+            .from('user_exam_plans')
+            .select('exam_id,plan_data,state_data,exam_info')
+            .eq('user_id', userId)
+            .in('exam_id', missingIds);
+          if (examRows && examRows.length) {
+            examRows.forEach(row => {
+              if (row.plan_data)  localStorage.setItem('psico_ai_plan_' + row.exam_id,  JSON.stringify(row.plan_data));
+              if (row.state_data) localStorage.setItem('psico_state_'   + row.exam_id,  JSON.stringify(row.state_data));
+              if (row.exam_info)  localStorage.setItem('psico_exam_info_' + row.exam_id, JSON.stringify(row.exam_info));
+            });
+          }
+        }
+      }
       return loaded;
     } catch(e) {
       console.warn('[Supabase] Load exception:', e);
@@ -232,13 +263,14 @@ const _PLAN_QUALITY = [
     if (lastDay) statePayload.__lastDay = lastDay;
 
     const payload = {
-      user_id:         session.user.id,
-      psico_state:     statePayload,
-      psico_sources:   _parseLS('psico_sources')   || [],
-      psico_exam_info: _parseLS('psico_exam_info') || {},
-      psico_ai_plan:   _parseLS('psico_ai_plan'),
-      psico_objective: localStorage.getItem('psico_objective') || 'pass',
-      updated_at:      new Date().toISOString()
+      user_id:              session.user.id,
+      psico_state:          statePayload,
+      psico_sources:        _parseLS('psico_sources')        || [],
+      psico_exam_info:      _parseLS('psico_exam_info')      || {},
+      psico_ai_plan:        _parseLS('psico_ai_plan'),
+      psico_objective:      localStorage.getItem('psico_objective') || 'pass',
+      psico_exams_archive:  _parseLS('psico_exams_archive')  || [],
+      updated_at:           new Date().toISOString()
     };
 
     try {
@@ -8895,7 +8927,7 @@ function _archiveCurrentExam() {
     entry.readiness = info.result.readiness || null;
   }
 
-  // Salva piano e stato separati
+  // Salva piano e stato in localStorage
   if (planRaw) _safeLSSet('psico_ai_plan_' + id, planRaw);
   const stateRaw = localStorage.getItem('psico_state');
   if (stateRaw) _safeLSSet('psico_state_' + id, stateRaw);
@@ -8903,7 +8935,34 @@ function _archiveCurrentExam() {
   const idx = archive.findIndex(e => e.id === id);
   if (idx >= 0) archive[idx] = entry; else archive.unshift(entry);
   _saveExamArchive(archive);
+
+  // Sync piano/stato su Supabase user_exam_plans (fire-and-forget)
+  _syncExamPlanToSupabase(id, planRaw, stateRaw, JSON.stringify(info));
+
   return id;
+}
+
+// Salva il piano di un singolo esame su Supabase user_exam_plans
+async function _syncExamPlanToSupabase(examId, planRaw, stateRaw, infoRaw) {
+  if (!_sb || !examId) return;
+  try {
+    const session = (await _sb.auth.getSession()).data.session;
+    if (!session) return;
+    let planData = null, stateData = null, examInfo = null;
+    try { planData  = JSON.parse(planRaw  || 'null'); } catch {}
+    try { stateData = JSON.parse(stateRaw || 'null'); } catch {}
+    try { examInfo  = JSON.parse(infoRaw  || 'null'); } catch {}
+    await _sb.from('user_exam_plans').upsert({
+      user_id:    session.user.id,
+      exam_id:    examId,
+      plan_data:  planData,
+      state_data: stateData,
+      exam_info:  examInfo,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id,exam_id' });
+  } catch(e) {
+    console.warn('[Supabase] syncExamPlan error:', e);
+  }
 }
 
 // Svuota il Proxy state in-memory e lo popola opzionalmente con newData
@@ -8915,21 +8974,41 @@ function _resetStateInMemory(newData) {
 }
 
 // Carica un esame archiviato come esame attivo
-function _switchToExam(examId) {
+async function _switchToExam(examId) {
   _archiveCurrentExam(); // salva quello corrente
 
   const archive = _getExamArchive();
   const entry   = archive.find(e => e.id === examId);
   if (!entry) { alert('Esame non trovato nell\'archivio.'); return; }
 
-  const planRaw = localStorage.getItem('psico_ai_plan_' + examId);
+  let planRaw   = localStorage.getItem('psico_ai_plan_' + examId);
+  let stateRaw  = localStorage.getItem('psico_state_' + examId);
+
+  // Se il piano non è in localStorage, proviamo a scaricarlo da Supabase
+  if (!planRaw && _sb) {
+    try {
+      const session = (await _sb.auth.getSession()).data.session;
+      if (session) {
+        const { data: row } = await _sb
+          .from('user_exam_plans')
+          .select('plan_data,state_data,exam_info')
+          .eq('user_id', session.user.id)
+          .eq('exam_id', examId)
+          .single();
+        if (row) {
+          if (row.plan_data)  { planRaw  = JSON.stringify(row.plan_data);  _safeLSSet('psico_ai_plan_' + examId, planRaw);  }
+          if (row.state_data) { stateRaw = JSON.stringify(row.state_data); _safeLSSet('psico_state_'   + examId, stateRaw); }
+        }
+      }
+    } catch(e) { console.warn('[Supabase] fetchExamPlan error:', e); }
+  }
+
   if (!planRaw) { alert('Piano non disponibile per questo esame.'); return; }
 
   // 1. Carica il nuovo piano
   _safeLSSet('psico_ai_plan', planRaw);
 
   // 2. Carica lo stato dell'esame nel Proxy in-memory e in localStorage
-  const stateRaw   = localStorage.getItem('psico_state_' + examId);
   const savedState = stateRaw ? (() => { try { return JSON.parse(stateRaw); } catch { return {}; } })() : {};
   _resetStateInMemory(savedState);
   if (stateRaw) _safeLSSet('psico_state', stateRaw);
@@ -8973,6 +9052,19 @@ function _deleteExam(examId) {
   _saveExamArchive(newArchive);
   try { localStorage.removeItem('psico_ai_plan_'  + examId); } catch {}
   try { localStorage.removeItem('psico_state_'    + examId); } catch {}
+
+  // Rimuovi da Supabase user_exam_plans (fire-and-forget)
+  if (_sb) {
+    _sb.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        _sb.from('user_exam_plans')
+          .delete()
+          .eq('user_id', session.user.id)
+          .eq('exam_id', examId)
+          .then(() => {});
+      }
+    });
+  }
 
   if (isCurrent) {
     // L'esame eliminato era quello attivo: resetta tutto e mostra onboarding
@@ -9049,6 +9141,8 @@ function _updateArchivedExamOutcome(examId, outcome, grade) {
     info.result = { outcome, grade: entry.grade, examDate: entry.examDate, recordedAt: new Date().toISOString() };
     _safeLSSet('psico_exam_info', JSON.stringify(info));
   }
+  // Sincronizza l'archivio aggiornato su Supabase
+  if (typeof window._syncToSupabase === 'function') window._syncToSupabase();
   _renderExamsArchiveBody();
 }
 
