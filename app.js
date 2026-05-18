@@ -7975,8 +7975,31 @@ async function startCheckout(planType) {
 }
 
 async function cancelSubscription() {
-  if (!confirm('Sei sicuro di voler annullare l\'abbonamento?\nIl piano resterà attivo fino alla scadenza del periodo corrente.')) return;
-  alert('Per annullare il tuo abbonamento scrivi a contact@wordpresschef.it — ti risponderemo entro 24 ore.');
+  if (!_sb) return;
+  const btn = document.querySelector('.acct-cancel-btn');
+  const origText = btn ? btn.textContent : '';
+  try {
+    if (btn) { btn.disabled = true; btn.textContent = 'Caricamento…'; }
+    const session = (await _sb.auth.getSession()).data.session;
+    if (!session) { alert('Devi essere autenticato.'); return; }
+    const res = await fetch(`${window._SB_URL}/functions/v1/create-portal-session`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({ return_url: window.location.href })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const { url } = await res.json();
+    if (url) window.location.href = url;
+  } catch(e) {
+    console.warn('[stripe portal]', e);
+    // Fallback: link diretto alla pagina abbonamenti Stripe
+    window.open('https://billing.stripe.com/p/login/test_00000', '_blank');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = origText; }
+  }
 }
 
 // ── Paywall ────────────────────────────────────────────────────
