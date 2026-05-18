@@ -574,7 +574,7 @@ window._reinitApp = function() {
   // Rebuild all UI components from fresh localStorage
   applyTheme(localStorage.getItem('psico_theme') || 'dark');
   if (typeof buildNav  === 'function') buildNav();
-  if (typeof buildDays === 'function') buildDays();
+  if (typeof buildDays === 'function') buildDays({ force: true });
   if (typeof updateProgress     === 'function') updateProgress();
   if (typeof updateTotalHours   === 'function') updateTotalHours();
   if (typeof updateApiIndicator === 'function') updateApiIndicator();
@@ -8779,6 +8779,8 @@ function _deleteExam(examId) {
       localStorage.removeItem('psico_state');
       localStorage.removeItem('psico_last_day');
     } catch {}
+    window._lastLocalWrite = Date.now();
+    if (typeof window._syncToSupabase === 'function') window._syncToSupabase();
     _closeExamsArchive();
     buildDays({ force: true });
     buildNav();
@@ -8809,6 +8811,11 @@ function _createNewExam() {
     localStorage.removeItem('psico_state');
     localStorage.removeItem('psico_last_day');
   } catch {}
+
+  // Imposta _lastLocalWrite per attivare i 30s di protezione contro il pull Supabase,
+  // e sincronizza subito lo stato vuoto in modo che il cloud non ripristini il vecchio piano.
+  window._lastLocalWrite = Date.now();
+  if (typeof window._syncToSupabase === 'function') window._syncToSupabase();
 
   buildDays({ force: true });
   buildNav();
@@ -9548,6 +9555,10 @@ REGOLE ASSOLUTE (non derogabili):
       days:        normalizedDays
     };
     _safeLSSet('psico_ai_plan', JSON.stringify(plan));
+    // Aggiorna il timestamp locale e sincronizza subito: evita che _pullAndReinit
+    // (scatenato da visibilitychange durante la generazione) ripristini il vecchio piano.
+    window._lastLocalWrite = Date.now();
+    if (typeof window._syncToSupabase === 'function') window._syncToSupabase();
     updatePlanQualityWidget();
 
     // Sync exam to Supabase user_exams (for admin dashboard tracking)
