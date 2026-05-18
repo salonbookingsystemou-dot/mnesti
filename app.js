@@ -15,12 +15,15 @@ const _ACCENT_PRESETS = [
 
 // ── Plan / source quality tiers (single source of truth) ──────
 // Used by: header quality widget, onboarding quality meter, confirm-overwrite dialog.
-// Tier 1 = no sources  →  Tier 4 = dispense + manuali
+// Tier 1 = solo materia  →  Tier 4 = programma + dispense + manuali
+// Tier 2 = programma
+// Tier 3 = (programma + dispense) OR (programma + manuali)
+// Tier 4 = programma + dispense + manuali
 const _PLAN_QUALITY = [
-  { label: 'Base',         shortDesc: 'solo materia',          color: '#6b7280', hint: 'Piano basato sulla conoscenza di Claude — aggiungi dispense per domande personalizzate.' },
-  { label: 'Strutturato',  shortDesc: 'programma indicato',    color: '#d97757', hint: 'Piano con argomenti del programma — carica le dispense PDF per domande mirate.' },
-  { label: 'Con dispense', shortDesc: 'PDF caricati',          color: '#3b82f6', hint: 'Piano costruito sulle tue dispense — aggiungi i manuali di testo per citazioni precise.' },
-  { label: 'Ottimale',     shortDesc: 'dispense + manuali',    color: '#f59e0b', hint: 'Qualità massima — domande basate su dispense e manuali del tuo corso.' },
+  { label: 'Base',    shortDesc: 'solo materia',          color: '#6b7280', hint: 'Piano basato sulla conoscenza di Claude — aggiungi il programma e le dispense per domande personalizzate.' },
+  { label: 'Buona',   shortDesc: '+ programma',           color: '#d97757', hint: 'Piano con il programma del corso — carica le dispense PDF per domande mirate.' },
+  { label: 'Ottima',  shortDesc: '+ dispense o manuali',  color: '#3b82f6', hint: 'Piano costruito sulle tue fonti — aggiungi dispense E manuali per raggiungere la qualità Massima.' },
+  { label: 'Massima', shortDesc: '+ dispense + manuali',  color: '#f59e0b', hint: 'Qualità massima — domande basate su dispense e manuali del tuo corso specifico.' },
 ];
 
 // ── Supabase Auth + Cloud Sync ───────────────────────────────
@@ -732,7 +735,16 @@ function _obUpdateQuality(hasExam, hasSyllabus, hasFiles, hasBooks) {
   if (!meter) return;
   meter.style.display = hasExam ? '' : 'none';
 
-  const tier = hasBooks ? 4 : hasFiles ? 3 : hasSyllabus ? 2 : 1;
+  // Tier logic allineata a _calcSourceQualityTier:
+  // Massima (4): programma + dispense + manuale
+  // Ottima  (3): (programma + dispense) OR (programma + manuale)
+  // Buona   (2): programma OR solo manuale
+  // Base    (1): solo materia
+  let tier = 1;
+  if (hasSyllabus && hasFiles && hasBooks) tier = 4;
+  else if (hasSyllabus && (hasFiles || hasBooks)) tier = 3;
+  else if (hasSyllabus || hasBooks) tier = 2;
+
   const labels = _PLAN_QUALITY.map(q => q.label);
 
   for (let i = 1; i <= 4; i++) {
@@ -753,9 +765,11 @@ function _obUpdateQuality(hasExam, hasSyllabus, hasFiles, hasBooks) {
 
   const hint = document.getElementById('obQualityHint');
   if (hint) {
-    if (tier === 1) hint.textContent = 'Carica le dispense o indica i manuali per un piano basato sul tuo corso specifico.';
-    else if (tier === 2) hint.textContent = 'Carica le dispense PDF per domande che citano esattamente il tuo materiale.';
-    else if (tier === 3) hint.textContent = 'Aggiungi i manuali di testo per citazioni precise di autori e capitoli nelle risposte.';
+    if (tier === 1) hint.textContent = 'Inserisci il programma del corso per generare domande mirate sulla tua materia.';
+    else if (tier === 2) hint.textContent = 'Carica le dispense PDF oppure indica i manuali di testo per raggiungere la qualità Ottima.';
+    else if (tier === 3) hint.textContent = hasSyllabus && hasFiles && !hasBooks
+      ? 'Aggiungi i manuali di testo per citazioni precise di autori e capitoli.'
+      : 'Carica le dispense PDF per domande ancora più mirate sul tuo materiale.';
     else hint.textContent = 'Qualità massima — il piano cita autori e capitoli specifici del tuo corso.';
   }
 }
@@ -914,7 +928,7 @@ async function _runOnboarding() {
       title: 'Programma del corso',
       content: syllabus.slice(0, 14000),
       sizeBytes: syllabus.length,
-      type: 'text',
+      type: 'syllabus',
       addedAt: Date.now()
     });
   }
@@ -9138,20 +9152,37 @@ function updateGenPlanBtn() {
 
 // ── Plan quality tier ─────────────────────────────────────────
 function _calcSourceQualityTier() {
-  const sources  = getSources();
-  const primary  = sources.filter(s => s.type !== 'textbook-ref' && (s.content || '').trim().length > 100);
-  const totalPri = primary.reduce((sum, s) => sum + (s.content || '').length, 0);
-  const hasSyllabus = primary.length > 0;              // programma o qualsiasi fonte testuale
-  const hasFiles    = totalPri >= 3000;                 // dispense / slide con contenuto sostanziale
-  const hasBooks    = sources.some(s => s.type === 'textbook-ref' && (s.title || s.content || '').trim().length > 3);
+  const sources = getSources();
+
+  // Programma: type 'syllabus' (new) or legacy ob-syllabus with any non-textbook type
+  const hasSyllabus = sources.some(s =>
+    s.type === 'syllabus' ||
+    (s.id === 'ob-syllabus' && s.type !== 'textbook-ref')
+  );
+
+  // Dispense: any source that is NOT a syllabus, NOT a textbook-ref, has real content
+  // Includes: uploaded PDFs (no type), pasted text (type 'text') from the sources panel,
+  //           and uploaded files from onboarding (type 'text' with id != ob-syllabus)
+  const hasFiles = sources.some(s =>
+    s.type !== 'textbook-ref' &&
+    s.type !== 'syllabus' &&
+    s.id   !== 'ob-syllabus' &&
+    (s.content || '').trim().length > 100
+  );
+
+  // Manuali: textbook references
+  const hasBooks = sources.some(s =>
+    s.type === 'textbook-ref' &&
+    (s.title || s.content || '').trim().length > 3
+  );
 
   // Massima (4): programma + dispense + manuale
   // Ottima  (3): programma + dispense  OR  programma + manuale
   // Buona   (2): programma (o solo manuale)
   // Base    (1): solo materia
-  if (hasSyllabus && hasFiles && hasBooks)        return 4;
-  if (hasSyllabus && (hasFiles || hasBooks))      return 3;
-  if (hasSyllabus || hasBooks)                    return 2;
+  if (hasSyllabus && hasFiles && hasBooks) return 4;
+  if (hasSyllabus && (hasFiles || hasBooks)) return 3;
+  if (hasSyllabus || hasBooks) return 2;
   return 1;
 }
 
