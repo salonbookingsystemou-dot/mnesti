@@ -7974,31 +7974,8 @@ async function startCheckout(planType) {
   }
 }
 
-async function cancelSubscription() {
-  if (!_sb) return;
-  const btn = document.querySelector('.acct-cancel-btn');
-  const origText = btn ? btn.textContent : '';
-  try {
-    if (btn) { btn.disabled = true; btn.textContent = 'Caricamento…'; }
-    const session = (await _sb.auth.getSession()).data.session;
-    if (!session) { alert('Devi essere autenticato.'); return; }
-    const res = await fetch(`${window._SB_URL}/functions/v1/create-portal-session`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`
-      },
-      body: JSON.stringify({ return_url: window.location.href })
-    });
-    if (!res.ok) throw new Error(await res.text());
-    const { url } = await res.json();
-    if (url) window.location.href = url;
-  } catch(e) {
-    console.warn('[stripe portal]', e);
-    alert('Impossibile aprire il portale Stripe. Scrivi a support@mnesti.it per gestire il tuo abbonamento.');
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = origText; }
-  }
+function cancelSubscription() {
+  window.open('https://billing.stripe.com/p/login/eVq4gA0dAfFs3uz7IW7EQ00', '_blank');
 }
 
 // ── Paywall ────────────────────────────────────────────────────
