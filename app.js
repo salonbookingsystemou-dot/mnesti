@@ -8761,18 +8761,32 @@ function _deleteExam(examId) {
   const entry   = archive.find(e => e.id === examId);
   if (!entry) return;
 
-  if (examId === _currentExamId()) {
-    alert('Non puoi eliminare l\'esame attivo. Passa prima a un altro esame con "Apri piano".');
-    return;
-  }
-
   if (!confirm(`Eliminare l'esame "${entry.subject || 'senza titolo'}"?\nIl piano e i progressi salvati verranno rimossi definitivamente.`)) return;
+
+  const isCurrent = (examId === _currentExamId());
 
   const newArchive = archive.filter(e => e.id !== examId);
   _saveExamArchive(newArchive);
   try { localStorage.removeItem('psico_ai_plan_'  + examId); } catch {}
   try { localStorage.removeItem('psico_state_'    + examId); } catch {}
-  _renderExamsArchiveBody();
+
+  if (isCurrent) {
+    // L'esame eliminato era quello attivo: resetta tutto e mostra onboarding
+    _resetStateInMemory();
+    try {
+      localStorage.removeItem('psico_ai_plan');
+      localStorage.removeItem('psico_exam_info');
+      localStorage.removeItem('psico_state');
+      localStorage.removeItem('psico_last_day');
+    } catch {}
+    _closeExamsArchive();
+    buildDays({ force: true });
+    buildNav();
+    updateGenPlanStatus();
+    _showOnboarding(1);
+  } else {
+    _renderExamsArchiveBody();
+  }
 }
 
 // Apre il flusso per un nuovo esame
@@ -8891,12 +8905,12 @@ function _renderExamsArchiveBody() {
       ? `<button class="ea-action-btn ea-action-open" onclick="_switchToExam('${entry.id}')">
            <i data-lucide="folder-open" style="width:12px;height:12px;stroke-width:2"></i>
            Apri piano
-         </button>
-         <button class="ea-action-btn ea-action-delete" onclick="_deleteExam('${entry.id}')">
-           <i data-lucide="trash-2" style="width:12px;height:12px;stroke-width:2"></i>
-           Elimina
          </button>`
       : `<span class="ea-current-badge">Esame attivo</span>`;
+    const deleteBtn = `<button class="ea-action-btn ea-action-delete" onclick="_deleteExam('${entry.id}')">
+           <i data-lucide="trash-2" style="width:12px;height:12px;stroke-width:2"></i>
+           Elimina
+         </button>`;
 
     const outcomeFormId = _outcomeFormId(entry.id);
     const outcomeForm = `
@@ -8942,6 +8956,7 @@ function _renderExamsArchiveBody() {
         </div>
         <div class="ea-card-actions">
           ${switchBtn}
+          ${deleteBtn}
           ${updateBtn}
         </div>
       </div>`;
@@ -9106,9 +9121,9 @@ function updatePlanQualityWidget() {
   if (cta) {
     cta.style.display = canImprove ? 'inline-flex' : 'none';
     if (canImprove && currentTier > planTier) {
-      // Sources already improved — suggest regenerating
+      // Sources already improved — trigger regeneration directly
       cta.textContent = '↑ Rigenera il piano';
-      cta.onclick = () => document.getElementById('genPlanBtn')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      cta.onclick = () => generateStudyPlan();
     } else if (canImprove) {
       cta.innerHTML = '<i data-lucide="arrow-up-right" style="width:10px;height:10px;stroke-width:2.5;pointer-events:none"></i> Migliora il piano';
       cta.onclick = () => openSetupDrawer('fonti');
@@ -9136,6 +9151,7 @@ function updateGenPlanStatus() {
     statusEl.className = 'gen-plan-status';
     if (resetEl) resetEl.style.display = 'none';
   }
+  updateGenPlanBtn();
   updatePlanQualityWidget();
 }
 
