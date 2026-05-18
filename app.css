@@ -314,18 +314,19 @@
     width: min(420px, 96vw);
     background: var(--bg);
     border-left: 1px solid var(--border);
-    display: flex; flex-direction: column;
+    /* Grid: header | divider | scrollable body — più affidabile di flex per overflow */
+    display: grid;
+    grid-template-rows: auto 1px 1fr;
     overflow: hidden;
     z-index: 3001;
     animation: setupSlideIn 0.24s ease;
-    /* Respect iOS safe areas (notch, home bar) */
     padding-top: env(safe-area-inset-top, 0px);
     padding-right: env(safe-area-inset-right, 0px);
   }
   @keyframes setupSlideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
   .setup-drawer-top {
     display: flex; align-items: center;
-    padding: 12px 16px 0; gap: 4px; flex-shrink: 0;
+    padding: 12px 16px 0; gap: 4px;
   }
   .setup-tabs {
     display: flex; gap: 0; flex: 1; overflow-x: auto;
@@ -353,14 +354,12 @@
     height: 1px; background: var(--border); flex-shrink: 0;
   }
   .setup-body {
-    /* flex: 1 1 0 + min-height: 0 garantisce altezza bounded nel flex parent */
-    flex: 1 1 0;
+    /* grid child con 1fr → altezza esatta = spazio rimanente, overflow garantito */
     min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
-    /* display: block (non flex) — scroll container semplice e affidabile su tutti i browser */
     display: block;
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
