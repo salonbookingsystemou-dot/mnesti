@@ -7995,8 +7995,7 @@ async function cancelSubscription() {
     if (url) window.location.href = url;
   } catch(e) {
     console.warn('[stripe portal]', e);
-    // Fallback: link diretto alla pagina abbonamenti Stripe
-    window.open('https://billing.stripe.com/p/login/test_00000', '_blank');
+    alert('Impossibile aprire il portale Stripe. Scrivi a support@mnesti.it per gestire il tuo abbonamento.');
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = origText; }
   }
