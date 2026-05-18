@@ -623,6 +623,12 @@ function _showOnboarding(startStep) {
   if (info.professor) { const f = document.getElementById('obProfessor'); if (f) f.value = info.professor; }
   if (info.date)      { const f = document.getElementById('obDate');      if (f) f.value = info.date; }
   _obValidate();
+  // Mostra "Salta per ora" solo se l'utente ha già un piano attivo
+  const skipLink = document.getElementById('obSkipLink');
+  if (skipLink) {
+    const hasPlan = !!localStorage.getItem('psico_ai_plan');
+    skipLink.style.display = hasPlan ? 'block' : 'none';
+  }
   if (window.lucide) lucide.createIcons();
 }
 
@@ -944,6 +950,22 @@ function _skipOnboarding() {
   // Permanent skip flag — prevents onboarding from re-appearing on reload
   localStorage.setItem('psico_ob_skipped', '1');
   setTimeout(() => { if (typeof _tryShowPwaBanner === 'function') _tryShowPwaBanner(); }, 1500);
+}
+
+// "Salta per ora" — chiude l'onboarding e riporta all'esame corrente se esiste
+function _skipOnboardingToExam() {
+  _closeOnboarding();
+  const activeDays = typeof getActiveDays === 'function' ? getActiveDays() : [];
+  if (activeDays.length) {
+    // Ha già un piano: torna al giorno attivo
+    if (typeof _resolveStartDay === 'function' && typeof showDay === 'function') {
+      const target = _resolveStartDay();
+      if (target) showDay(target.id);
+    }
+  } else {
+    // Nessun piano: imposta skip flag per non rivedere l'onboarding
+    localStorage.setItem('psico_ob_skipped', '1');
+  }
 }
 // ── End onboarding ────────────────────────────────────────────
 
