@@ -353,21 +353,29 @@
     flex: 0 0 1px; height: 1px; background: var(--border);
   }
   .setup-body {
-    /* height: 0 + flex: 1 1 auto = il body NON usa la sua altezza naturale
-       ma solo lo spazio assegnatogli dal flex parent → overflow funziona sempre */
     flex: 1 1 auto;
-    height: 0;
-    overflow-y: auto;
-    overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-    display: block;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* i pane figli gestiscono il proprio scroll */
   }
   .setup-pane { display: none; }
   .setup-pane.active {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 0;
+  }
+  /* Scrollable inner body — usato da Account e Tema */
+  .setup-pane-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
     padding: 20px 16px;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
   }
   /* Re-add gap between direct children using row-gap via CSS custom property */
   .setup-pane.active > * + * { margin-top: 16px; }
