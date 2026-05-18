@@ -8721,28 +8721,58 @@ function _switchToExam(examId) {
   const planRaw = localStorage.getItem('psico_ai_plan_' + examId);
   if (!planRaw) { alert('Piano non disponibile per questo esame.'); return; }
 
+  // 1. Carica il nuovo piano
   _safeLSSet('psico_ai_plan', planRaw);
 
-  const stateRaw = localStorage.getItem('psico_state_' + examId);
+  // 2. Carica lo stato dell'esame nel Proxy in-memory e in localStorage
+  const stateRaw   = localStorage.getItem('psico_state_' + examId);
   const savedState = stateRaw ? (() => { try { return JSON.parse(stateRaw); } catch { return {}; } })() : {};
   _resetStateInMemory(savedState);
-  if (!stateRaw) try { localStorage.removeItem('psico_state'); } catch {}
+  if (stateRaw) _safeLSSet('psico_state', stateRaw);
+  else try { localStorage.removeItem('psico_state'); } catch {}
 
+  // 3. Carica le info esame
   const examInfo = { subject: entry.subject, professor: entry.professor, date: entry.examDate };
   if (entry.outcome) {
     examInfo.result = { outcome: entry.outcome, grade: entry.grade, examDate: entry.examDate };
   }
   _safeLSSet('psico_exam_info', JSON.stringify(examInfo));
 
+  // 4. Ricostruisci tutto il DOM
   try { localStorage.removeItem('psico_last_day'); } catch {}
   buildDays({ force: true });
   buildNav();
-  updateGenPlanStatus();
-  const first = getActiveDays()[0];
-  if (first) showDay(first.id);
+  loadExamInfoUI();       // aggiorna form + abilita pulsante "Rigenera piano"
+  updateHeaderTitle();    // aggiorna titolo e data esame nell'header
+  updateProgress();       // aggiorna donut/barra progresso
+  updateGenPlanStatus();  // aggiorna stato nella sezione fonti
+
+  // 5. Mostra il giorno attivo corretto (primo incompleto, non solo il primo della lista)
+  const startDay = _resolveStartDay();
+  if (startDay) showDay(startDay.id);
 
   _closeExamsArchive();
   if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// Elimina definitivamente un esame dall'archivio
+function _deleteExam(examId) {
+  const archive = _getExamArchive();
+  const entry   = archive.find(e => e.id === examId);
+  if (!entry) return;
+
+  if (examId === _currentExamId()) {
+    alert('Non puoi eliminare l\'esame attivo. Passa prima a un altro esame con "Apri piano".');
+    return;
+  }
+
+  if (!confirm(`Eliminare l'esame "${entry.subject || 'senza titolo'}"?\nIl piano e i progressi salvati verranno rimossi definitivamente.`)) return;
+
+  const newArchive = archive.filter(e => e.id !== examId);
+  _saveExamArchive(newArchive);
+  try { localStorage.removeItem('psico_ai_plan_'  + examId); } catch {}
+  try { localStorage.removeItem('psico_state_'    + examId); } catch {}
+  _renderExamsArchiveBody();
 }
 
 // Apre il flusso per un nuovo esame
@@ -8861,6 +8891,10 @@ function _renderExamsArchiveBody() {
       ? `<button class="ea-action-btn ea-action-open" onclick="_switchToExam('${entry.id}')">
            <i data-lucide="folder-open" style="width:12px;height:12px;stroke-width:2"></i>
            Apri piano
+         </button>
+         <button class="ea-action-btn ea-action-delete" onclick="_deleteExam('${entry.id}')">
+           <i data-lucide="trash-2" style="width:12px;height:12px;stroke-width:2"></i>
+           Elimina
          </button>`
       : `<span class="ea-current-badge">Esame attivo</span>`;
 

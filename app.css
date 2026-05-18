@@ -710,6 +710,8 @@
   .ea-action-open:hover { background: var(--surface2); color: var(--text); }
   .ea-action-outcome { background: none; color: var(--text-2); border: 1px solid var(--border); }
   .ea-action-outcome:hover { background: var(--surface3); }
+  .ea-action-delete  { background: none; color: #e57373; border: 1px solid rgba(229,115,115,0.25); }
+  .ea-action-delete:hover { background: rgba(229,115,115,0.10); }
   .ea-current-badge {
     font-size: 11px; color: var(--accent); font-weight: 600; padding: 4px 0;
   }
