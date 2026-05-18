@@ -8090,10 +8090,12 @@ async function _pwStartCheckout() {
       const msg = plan === 'monthly'
         ? 'Abbonamento attivato! Esami illimitati e 1.000 chiamate AI/giorno sono ora disponibili.'
         : 'Acquisto completato! Hai 1 nuovo esame disponibile e 500 chiamate AI/giorno per 90 giorni.';
-      // Mostra messaggio di conferma elegante
+      // Mostra messaggio di conferma con CTA per creare il nuovo esame
       _showCheckoutSuccessToast(msg, plan);
       // Ricarica il tab account per mostrare il nuovo piano
       _loadAccountPane();
+      // Avvia automaticamente l'onboarding per il nuovo esame dopo un breve delay
+      setTimeout(() => _createNewExam(), 1800);
     }, 2000);
   } else if (checkout === 'cancelled') {
     console.log('[checkout] pagamento annullato dall\'utente');
@@ -8111,6 +8113,9 @@ function _showCheckoutSuccessToast(message, plan) {
     <div class="cst-body">
       <div class="cst-title">${plan === 'monthly' ? 'Abbonamento attivato' : 'Acquisto completato'}</div>
       <div class="cst-msg">${message}</div>
+      <button class="cst-new-exam-btn" onclick="this.closest('.checkout-success-toast').remove(); _createNewExam()">
+        Crea il tuo nuovo esame →
+      </button>
     </div>
     <button class="cst-close" onclick="this.closest('.checkout-success-toast').remove()">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
