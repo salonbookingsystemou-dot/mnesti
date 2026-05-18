@@ -931,12 +931,13 @@ async function _runOnboarding() {
   });
   if (books.length > 10) {
     sources.push({
-      id: 'ob-books',
-      title: 'Manuali di testo',
-      content: books.slice(0, 8000),
-      sizeBytes: books.length,
-      type: 'text',
-      addedAt: Date.now()
+      id:           'ob-books',
+      title:        'Manuali di testo',
+      textbookTitle:'Manuali di testo',
+      content:      books.slice(0, 8000),
+      sizeBytes:    books.length,
+      type:         'textbook-ref',   // fonte secondaria — conta per tier Massima
+      addedAt:      Date.now()
     });
   }
   _safeLSSet('psico_sources', JSON.stringify(sources));
