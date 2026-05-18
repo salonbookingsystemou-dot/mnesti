@@ -596,11 +596,11 @@
   }
   /* ── Sidebar footer (nuovo esame + archivio + logout) ── */
   .sidebar-footer {
-    padding: 0.75rem 1rem 1.25rem;
+    padding: 1rem 1rem 1.5rem;
     margin-top: auto;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 9px;
   }
   .sidebar-new-exam-btn {
     width: 100%; display: flex; align-items: center; justify-content: center; gap: 7px;
