@@ -8639,6 +8639,16 @@ window._saveExamOutcome = function(outcome) {
   if (typeof window._syncToSupabase === 'function') window._syncToSupabase();
 };
 
+window._skipExamOutcomeForNow = function() {
+  const overlay = document.getElementById('examOutcomeOverlay');
+  if (overlay) {
+    overlay.classList.remove('open');
+    overlay.setAttribute('aria-hidden', 'true');
+  }
+  // Snooze per la sessione corrente — riappare alla prossima apertura dell'app
+  try { sessionStorage.setItem('exam_outcome_snoozed', '1'); } catch(e) {}
+};
+
 window._maybeShowExamOutcomeModal = function() {
   const ob = document.getElementById('obOverlay');
   if (ob?.classList.contains('active')) return;
@@ -8648,6 +8658,7 @@ window._maybeShowExamOutcomeModal = function() {
   if (!info.date || info.skipped) return;
   if (!_examDateHasPassed(info.date)) return;
   if (info.result && info.result.examDate === info.date) return;
+  try { if (sessionStorage.getItem('exam_outcome_snoozed')) return; } catch(e) {}
 
   const overlay = document.getElementById('examOutcomeOverlay');
   if (!overlay) return;
