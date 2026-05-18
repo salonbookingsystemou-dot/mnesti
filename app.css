@@ -353,27 +353,21 @@
     height: 1px; background: var(--border); flex-shrink: 0;
   }
   .setup-body {
-    flex: 1;
-    min-height: 0;   /* lets flex child shrink below content size so overflow works */
+    /* flex: 1 1 0 + min-height: 0 garantisce altezza bounded nel flex parent */
+    flex: 1 1 0;
+    min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
-    -webkit-overflow-scrolling: touch; /* smooth momentum scroll on iOS */
+    -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
-    /* Make body a flex column so the pane starts at the TOP, not the bottom */
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    /* Safe area padding for iOS home bar / notch */
+    /* display: block (non flex) — scroll container semplice e affidabile su tutti i browser */
+    display: block;
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
-  /* Panes: hidden by default, block (not flex) when active so height
-     is driven by content and nothing can push it to the bottom */
   .setup-pane { display: none; }
   .setup-pane.active {
     display: block;
     padding: 20px 16px;
-    /* flex: 0 0 auto so the pane never grows to fill the body height */
-    flex: 0 0 auto;
   }
   /* Re-add gap between direct children using row-gap via CSS custom property */
   .setup-pane.active > * + * { margin-top: 16px; }
