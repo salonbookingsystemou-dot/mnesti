@@ -9107,10 +9107,19 @@ function _calcSourceQualityTier() {
   const sources  = getSources();
   const primary  = sources.filter(s => s.type !== 'textbook-ref' && (s.content || '').trim().length > 100);
   const totalPri = primary.reduce((sum, s) => sum + (s.content || '').length, 0);
-  const hasSyllabus = primary.length > 0;
-  const hasFiles    = totalPri >= 3000;
+  const hasSyllabus = primary.length > 0;              // programma o qualsiasi fonte testuale
+  const hasFiles    = totalPri >= 3000;                 // dispense / slide con contenuto sostanziale
   const hasBooks    = sources.some(s => s.type === 'textbook-ref' && (s.title || s.content || '').trim().length > 3);
-  return hasBooks ? 4 : hasFiles ? 3 : hasSyllabus ? 2 : 1;
+
+  // Logica cumulativa: ogni tier richiede tutti i livelli precedenti.
+  // Massima (4): programma + dispense + manuale
+  // Ottima  (3): programma + dispense (senza manuale)
+  // Buona   (2): programma o manuale (senza dispense)
+  // Base    (1): solo materia
+  if (hasSyllabus && hasFiles && hasBooks) return 4;
+  if (hasSyllabus && hasFiles)             return 3;
+  if (hasSyllabus || hasBooks)             return 2;
+  return 1;
 }
 
 function updatePlanQualityWidget() {
