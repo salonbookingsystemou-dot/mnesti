@@ -8702,6 +8702,14 @@ function _archiveCurrentExam() {
   return id;
 }
 
+// Svuota il Proxy state in-memory e lo popola opzionalmente con newData
+function _resetStateInMemory(newData) {
+  Object.keys(state).forEach(k => { try { delete state[k]; } catch {} });
+  if (newData && typeof newData === 'object') {
+    Object.keys(newData).forEach(k => { try { state[k] = newData[k]; } catch {} });
+  }
+}
+
 // Carica un esame archiviato come esame attivo
 function _switchToExam(examId) {
   _archiveCurrentExam(); // salva quello corrente
@@ -8716,8 +8724,9 @@ function _switchToExam(examId) {
   _safeLSSet('psico_ai_plan', planRaw);
 
   const stateRaw = localStorage.getItem('psico_state_' + examId);
-  if (stateRaw) _safeLSSet('psico_state', stateRaw);
-  else try { localStorage.removeItem('psico_state'); } catch {}
+  const savedState = stateRaw ? (() => { try { return JSON.parse(stateRaw); } catch { return {}; } })() : {};
+  _resetStateInMemory(savedState);
+  if (!stateRaw) try { localStorage.removeItem('psico_state'); } catch {}
 
   const examInfo = { subject: entry.subject, professor: entry.professor, date: entry.examDate };
   if (entry.outcome) {
@@ -8739,6 +8748,15 @@ function _switchToExam(examId) {
 // Apre il flusso per un nuovo esame
 function _createNewExam() {
   _archiveCurrentExam();
+
+  // Chiudi il welcome modal (potrebbe essere aperto con dati del vecchio esame)
+  const _wo = document.getElementById('welcomeOverlay');
+  if (_wo) { _wo.classList.remove('open'); _wo.setAttribute('aria-hidden', 'true'); }
+  // Forza il re-show del welcome al termine del nuovo piano
+  try { sessionStorage.removeItem('ss_welcome_shown'); } catch {}
+
+  // Reset stato in-memory prima di pulire localStorage
+  _resetStateInMemory();
 
   // Reset dati esame corrente
   try {
@@ -9502,6 +9520,11 @@ REGOLE ASSOLUTE (non derogabili):
     const first = getActiveDays()[0];
     if (first) showDay(first.id);
     if (!fromOnboarding) closeSourcesPanel();
+
+    // Dopo onboarding, mostra il welcome modal con i dati FRESCHI del nuovo piano
+    if (fromOnboarding && typeof showWelcomeModal === 'function') {
+      setTimeout(() => showWelcomeModal(), 400);
+    }
 
   } catch(e) {
     alert('Errore nella generazione del piano:\n' + e.message);
