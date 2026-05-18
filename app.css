@@ -352,6 +352,11 @@
   .setup-tab-border {
     flex: 0 0 1px; height: 1px; background: var(--border);
   }
+  /* Divisori dentro i pane (es. tra sezioni Account) */
+  .setup-pane-scroll .setup-tab-border,
+  .setup-pane-scroll hr {
+    margin: 8px 0;
+  }
   .setup-body {
     flex: 1 1 auto;
     min-height: 0;
@@ -381,7 +386,7 @@
   .setup-pane.active > * + * { margin-top: 16px; }
 
   /* ── Account pane ───────────────────────────────────────────── */
-  .acct-section { display: flex; flex-direction: column; gap: 10px; }
+  .acct-section { display: flex; flex-direction: column; gap: 12px; }
   .acct-section-title {
     font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 700;
     text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent);
@@ -421,9 +426,9 @@
   .acct-usage-fill.danger { background: #e74c3c; }
   .acct-usage-pct { font-size: 10px; color: var(--text-3); flex-shrink: 0; width: 28px; text-align: right; }
 
-  .acct-storage-block { margin-top: 10px; display: flex; flex-direction: column; gap: 5px; }
+  .acct-storage-block { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; }
   .acct-storage-breakdown {
-    display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px;
+    display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; margin-bottom: 4px;
   }
   .acct-storage-chip {
     display: flex; align-items: center; gap: 4px;
@@ -435,11 +440,11 @@
 
   .acct-stats-grid {
     display: grid; grid-template-columns: 1fr 1fr;
-    gap: 8px; margin-top: 4px;
+    gap: 8px; margin-top: 8px;
   }
   .acct-stat-cell {
     background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 8px; padding: 10px 12px;
+    border-radius: 8px; padding: 12px 14px;
   }
   .acct-stat-val { font-size: 17px; font-weight: 700; color: var(--text-1); font-family: 'Inter', sans-serif; letter-spacing: -0.02em; }
   .acct-stat-lbl { font-size: 10px; color: var(--text-3); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.05em; }
@@ -491,15 +496,15 @@
     margin-top: 8px;
   }
   .acct-plan-manage {
-    margin-top: 10px; padding: 12px;
+    margin-top: 14px; padding: 14px;
     background: rgba(76,175,80,.06); border: 1px solid rgba(76,175,80,.2);
-    border-radius: 8px;
+    border-radius: 10px;
   }
   .acct-plan-manage-title {
     font-size: 11px; font-weight: 700; color: #4caf50;
     text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px;
   }
-  .acct-plan-manage-info { font-size: 11px; color: var(--text-3); margin-bottom: 10px; }
+  .acct-plan-manage-info { font-size: 12px; color: var(--text-3); margin-bottom: 12px; }
   .acct-cancel-btn {
     font-size: 11px; color: var(--accent); background: none;
     border: none; cursor: pointer; text-decoration: none;
