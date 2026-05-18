@@ -8019,8 +8019,8 @@ function _pwSelectPlan(plan) {
 
   if (ctaLabel) {
     ctaLabel.textContent = plan === 'monthly'
-      ? 'Abbonati per €9,99/mese'
-      : 'Acquista per €4,99';
+      ? 'Abbonati — €15/mese'
+      : 'Acquista esame singolo — €30';
   }
 }
 

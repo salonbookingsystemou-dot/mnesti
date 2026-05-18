@@ -603,8 +603,8 @@
       <div class="paywall-plan" id="pwPlanExam" onclick="_pwSelectPlan('exam')">
         <div class="paywall-plan-radio" id="pwRadioExam"></div>
         <div class="paywall-plan-body">
-          <div class="paywall-plan-name">Per esame</div>
-          <div class="paywall-plan-price">€4,99 <span>una tantum</span></div>
+          <div class="paywall-plan-name">Esame singolo</div>
+          <div class="paywall-plan-price">€30 <span>una tantum</span></div>
           <ul class="paywall-features">
             <li class="accent">1 esame aggiuntivo</li>
             <li>500 chiamate AI al giorno</li>
@@ -616,15 +616,15 @@
 
       <!-- Mensile — highlighted -->
       <div class="paywall-plan highlighted" id="pwPlanMonthly" onclick="_pwSelectPlan('monthly')">
-        <div class="paywall-plan-badge">Più popolare</div>
+        <div class="paywall-plan-badge">Più conveniente</div>
         <div class="paywall-plan-radio" id="pwRadioMonthly"></div>
         <div class="paywall-plan-body">
-          <div class="paywall-plan-name">Mensile</div>
-          <div class="paywall-plan-price">€9,99 <span>/ mese</span></div>
+          <div class="paywall-plan-name">Pro mensile</div>
+          <div class="paywall-plan-price">€15 <span>/ mese</span></div>
           <ul class="paywall-features">
-            <li class="accent">Esami illimitati</li>
+            <li class="accent">Esami illimitati in parallelo</li>
             <li class="accent">1.000 chiamate AI al giorno</li>
-            <li>Dispense senza limite di storage</li>
+            <li>200 MB di storage</li>
             <li>Disdici quando vuoi</li>
           </ul>
         </div>
@@ -635,7 +635,8 @@
     <!-- CTA -->
     <button class="paywall-cta" id="pwCtaBtn" onclick="_pwStartCheckout()">
       <i data-lucide="credit-card" style="width:14px;height:14px;stroke-width:2;flex-shrink:0"></i>
-      <span id="pwCtaLabel">Abbonati per €9,99/mese</span>
+      <span id="pwCtaLabel">Abbonati — €15/mese</span>
+      <!-- label aggiornata dinamicamente da _pwSelectPlan() -->
     </button>
 
     <!-- Security + skip -->
