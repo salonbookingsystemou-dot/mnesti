@@ -578,6 +578,78 @@
 </div>
 
 <!-- API Key Modal (legacy stub — functionality moved to Setup drawer) -->
+<!-- ── Paywall modal ──────────────────────────────────────────── -->
+<div id="paywallOverlay" class="paywall-overlay" style="display:none" aria-modal="true" role="dialog" aria-label="Sblocca nuovi esami">
+  <div class="paywall-modal">
+
+    <!-- Close button -->
+    <button class="paywall-close" onclick="_closePaywall()" aria-label="Chiudi">
+      <i data-lucide="x" style="width:16px;height:16px;stroke-width:2"></i>
+    </button>
+
+    <!-- Header -->
+    <div class="paywall-header">
+      <div class="paywall-icon">
+        <i data-lucide="layers" style="width:20px;height:20px;stroke-width:1.8"></i>
+      </div>
+      <div class="paywall-title">Hai usato il tuo esame gratuito</div>
+      <div class="paywall-subtitle">Scegli il piano adatto per creare nuovi esami.<br>Il tuo primo esame rimane sempre accessibile.</div>
+    </div>
+
+    <!-- Plan options -->
+    <div class="paywall-plans">
+
+      <!-- Per esame -->
+      <div class="paywall-plan" id="pwPlanExam" onclick="_pwSelectPlan('exam')">
+        <div class="paywall-plan-radio" id="pwRadioExam"></div>
+        <div class="paywall-plan-body">
+          <div class="paywall-plan-name">Per esame</div>
+          <div class="paywall-plan-price">€4,99 <span>una tantum</span></div>
+          <ul class="paywall-features">
+            <li class="accent">1 esame aggiuntivo</li>
+            <li>500 chiamate AI al giorno</li>
+            <li>Valido 90 giorni dall'acquisto</li>
+            <li>Caricamento dispense PDF</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Mensile — highlighted -->
+      <div class="paywall-plan highlighted" id="pwPlanMonthly" onclick="_pwSelectPlan('monthly')">
+        <div class="paywall-plan-badge">Più popolare</div>
+        <div class="paywall-plan-radio" id="pwRadioMonthly"></div>
+        <div class="paywall-plan-body">
+          <div class="paywall-plan-name">Mensile</div>
+          <div class="paywall-plan-price">€9,99 <span>/ mese</span></div>
+          <ul class="paywall-features">
+            <li class="accent">Esami illimitati</li>
+            <li class="accent">1.000 chiamate AI al giorno</li>
+            <li>Dispense senza limite di storage</li>
+            <li>Disdici quando vuoi</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- CTA -->
+    <button class="paywall-cta" id="pwCtaBtn" onclick="_pwStartCheckout()">
+      <i data-lucide="credit-card" style="width:14px;height:14px;stroke-width:2;flex-shrink:0"></i>
+      <span id="pwCtaLabel">Abbonati per €9,99/mese</span>
+    </button>
+
+    <!-- Security + skip -->
+    <div class="paywall-footer">
+      <div class="paywall-secure">
+        <i data-lucide="lock" style="width:10px;height:10px;stroke-width:2;flex-shrink:0"></i>
+        Pagamento sicuro via Stripe · Nessun addebito prima del checkout
+      </div>
+      <button class="paywall-skip" onclick="_closePaywall()">Torna all'esame corrente</button>
+    </div>
+
+  </div>
+</div>
+
 <div id="apiModal" style="display:none"></div>
 
 <div class="layout">

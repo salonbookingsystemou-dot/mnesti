@@ -312,6 +312,9 @@ const _PLAN_QUALITY = [
     // Backfill user_exams row so admin dashboard always counts correctly
     _syncExamInfoToSupabase(session.user.id);
 
+    // Carica piano utente in background per il paywall check
+    _loadUserPlan();
+
     // Good luck email on exam day at 08:00 (if conditions met)
     TimerRegistry.set('examGoodLuck', _checkExamDayGoodLuck, 5_000);
 
@@ -7944,6 +7947,99 @@ async function cancelSubscription() {
   alert('Per annullare il tuo abbonamento scrivi a contact@wordpresschef.it — ti risponderemo entro 24 ore.');
 }
 
+// ── Paywall ────────────────────────────────────────────────────
+// Cache del piano utente: aggiornata al login e dopo ogni checkout.
+window._userPlanType      = null; // 'free' | 'exam' | 'monthly' | null (not loaded)
+window._userPlanValidUntil = null;
+
+async function _loadUserPlan() {
+  if (!_sb) return;
+  try {
+    const { data, error } = await _sb.from('user_plans')
+      .select('plan_type, valid_until')
+      .maybeSingle();
+    if (error) { console.warn('[paywall] user_plans fetch error:', error.message); return; }
+    window._userPlanType       = data?.plan_type      || 'free';
+    window._userPlanValidUntil = data?.valid_until     || null;
+  } catch(e) { console.warn('[paywall] _loadUserPlan failed:', e.message); }
+}
+
+function _isPaidUser() {
+  if (window._userPlanType === null) return false; // not loaded yet → conservative
+  if (window._userPlanType === 'free' || !window._userPlanType) return false;
+  if (window._userPlanValidUntil && new Date(window._userPlanValidUntil) <= new Date()) return false;
+  return true;
+}
+
+// Chiamato da _createNewExam: ritorna true se si può procedere, false se è stato mostrato il paywall.
+async function _checkPaywallBeforeNewExam() {
+  // Piano già caricato? Se no, prova a caricarlo (bloccante ma rapido).
+  if (window._userPlanType === null) await _loadUserPlan();
+
+  // Utente paid → nessun paywall
+  if (_isPaidUser()) return true;
+
+  // Utente free: verifica se ha già usato il primo esame gratuito.
+  // "Ha usato il primo esame" = ha almeno un esame nell'archivio.
+  const archive = _getExamArchive ? _getExamArchive() : [];
+  const hasUsedFreeExam = archive.length > 0;
+
+  if (!hasUsedFreeExam) return true; // primo esame — procedi gratis
+
+  // Mostra il paywall
+  _showPaywallModal();
+  return false;
+}
+
+// Stato interno della modale
+let _pwSelectedPlan = 'monthly';
+
+function _showPaywallModal() {
+  const overlay = document.getElementById('paywallOverlay');
+  if (!overlay) return;
+  overlay.style.display = 'flex';
+  if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [overlay] });
+  _pwSelectPlan('monthly');
+}
+
+function _closePaywall() {
+  const overlay = document.getElementById('paywallOverlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+function _pwSelectPlan(plan) {
+  _pwSelectedPlan = plan;
+
+  const planExam    = document.getElementById('pwPlanExam');
+  const planMonthly = document.getElementById('pwPlanMonthly');
+  const ctaLabel    = document.getElementById('pwCtaLabel');
+
+  if (planExam)    planExam.classList.toggle('selected',    plan === 'exam');
+  if (planMonthly) planMonthly.classList.toggle('selected', plan === 'monthly');
+
+  if (ctaLabel) {
+    ctaLabel.textContent = plan === 'monthly'
+      ? 'Abbonati per €9,99/mese'
+      : 'Acquista per €4,99';
+  }
+}
+
+async function _pwStartCheckout() {
+  const btn = document.getElementById('pwCtaBtn');
+  if (btn) {
+    btn.classList.add('loading');
+    btn.disabled = true;
+    const lbl = document.getElementById('pwCtaLabel');
+    if (lbl) lbl.textContent = 'Apertura checkout…';
+  }
+  try {
+    await startCheckout(_pwSelectedPlan);
+  } catch(e) {
+    if (btn) { btn.classList.remove('loading'); btn.disabled = false; }
+    _pwSelectPlan(_pwSelectedPlan); // restore label
+  }
+}
+
 // ── Gestione redirect post-checkout ──────────────────────────
 (function _handleCheckoutReturn() {
   const params = new URLSearchParams(window.location.search);
@@ -7957,19 +8053,45 @@ async function cancelSubscription() {
 
   if (checkout === 'success') {
     // Piccolo ritardo per dare tempo al webhook di aggiornare il DB
-    setTimeout(() => {
+    setTimeout(async () => {
+      // Aggiorna cache piano utente (paywall si sblocca subito)
+      await _loadUserPlan();
       const msg = plan === 'monthly'
-        ? '🎉 Abbonamento attivato! Le nuove funzionalità sono ora disponibili.'
-        : '🎉 Piano per esame attivato! Hai 500 chiamate AI/giorno e 90 giorni di accesso.';
-      alert(msg);
+        ? 'Abbonamento attivato! Esami illimitati e 1.000 chiamate AI/giorno sono ora disponibili.'
+        : 'Acquisto completato! Hai 1 nuovo esame disponibile e 500 chiamate AI/giorno per 90 giorni.';
+      // Mostra messaggio di conferma elegante
+      _showCheckoutSuccessToast(msg, plan);
       // Ricarica il tab account per mostrare il nuovo piano
       _loadAccountPane();
-      openSettings('account');
     }, 2000);
   } else if (checkout === 'cancelled') {
     console.log('[checkout] pagamento annullato dall\'utente');
   }
 })();
+
+function _showCheckoutSuccessToast(message, plan) {
+  // Rimuovi toast precedenti
+  document.querySelectorAll('.checkout-success-toast').forEach(el => el.remove());
+
+  const toast = document.createElement('div');
+  toast.className = 'checkout-success-toast';
+  toast.innerHTML = `
+    <div class="cst-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+    <div class="cst-body">
+      <div class="cst-title">${plan === 'monthly' ? 'Abbonamento attivato' : 'Acquisto completato'}</div>
+      <div class="cst-msg">${message}</div>
+    </div>
+    <button class="cst-close" onclick="this.closest('.checkout-success-toast').remove()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  `;
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('visible'));
+  setTimeout(() => {
+    toast.classList.remove('visible');
+    setTimeout(() => toast.remove(), 400);
+  }, 6000);
+}
 
 async function _acctChangePassword() {
   const pw1   = document.getElementById('acctNewPw')?.value || '';
@@ -8874,7 +8996,11 @@ function _deleteExam(examId) {
 }
 
 // Apre il flusso per un nuovo esame
-function _createNewExam() {
+async function _createNewExam() {
+  // Controllo paywall: dal secondo esame in poi serve un piano a pagamento
+  const canProceed = await _checkPaywallBeforeNewExam();
+  if (!canProceed) return;
+
   _archiveCurrentExam();
 
   // Chiudi il welcome modal (potrebbe essere aperto con dati del vecchio esame)
