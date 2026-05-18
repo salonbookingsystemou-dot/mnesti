@@ -6883,11 +6883,19 @@ function _extractJson(raw) {
     .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"')
     .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'");
 
-  // 2. Rimuovi code fences
-  s = s.replace(/```(?:json)?/gi, '').replace(/```/g, '');
+  // 2. Rimuovi code fences (incluse varianti con spazi o newline extra)
+  s = s.replace(/```\s*json\s*/gi, '').replace(/```/g, '');
 
   // 3. Prova direttamente
-  try { return JSON.parse(s.trim()); } catch { /* fall through */ }
+  try {
+    const parsed = JSON.parse(s.trim());
+    // Se il modello ha restituito un singolo oggetto "day" invece di un array,
+    // avvolgilo automaticamente così il chiamante riceve sempre un array.
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.date) {
+      return [parsed];
+    }
+    return parsed;
+  } catch { /* fall through */ }
 
   // 4. Estrai il primo array [...] o oggetto {...}
   const firstBracket = s.indexOf('[');
@@ -6903,23 +6911,38 @@ function _extractJson(raw) {
   }
 
   if (start !== -1 && end > start) {
-    try { return JSON.parse(s.slice(start, end + 1)); } catch { /* fall through */ }
+    try {
+      const parsed = JSON.parse(s.slice(start, end + 1));
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.date) {
+        return [parsed];
+      }
+      return parsed;
+    } catch { /* fall through */ }
   }
 
   // 5. Partial recovery: handle streaming truncation mid-array.
   // Find the last complete object "}" and close the array there.
-  // This saves plans where max_tokens cuts the response before the final "]".
   if (start !== -1 && closing === ']') {
     const chunk = s.slice(start);
-    // Try closing after last "}," (item followed by comma → more items were cut)
     const lastCommaObj = chunk.lastIndexOf('},');
     if (lastCommaObj !== -1) {
       try { return JSON.parse(chunk.slice(0, lastCommaObj + 1) + ']'); } catch { /* fall through */ }
     }
-    // Try closing after last lone "}" (last object, no comma)
     const lastBrace = chunk.lastIndexOf('}');
     if (lastBrace !== -1) {
       try { return JSON.parse(chunk.slice(0, lastBrace + 1) + ']'); } catch { /* fall through */ }
+    }
+  }
+
+  // 6. Partial recovery for truncated single object → wrap in array
+  if (start !== -1 && closing === '}') {
+    const chunk = s.slice(start);
+    const lastBrace = chunk.lastIndexOf('}');
+    if (lastBrace !== -1) {
+      try {
+        const parsed = JSON.parse(chunk.slice(0, lastBrace + 1));
+        if (parsed && parsed.date) return [parsed];
+      } catch { /* fall through */ }
     }
   }
 
@@ -9514,7 +9537,8 @@ DISTRIBUZIONE DOMANDE (Tassonomia di Bloom per ogni giornata di studio):
 SCHEMA DATE DISPONIBILI:
 ${skeleton.map(d => `${d.date} (${d.label})`).join(', ')}
 
-Rispondi ESCLUSIVAMENTE con un array JSON valido di oggetti "day" (nessun altro testo, nessun markdown).
+Rispondi ESCLUSIVAMENTE con un array JSON valido che inizia con "[" e finisce con "]" (nessun altro testo, nessun markdown, nessun code fence).
+La risposta deve essere SOLO: [ {...}, {...}, ... ]
 Ogni oggetto "day" deve avere ESATTAMENTE questi campi:
 
 {
@@ -9540,18 +9564,34 @@ REGOLE ASSOLUTE (non derogabili):
 
   _setPlanGenUI('Generazione piano…', 'Claude sta costruendo il calendario e le domande…', 30, 'Chiamata API…');
 
-  try {
-    const data = await _callClaudeStream({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 12000,
-      temperature: 0.7,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: `Genera il piano di studio completo per ${subject}, da oggi (${_isoDate(today)}) al giorno dell'esame (${info.date}). Rispondi solo con il JSON.` }]
-    });
+  const _apiMsg = `Genera il piano di studio completo per ${subject}, da oggi (${_isoDate(today)}) al giorno dell'esame (${info.date}). Rispondi SOLO con l'array JSON — nessun testo, nessun markdown. Formato: [{...},{...},...]`;
 
-    _setPlanGenUI('Elaborazione risposta…', 'Analisi e validazione del piano generato…', 70, 'Parsing JSON…');
-    const planDays = _extractJson(data.content[0].text.trim());
-    if (!Array.isArray(planDays) || planDays.length === 0) throw new Error('Piano non valido ricevuto dall\'AI');
+  try {
+
+    // ── Chiamata API con retry automatico ────────────────────────
+    let planDays = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (attempt > 0) {
+        _setPlanGenUI('Nuovo tentativo…', 'Il primo tentativo ha restituito un formato non valido, riprovo…', 35, 'Richiesta API…');
+        await new Promise(r => setTimeout(r, 1500));
+      }
+      const data = await _callClaudeStream({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 16000,
+        temperature: 0.7,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: _apiMsg }]
+      });
+      const parsed = _extractJson(data.content[0].text.trim());
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        if (attempt === 1) throw new Error('Piano non valido ricevuto dall\'AI dopo 2 tentativi');
+        console.warn('[generateStudyPlan] attempt 1: non-array result, retrying');
+        continue;
+      }
+      planDays = parsed;
+      break;
+    }
+    if (!planDays) throw new Error('Impossibile generare il piano — riprova.');
 
     _setPlanGenUI('Salvataggio…', 'Costruzione del calendario…', 90, 'Quasi pronto…');
 
