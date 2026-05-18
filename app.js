@@ -8637,7 +8637,275 @@ window._saveExamOutcome = function(outcome) {
   if (inp) inp.value = '';
 
   if (typeof window._syncToSupabase === 'function') window._syncToSupabase();
+  // Propaga l'esito nell'archivio
+  if (typeof _archiveCurrentExam === 'function') try { _archiveCurrentExam(); } catch {}
 };
+
+// ══════════════════════════════════════════════════════════════
+// ── Archivio Esami ────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+
+const _ARCHIVE_KEY = 'psico_exams_archive';
+
+function _getExamArchive() {
+  try { return JSON.parse(localStorage.getItem(_ARCHIVE_KEY) || '[]'); } catch { return []; }
+}
+
+function _saveExamArchive(archive) {
+  _safeLSSet(_ARCHIVE_KEY, JSON.stringify(archive));
+}
+
+// Genera un ID stabile dall'esame corrente (data + materia)
+function _currentExamId() {
+  const info = getExamInfo();
+  const slug = (info.date || 'nodate').replace(/-/g, '') +
+               '_' + (info.subject || 'nosubj').replace(/\s+/g, '').toLowerCase().slice(0, 12);
+  return 'exam_' + slug;
+}
+
+// Archivia il piano e lo stato correnti, aggiorna outcome se disponibile
+function _archiveCurrentExam() {
+  const planRaw = localStorage.getItem('psico_ai_plan');
+  const info    = getExamInfo();
+  if (!planRaw && !info.date) return null;
+
+  const id      = _currentExamId();
+  const archive = _getExamArchive();
+  const existing = archive.find(e => e.id === id) || {};
+
+  const entry = {
+    ...existing,
+    id,
+    subject:   info.subject   || '',
+    professor: info.professor || '',
+    examDate:  info.date      || '',
+    createdAt: existing.createdAt || (() => {
+      try { return JSON.parse(planRaw || '{}').generatedAt || new Date().toISOString(); } catch { return new Date().toISOString(); }
+    })(),
+  };
+
+  // Aggiorna outcome dall'info corrente
+  if (info.result) {
+    entry.outcome  = info.result.outcome || null;
+    entry.grade    = info.result.grade   || null;
+    entry.readiness = info.result.readiness || null;
+  }
+
+  // Salva piano e stato separati
+  if (planRaw) _safeLSSet('psico_ai_plan_' + id, planRaw);
+  const stateRaw = localStorage.getItem('psico_state');
+  if (stateRaw) _safeLSSet('psico_state_' + id, stateRaw);
+
+  const idx = archive.findIndex(e => e.id === id);
+  if (idx >= 0) archive[idx] = entry; else archive.unshift(entry);
+  _saveExamArchive(archive);
+  return id;
+}
+
+// Carica un esame archiviato come esame attivo
+function _switchToExam(examId) {
+  _archiveCurrentExam(); // salva quello corrente
+
+  const archive = _getExamArchive();
+  const entry   = archive.find(e => e.id === examId);
+  if (!entry) { alert('Esame non trovato nell\'archivio.'); return; }
+
+  const planRaw = localStorage.getItem('psico_ai_plan_' + examId);
+  if (!planRaw) { alert('Piano non disponibile per questo esame.'); return; }
+
+  _safeLSSet('psico_ai_plan', planRaw);
+
+  const stateRaw = localStorage.getItem('psico_state_' + examId);
+  if (stateRaw) _safeLSSet('psico_state', stateRaw);
+  else try { localStorage.removeItem('psico_state'); } catch {}
+
+  const examInfo = { subject: entry.subject, professor: entry.professor, date: entry.examDate };
+  if (entry.outcome) {
+    examInfo.result = { outcome: entry.outcome, grade: entry.grade, examDate: entry.examDate };
+  }
+  _safeLSSet('psico_exam_info', JSON.stringify(examInfo));
+
+  try { localStorage.removeItem('psico_last_day'); } catch {}
+  buildDays({ force: true });
+  buildNav();
+  updateGenPlanStatus();
+  const first = getActiveDays()[0];
+  if (first) showDay(first.id);
+
+  _closeExamsArchive();
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// Apre il flusso per un nuovo esame
+function _createNewExam() {
+  _archiveCurrentExam();
+
+  // Reset dati esame corrente
+  try {
+    localStorage.removeItem('psico_ai_plan');
+    localStorage.removeItem('psico_exam_info');
+    localStorage.removeItem('psico_state');
+    localStorage.removeItem('psico_last_day');
+  } catch {}
+
+  buildDays({ force: true });
+  buildNav();
+  updateGenPlanStatus();
+  _closeExamsArchive();
+  closeMobileSidebar();
+
+  // Apri onboarding step 1
+  _showOnboarding(1);
+}
+
+// Aggiorna l'esito di un esame archiviato
+function _updateArchivedExamOutcome(examId, outcome, grade) {
+  const archive = _getExamArchive();
+  const entry   = archive.find(e => e.id === examId);
+  if (!entry) return;
+  entry.outcome = outcome;
+  entry.grade   = (outcome === 'passed' && grade) ? Number(grade) : null;
+  _saveExamArchive(archive);
+  // Se è l'esame corrente, aggiorna anche psico_exam_info
+  if (examId === _currentExamId()) {
+    const info = getExamInfo();
+    info.result = { outcome, grade: entry.grade, examDate: entry.examDate, recordedAt: new Date().toISOString() };
+    _safeLSSet('psico_exam_info', JSON.stringify(info));
+  }
+  _renderExamsArchiveBody();
+}
+
+// ── Panel UI ──────────────────────────────────────────────────
+
+function _openExamsArchive() {
+  _archiveCurrentExam(); // aggiorna archivio con dati recenti
+  _renderExamsArchiveBody();
+  const el = document.getElementById('examsArchiveOverlay');
+  if (el) { el.classList.add('open'); el.setAttribute('aria-hidden', 'false'); }
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  closeMobileSidebar();
+}
+
+function _closeExamsArchive() {
+  const el = document.getElementById('examsArchiveOverlay');
+  if (el) { el.classList.remove('open'); el.setAttribute('aria-hidden', 'true'); }
+}
+
+function _renderExamsArchiveBody() {
+  const body    = document.getElementById('examsArchiveBody');
+  if (!body) return;
+  const archive = _getExamArchive();
+  const curId   = _currentExamId();
+
+  if (!archive.length) {
+    body.innerHTML = `
+      <div class="exams-archive-empty">
+        <i data-lucide="folder-open" style="width:36px;height:36px;stroke-width:1.5;color:var(--text-3)"></i>
+        <p>Nessun esame archiviato.<br>Crea il tuo primo piano di studio.</p>
+        <button class="exams-archive-new-btn" onclick="_createNewExam()">
+          <i data-lucide="plus" style="width:13px;height:13px;stroke-width:2.5"></i>
+          Crea nuovo esame
+        </button>
+      </div>`;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    return;
+  }
+
+  const months = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+  const _fmtDate = iso => {
+    if (!iso) return '—';
+    const d = new Date(iso + 'T12:00:00');
+    return isNaN(d) ? iso : `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+  };
+  const _outcomeChip = entry => {
+    if (entry.id === curId && !entry.outcome) {
+      return `<span class="ea-chip ea-chip-active">In corso</span>`;
+    }
+    if (!entry.outcome) {
+      const past = entry.examDate && new Date(entry.examDate + 'T12:00:00') < new Date();
+      return past
+        ? `<span class="ea-chip ea-chip-pending">Esito mancante</span>`
+        : `<span class="ea-chip ea-chip-future">Futuro</span>`;
+    }
+    if (entry.outcome === 'passed') {
+      return `<span class="ea-chip ea-chip-passed">Superato${entry.grade ? ' · ' + entry.grade + '/30' : ''}</span>`;
+    }
+    return `<span class="ea-chip ea-chip-failed">Non superato</span>`;
+  };
+
+  const _outcomeFormId = id => 'eaof_' + id.replace(/[^a-z0-9]/gi, '');
+
+  const cards = archive.map(entry => {
+    const isCurrent = entry.id === curId;
+    const past = entry.examDate && new Date(entry.examDate + 'T12:00:00') < new Date();
+    const canUpdateOutcome = !entry.outcome || true; // sempre aggiornabile
+    const switchBtn = !isCurrent
+      ? `<button class="ea-action-btn ea-action-open" onclick="_switchToExam('${entry.id}')">
+           <i data-lucide="folder-open" style="width:12px;height:12px;stroke-width:2"></i>
+           Apri piano
+         </button>`
+      : `<span class="ea-current-badge">Esame attivo</span>`;
+
+    const outcomeFormId = _outcomeFormId(entry.id);
+    const outcomeForm = `
+      <div class="ea-outcome-form" id="${outcomeFormId}" style="display:none">
+        <div class="ea-outcome-row">
+          <button class="ea-out-btn ea-out-fail" onclick="_updateArchivedExamOutcome('${entry.id}','failed',null)">Non superato</button>
+          <div class="ea-out-pass-group">
+            <button class="ea-out-btn ea-out-pass" onclick="(function(){
+              var g=document.getElementById('eaGrade_${entry.id.replace(/[^a-z0-9]/gi,'')}');
+              var v=g?parseInt(g.value):0;
+              if(v>=18&&v<=30){_updateArchivedExamOutcome('${entry.id}','passed',v);document.getElementById('${outcomeFormId}').style.display='none';}
+              else{g&&g.classList.add('ea-inp-err');setTimeout(()=>g&&g.classList.remove('ea-inp-err'),800);}
+            })()">Superato</button>
+            <input type="number" class="ea-grade-inp" id="eaGrade_${entry.id.replace(/[^a-z0-9]/gi,'')}"
+              min="18" max="30" placeholder="voto" value="${entry.grade || ''}">
+          </div>
+        </div>
+      </div>`;
+
+    const updateBtn = past
+      ? `<button class="ea-action-btn ea-action-outcome"
+           onclick="var f=document.getElementById('${outcomeFormId}');f.style.display=f.style.display==='none'?'flex':'none'">
+           <i data-lucide="edit-2" style="width:12px;height:12px;stroke-width:2"></i>
+           ${entry.outcome ? 'Modifica esito' : 'Registra esito'}
+         </button>
+         ${outcomeForm}`
+      : '';
+
+    return `
+      <div class="ea-card${isCurrent ? ' ea-card-current' : ''}">
+        <div class="ea-card-head">
+          <div class="ea-card-info">
+            <div class="ea-subject">${escHtml(entry.subject || 'Esame senza titolo')}</div>
+            ${entry.professor ? `<div class="ea-professor">${escHtml(entry.professor)}</div>` : ''}
+            <div class="ea-date">
+              <i data-lucide="calendar" style="width:11px;height:11px;stroke-width:2"></i>
+              ${_fmtDate(entry.examDate)}
+            </div>
+          </div>
+          <div class="ea-card-meta">
+            ${_outcomeChip(entry)}
+          </div>
+        </div>
+        <div class="ea-card-actions">
+          ${switchBtn}
+          ${updateBtn}
+        </div>
+      </div>`;
+  }).join('');
+
+  body.innerHTML = `
+    <div class="ea-toolbar">
+      <button class="exams-archive-new-btn" onclick="_createNewExam()">
+        <i data-lucide="plus" style="width:13px;height:13px;stroke-width:2.5"></i>
+        Crea nuovo esame
+      </button>
+    </div>
+    <div class="ea-list">${cards}</div>`;
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
 
 window._skipExamOutcomeForNow = function() {
   const overlay = document.getElementById('examOutcomeOverlay');
@@ -9031,6 +9299,11 @@ async function generateStudyPlan(fromOnboarding = false) {
   if (_missing.length) {
     alert('Per generare il piano completa i seguenti campi:\n\n' + _missing.join('\n'));
     return;
+  }
+
+  // ── Archive current exam before overwriting ───────────────────────────────
+  if (typeof _archiveCurrentExam === 'function') {
+    try { _archiveCurrentExam(); } catch(e) { console.warn('Archive failed:', e); }
   }
 
   // ── Confirm overwrite if a plan already exists ─────────────────────────────

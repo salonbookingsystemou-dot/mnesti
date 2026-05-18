@@ -555,6 +555,24 @@
   </div>
 </div>
 
+<!-- ── Archivio Esami overlay ── -->
+<div class="exams-archive-overlay" id="examsArchiveOverlay" aria-hidden="true">
+  <div class="exams-archive-panel">
+    <div class="exams-archive-header">
+      <div class="exams-archive-title">
+        <i data-lucide="archive" style="width:16px;height:16px;stroke-width:2"></i>
+        I miei esami
+      </div>
+      <button class="exams-archive-close" onclick="_closeExamsArchive()" aria-label="Chiudi">
+        <i data-lucide="x" style="width:16px;height:16px;stroke-width:2.5"></i>
+      </button>
+    </div>
+    <div class="exams-archive-body" id="examsArchiveBody">
+      <!-- populated by JS -->
+    </div>
+  </div>
+</div>
+
 <!-- API Key Modal (legacy stub — functionality moved to Setup drawer) -->
 <div id="apiModal" style="display:none"></div>
 
@@ -626,9 +644,20 @@
       <div class="day-nav" id="dayNav"></div>
     </div>
 
-    <!-- Logout at bottom of sidebar (mobile-friendly) -->
-    <div class="sidebar-logout" id="sidebarLogout">
-      <button onclick="doLogout()">Esci dall'account</button>
+    <!-- Sidebar footer: esami + logout -->
+    <div class="sidebar-footer" id="sidebarLogout">
+      <button class="sidebar-new-exam-btn" onclick="_createNewExam()">
+        <i data-lucide="plus" style="width:13px;height:13px;stroke-width:2.5"></i>
+        Crea nuovo esame
+      </button>
+      <button class="sidebar-exams-btn" onclick="_openExamsArchive()">
+        <i data-lucide="archive" style="width:13px;height:13px;stroke-width:2"></i>
+        I miei esami
+      </button>
+      <button class="sidebar-logout-btn" onclick="doLogout()">
+        <i data-lucide="log-out" style="width:12px;height:12px;stroke-width:2"></i>
+        Esci dall'account
+      </button>
     </div>
   </div>
 
