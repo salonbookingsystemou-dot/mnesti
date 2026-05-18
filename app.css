@@ -492,11 +492,13 @@
   }
   .acct-plan-manage-info { font-size: 11px; color: var(--text-3); margin-bottom: 10px; }
   .acct-cancel-btn {
-    font-size: 10px; color: var(--text-4, #555); background: none;
-    border: none; cursor: pointer; text-decoration: underline;
-    padding: 0; transition: color .15s;
+    font-size: 11px; color: var(--accent); background: none;
+    border: none; cursor: pointer; text-decoration: none;
+    padding: 4px 0; transition: opacity .15s; display: inline-flex;
+    align-items: center; gap: 4px;
   }
-  .acct-cancel-btn:hover { color: #f44336; }
+  .acct-cancel-btn::after { content: ' ↗'; font-size: 10px; opacity: .7; }
+  .acct-cancel-btn:hover { opacity: .75; }
   .acct-plan-coming {
     margin-top: 10px; font-size: 11px; color: var(--text-3);
     text-align: center; padding: 8px;
