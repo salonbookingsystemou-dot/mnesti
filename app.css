@@ -6467,7 +6467,6 @@
 .po-day-card.po-locked .po-type-badge { opacity: 0.5; }
 .po-day-card.po-locked .po-count,
 .po-day-card.po-locked .po-prep-bar   { opacity: 0.45; }
-.po-day-card.po-locked .po-lock-icon  { opacity: 0.45; }
 
 /* State variants */
 .po-day-card.po-today {
@@ -6566,10 +6565,10 @@
 }
 .po-cta-btn:hover { opacity: 0.9; }
 
-/* Lock icon */
-.po-lock-icon {
-  position: absolute; bottom: 7px; right: 8px;
+/* Lock icon — inline in progress row, replaces the count */
+.po-lock-icon-inline {
   color: var(--text-3); opacity: 0.55; pointer-events: none;
+  display: inline-flex; align-items: center; flex-shrink: 0;
 }
 
 /* ── Back-to-plan button (inside day headers) ── */

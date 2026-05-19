@@ -3378,17 +3378,17 @@ function buildPlanOverview() {
           <span class="po-done-label">Completata</span>
         </div>`;
       } else if (total > 0) {
+        const lockSvg = `<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
         html += `<div class="po-progress-row">
           <div class="po-prep-bars">${bars}</div>
-          <span class="po-count">${answered}/${total}</span>
+          ${isLocked ? `<span class="po-lock-icon-inline">${lockSvg}</span>` : `<span class="po-count">${answered}/${total}</span>`}
         </div>`;
+      } else if (isLocked && !isRest && !isExam) {
+        const lockSvg = `<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
+        html += `<div class="po-progress-row" style="justify-content:flex-end"><span class="po-lock-icon-inline">${lockSvg}</span></div>`;
       }
       html += `</div>`; // po-card-bottom
       html += `</div>`; // po-card-inner
-
-      if (isLocked && !isRest && !isExam) {
-        html += `<span class="po-lock-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>`;
-      }
       html += `</div>`; // po-day-card
     });
 
