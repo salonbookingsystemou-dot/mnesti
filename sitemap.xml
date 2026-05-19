@@ -117,4 +117,13 @@
     <priority>0.7</priority>
   </url>
 
+
+  <!-- Come studiare psicologia all'università: tecniche e strategie -->
+  <url>
+    <loc>https://mnesti.it/blog-come-studiare-psicologia.html</loc>
+    <lastmod>2026-05-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
 </urlset>
