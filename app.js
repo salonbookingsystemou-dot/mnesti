@@ -3266,6 +3266,17 @@ function buildPlanOverview() {
   // ── "Today" card: match by date, fallback to current working day ──────────
   let todayDayId = (activeDays.find(d => d.date === todayStr) || _resolveStartDay() || activeDays[0]).id;
 
+  // ── Gap detection: plan generated but never started and already overdue ────
+  const planFirstDate = activeDays.find(d => d.date)?.date || null;
+  let gapDays = 0;
+  let showGapBanner = false;
+  if (planFirstDate && doneDays === 0 && daysToExam !== null && daysToExam > 0) {
+    const planStart = new Date(planFirstDate); planStart.setHours(0, 0, 0, 0);
+    const todayD    = new Date();              todayD.setHours(0, 0, 0, 0);
+    gapDays = Math.floor((todayD - planStart) / 86400000);
+    if (gapDays > 1) showGapBanner = true;
+  }
+
   // ── Group days into weeks (mirrors buildNav logic) ────────────────────────
   let curWeekKey  = null;
   let curWeekMeta = null;
@@ -3303,6 +3314,31 @@ function buildPlanOverview() {
         <div class="po-stat-label">Ore studiate</div>
       </div>
     </div>`;
+
+  // ── Gap banner ────────────────────────────────────────────────────────────
+  if (showGapBanner) {
+    const daysLeft = daysToExam;
+    html += `
+    <div class="po-gap-banner" id="poGapBanner">
+      <div class="po-gap-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>
+      <div class="po-gap-body">
+        <div class="po-gap-title">Piano non ancora iniziato</div>
+        <div class="po-gap-desc">
+          Il piano era previsto ${gapDays === 1 ? 'ieri' : `${gapDays} giorni fa`}, ma non hai ancora completato sessioni.
+          Con la data dell'esame fissa hai <strong>${daysLeft} giorn${daysLeft === 1 ? 'o' : 'i'} rimast${daysLeft === 1 ? 'o' : 'i'}</strong> —
+          vuoi rigenerare il piano ottimizzato sul tempo effettivo?
+        </div>
+      </div>
+      <div class="po-gap-actions">
+        <button class="po-gap-cta" onclick="generateStudyPlan(false)">Rigenera piano</button>
+        <button class="po-gap-dismiss" onclick="document.getElementById('poGapBanner').remove()">Ignora</button>
+      </div>
+    </div>`;
+  }
 
   // Single flat grid — week labels are full-span rows inside the same grid
   html += `<div class="po-days-grid">`;

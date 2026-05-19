@@ -6555,6 +6555,55 @@
 .po-done-row { display: flex; align-items: center; gap: 4px; margin-top: 8px; }
 .po-done-label { font-size: 10px; color: #3a9d6e; font-weight: 600; }
 
+/* ── Gap banner ── */
+.po-gap-banner {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 14px 16px;
+  margin-bottom: 1.5rem;
+  background: rgba(217,119,87,0.08);
+  border: 1px solid rgba(217,119,87,0.28);
+  border-radius: 10px;
+}
+.po-gap-icon {
+  flex-shrink: 0; margin-top: 1px;
+  color: var(--accent); opacity: 0.85;
+}
+.po-gap-body { flex: 1; min-width: 0; }
+.po-gap-title {
+  font-size: 13px; font-weight: 600; color: var(--text);
+  margin-bottom: 3px;
+}
+.po-gap-desc {
+  font-size: 12px; color: var(--text-2); line-height: 1.5;
+}
+.po-gap-desc strong { color: var(--text); font-weight: 600; }
+.po-gap-actions {
+  display: flex; flex-direction: column; gap: 6px;
+  flex-shrink: 0; align-items: flex-end;
+}
+.po-gap-cta {
+  padding: 7px 14px;
+  background: var(--accent); color: #fff;
+  border: none; border-radius: 6px;
+  font-size: 12px; font-weight: 600; font-family: inherit;
+  cursor: pointer; white-space: nowrap;
+  transition: opacity 0.12s;
+}
+.po-gap-cta:hover { opacity: 0.88; }
+.po-gap-dismiss {
+  padding: 4px 8px;
+  background: none; border: none;
+  font-size: 11px; color: var(--text-3);
+  font-family: inherit; cursor: pointer;
+  transition: color 0.12s;
+}
+.po-gap-dismiss:hover { color: var(--text-2); }
+
+@media (max-width: 600px) {
+  .po-gap-banner { flex-direction: column; gap: 10px; }
+  .po-gap-actions { flex-direction: row; align-items: center; width: 100%; }
+}
+
 /* Today CTA */
 .po-cta-btn {
   display: flex; align-items: center; justify-content: center; gap: 5px;
