@@ -3466,6 +3466,20 @@ function hidePlanOverview() {
 
 function showDay(id) {
   if (!isDayNavigable(id)) return; // guard: only done/skip/rest + current working day
+
+  // Auto-start session BEFORE making the block visible to avoid a pre-session flash.
+  // The calendar already serves as the plan overview — no intermediate gate needed.
+  const _day = getActiveDays().find(d => d.id === id);
+  if (_day && _day.type !== 'rest' && _day.type !== 'exam') {
+    const _s = state[id]?.status;
+    if (_s !== 'done' && _s !== 'skip') {
+      if (!state[id]) state[id] = {};
+      if (!state[id].sessionStarted && typeof startDaySession === 'function') {
+        startDaySession(id);
+      }
+    }
+  }
+
   hidePlanOverview();
   document.querySelectorAll('.day-block').forEach(el => el.classList.remove('visible'));
   document.querySelectorAll('.day-nav-item').forEach(el => el.classList.remove('active'));
