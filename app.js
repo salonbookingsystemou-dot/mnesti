@@ -3269,8 +3269,15 @@ function buildPlanOverview() {
   const totalSecs  = activeDays.reduce((s, d) => s + ((state[d.id] || {}).totalSeconds || 0), 0);
   const totalHours = (totalSecs / 3600).toFixed(1);
 
-  // ── "Today" card: match by date, fallback to current working day ──────────
-  let todayDayId = (activeDays.find(d => d.date === todayStr) || _resolveStartDay() || activeDays[0]).id;
+  // ── Two separate concepts ─────────────────────────────────────────────────
+  // activeDayId : first accessible/working day → full accent treatment + CTA
+  // todayDateId : day matching today's calendar date → subtle border only
+  const _activeDay   = _resolveStartDay() || activeDays[0];
+  const activeDayId  = _activeDay?.id || null;
+  const _todayMatch  = activeDays.find(d => d.date === todayStr);
+  const todayDateId  = _todayMatch?.id || null;
+  // Legacy alias (used below for backwards compat with gap detection)
+  const todayDayId   = todayDateId || activeDayId;
 
   // ── Gap detection: plan generated but never started and already overdue ────
   const planFirstDate = activeDays.find(d => d.date)?.date || null;
@@ -3363,7 +3370,8 @@ function buildPlanOverview() {
     html += `</div>`;
 
     week.days.forEach(day => {
-      const isToday    = day.id === todayDayId;
+      const isActiveDay  = day.id === activeDayId;   // first accessible day → CTA + full accent
+      const isTodayDate  = day.id === todayDateId;   // calendar date = today → subtle marker only
       const dayState   = state[day.id] || {};
       const isDone     = dayState.status === 'done';
       const isLocked   = !isDayUnlocked(day.id);
@@ -3379,12 +3387,13 @@ function buildPlanOverview() {
       const prepLevel = r ? r.prepLevel : 0;
 
       let cardClass = 'po-day-card';
-      if (isToday)               cardClass += ' po-today';
-      else if (isDone)           cardClass += ' po-done';
-      else if (isExam)           cardClass += ' po-exam';
-      else if (isRest)           cardClass += ' po-rest';
-      if (isLocked && !isRest)   cardClass += ' po-locked';
-      if (navigable)             cardClass += ' navigable';
+      if (isActiveDay)              cardClass += ' po-today';      // full accent on active day
+      else if (isTodayDate)         cardClass += ' po-today-marker'; // just a border for today's date
+      else if (isDone)              cardClass += ' po-done';
+      else if (isExam)              cardClass += ' po-exam';
+      else if (isRest)              cardClass += ' po-rest';
+      if (isLocked && !isRest)      cardClass += ' po-locked';
+      if (navigable)                cardClass += ' navigable';
 
       const TYPE_LABEL = { studio:'Studio', revisione:'Revisione', rest:'', exam:'Esame' };
       const typeLbl    = TYPE_LABEL[day.type] || '';
@@ -3393,13 +3402,14 @@ function buildPlanOverview() {
       const clickAttr  = navigable ? `onclick="showDay('${day.id}')"` : '';
 
       html += `<div class="${cardClass}" ${clickAttr}>`;
-      if (isToday)            html += `<div class="po-today-bar"></div>`;
-      if (isDone && !isToday) html += `<div class="po-done-stripe"></div>`;
+      if (isActiveDay)            html += `<div class="po-today-bar"></div>`;
+      if (isDone && !isActiveDay) html += `<div class="po-done-stripe"></div>`;
       html += `<div class="po-card-inner">`;
 
       // Row 1: date + badge
       html += `<div class="po-card-top"><span class="po-card-date">${escHtml(day.label)}</span>`;
-      if (isToday)          html += `<span class="po-today-pill">Oggi</span>`;
+      if (isActiveDay)      html += `<span class="po-today-pill">Oggi</span>`;
+      else if (isTodayDate) html += `<span class="po-today-pill po-today-pill--muted">Oggi</span>`;
       else if (typeLbl)     html += `<span class="${typeClass}">${typeLbl}</span>`;
       html += `</div>`;
 
@@ -3408,7 +3418,7 @@ function buildPlanOverview() {
 
       // Row 3: bottom
       html += `<div class="po-card-bottom">`;
-      if (isToday && !isDone) {
+      if (isActiveDay && !isDone) {
         const ctaLbl = Object.keys(dayState.answers || {}).length > 0 ? 'Riprendi sessione' : 'Inizia sessione';
         html += `<button class="po-cta-btn" onclick="event.stopPropagation();showDay('${day.id}')">
           <svg width="9" height="9" viewBox="0 0 24 24" fill="white" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
