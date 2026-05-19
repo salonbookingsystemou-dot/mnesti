@@ -6407,11 +6407,21 @@
   text-transform: uppercase; letter-spacing: 0.08em; margin-top: 3px;
 }
 
-/* ── Week section ── */
-.po-week { margin-bottom: 2rem; }
-.po-week-header {
-  display: flex; align-items: center; gap: 10px; margin-bottom: 0.65rem;
+/* ── Single continuous grid (week labels as full-span rows) ── */
+.po-days-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 8px;
 }
+
+/* Week label row — spans all columns, ultra-compact */
+.po-week-label-row {
+  grid-column: 1 / -1;
+  display: flex; align-items: center; gap: 10px;
+  padding: 4px 0 2px;
+  margin-top: 4px;
+}
+.po-week-label-row:first-child { margin-top: 0; }
 .po-week-num {
   font-size: 10px; font-weight: 800; text-transform: uppercase;
   letter-spacing: 0.12em; color: var(--text-3); white-space: nowrap;
@@ -6421,16 +6431,9 @@
 .po-week-count { margin-left: auto; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--text-3); }
 .po-week-count.complete { color: #3a9d6e; font-weight: 600; }
 
-/* ── Day cards grid ── */
-.po-days-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
-  grid-auto-rows: 120px;
-  gap: 8px;
-}
-
 /* ── Individual day card ── */
 .po-day-card {
+  height: 120px;
   position: relative;
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -6558,8 +6561,8 @@ body.po-session-view .po-back-btn { display: inline-flex; }
   }
   .po-days-grid {
     grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-    grid-auto-rows: 110px;
     gap: 6px;
   }
+  .po-day-card { height: 110px; }
   .po-stats { grid-template-columns: repeat(3, 1fr); gap: 6px; max-width: 100%; }
 }

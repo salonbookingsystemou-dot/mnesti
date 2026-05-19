@@ -3304,18 +3304,21 @@ function buildPlanOverview() {
       </div>
     </div>`;
 
+  // Single flat grid — week labels are full-span rows inside the same grid
+  html += `<div class="po-days-grid">`;
+
   weeks.forEach(week => {
     const wStudy = week.days.filter(d => d.type !== 'rest' && d.type !== 'exam');
     const wDone  = wStudy.filter(d => (state[d.id] || {}).status === 'done').length;
     const wTotal = wStudy.length;
     const allDone = wDone === wTotal && wTotal > 0;
 
-    html += `<div class="po-week">
-      <div class="po-week-header">
-        <span class="po-week-num">${escHtml(week.num)}</span>`;
+    // Week label row — spans all columns, visually minimal
+    html += `<div class="po-week-label-row">
+      <span class="po-week-num">${escHtml(week.num)}</span>`;
     if (week.desc) html += `<span class="po-week-vdiv"></span><span class="po-week-desc">${escHtml(week.desc)}</span>`;
     if (wTotal > 0) html += `<span class="po-week-count${allDone ? ' complete' : ''}">${wDone}/${wTotal}</span>`;
-    html += `</div><div class="po-days-grid">`;
+    html += `</div>`;
 
     week.days.forEach(day => {
       const isToday    = day.id === todayDayId;
@@ -3389,8 +3392,9 @@ function buildPlanOverview() {
       html += `</div>`; // po-day-card
     });
 
-    html += `</div></div>`; // po-days-grid + po-week
   });
+
+  html += `</div>`; // po-days-grid (single flat grid)
 
   el.innerHTML = html;
   if (typeof lucide !== 'undefined') lucide.createIcons();
