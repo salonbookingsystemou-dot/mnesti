@@ -334,6 +334,12 @@ const _PLAN_QUALITY = [
 
     _hideLogin();
 
+    // Always land on the calendar overview after login — regardless of any
+    // previous showDay() calls (e.g. from plan generation or last session).
+    if (!needsOb && typeof showPlanOverview === 'function') {
+      showPlanOverview();
+    }
+
     // Only push to Supabase if this is a new login (isNewLogin=true).
     // For existing sessions the load already happened and we don't want to
     // risk overwriting remote data with a stale local snapshot.
@@ -10236,13 +10242,17 @@ REGOLE ASSOLUTE (non derogabili):
     buildDays({ force: true }); // completely new plan structure
     buildNav();
     updateGenPlanStatus();
-    const first = getActiveDays()[0];
-    if (first) showDay(first.id);
-    if (!fromOnboarding) closeSourcesPanel();
 
-    // Dopo onboarding, mostra il welcome modal con i dati FRESCHI del nuovo piano
-    if (fromOnboarding && typeof showWelcomeModal === 'function') {
-      setTimeout(() => showWelcomeModal(), 400);
+    if (fromOnboarding) {
+      // After onboarding: always land on calendar overview, not a specific day
+      if (typeof buildPlanOverview === 'function') buildPlanOverview();
+      if (typeof showPlanOverview  === 'function') showPlanOverview();
+      // Show welcome modal with fresh plan data on top of calendar
+      if (typeof showWelcomeModal === 'function') setTimeout(() => showWelcomeModal(), 400);
+    } else {
+      const first = getActiveDays()[0];
+      if (first) showDay(first.id);
+      closeSourcesPanel();
     }
 
   } catch(e) {
