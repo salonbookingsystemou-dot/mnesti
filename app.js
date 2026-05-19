@@ -5054,11 +5054,12 @@ function timerStop(dayId) {
   // Force immediate cloud sync on session end (don't rely on debounce)
   TimerRegistry.clear('sync');
   if (typeof window._syncToSupabase === 'function') window._syncToSupabase();
-  // Rebuild questions panel back to pre-session prompt.
-  // Guard: if the user has an edit open, skip re-render to preserve their unsaved text.
+  // Rebuild questions panel (needed for correct state if user returns to this day).
   if (typeof _renderQsPanel === 'function' && !document.querySelector('.q-done-edit-area.open')) {
     _renderQsPanel(dayId);
   }
+  // Return to calendar overview after closing the session
+  if (typeof showPlanOverview === 'function') showPlanOverview();
 }
 
 // ── Countdown expired ─────────────────────────────────────────
