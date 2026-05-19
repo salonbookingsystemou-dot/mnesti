@@ -336,9 +336,9 @@ const _PLAN_QUALITY = [
 
     // Always land on the calendar overview after login — regardless of any
     // previous showDay() calls (e.g. from plan generation or last session).
-    if (!needsOb && typeof showPlanOverview === 'function') {
-      showPlanOverview();
-    }
+    // buildPlanOverview handles the empty-plan state gracefully, so this is safe
+    // to call unconditionally. The onboarding overlay (if needed) renders on top.
+    if (typeof showPlanOverview === 'function') showPlanOverview();
 
     // Only push to Supabase if this is a new login (isNewLogin=true).
     // For existing sessions the load already happened and we don't want to
