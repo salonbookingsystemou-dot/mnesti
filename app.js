@@ -7985,8 +7985,37 @@ async function startCheckout(planType) {
   }
 }
 
-function cancelSubscription() {
-  window.open('https://billing.stripe.com/p/login/eVq4gA0dAfFs3uz7IW7EQ00', '_blank');
+async function cancelSubscription() {
+  const btn = document.querySelector('.acct-cancel-btn');
+  if (btn) { btn.style.opacity = '0.5'; btn.style.pointerEvents = 'none'; btn.textContent = 'Apertura…'; }
+
+  try {
+    const token = window._getSBToken ? await window._getSBToken() : null;
+    if (!token) throw new Error('Sessione scaduta');
+
+    const res = await fetch(`${window._SB_URL}/functions/v1/create-portal-session`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ return_url: window.location.origin + '/app.html' }),
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.url) throw new Error(data.error || 'Errore apertura portale');
+
+    window.open(data.url, '_blank');
+  } catch (err) {
+    console.error('[cancelSubscription]', err);
+    alert('Impossibile aprire il portale Stripe. Riprova o contatta support@mnesti.it.');
+  } finally {
+    if (btn) {
+      btn.style.opacity = '';
+      btn.style.pointerEvents = '';
+      btn.innerHTML = 'Accedi al tuo abbonamento su Stripe <span style="font-size:10px;opacity:.7">↗</span>';
+    }
+  }
 }
 
 // ── Paywall ────────────────────────────────────────────────────
