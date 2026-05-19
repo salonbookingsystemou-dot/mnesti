@@ -6369,10 +6369,16 @@
   display: none;
   height: calc(100vh - 56px);
   overflow-y: auto;
-  padding: 2rem 2.5rem 3rem;
   background: var(--bg);
 }
 .plan-overview.visible { display: block; }
+
+/* Centred inner content — fills available width up to a comfortable max */
+.po-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem 2.5rem 3rem;
+}
 
 /* ── Page header ── */
 .po-title {
@@ -6410,7 +6416,7 @@
 /* ── Single continuous grid (week labels as full-span rows) ── */
 .po-days-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  grid-template-columns: repeat(7, 1fr);
   gap: 8px;
 }
 
@@ -6583,10 +6589,12 @@ body.po-session-view .po-back-btn { display: inline-flex; }
 @media (max-width: 768px) {
   .plan-overview {
     height: calc(100dvh - 48px);
+  }
+  .po-inner {
     padding: 1.25rem 1rem 2.5rem;
   }
   .po-days-grid {
-    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: 6px;
   }
   .po-day-card { height: 110px; }

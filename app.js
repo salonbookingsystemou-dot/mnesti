@@ -3286,7 +3286,7 @@ function buildPlanOverview() {
 
   // ── Build HTML ────────────────────────────────────────────────────────────
   const daysLabel = daysToExam === null ? '—' : daysToExam <= 0 ? '0' : String(daysToExam);
-  let html = `
+  let html = `<div class="po-inner">
     <div class="po-title">Piano di studio</div>
     ${examInfo.subject ? `<div class="po-subtitle">${escHtml(examInfo.subject)}${examInfo.professor ? ' — ' + escHtml(examInfo.professor) : ''}</div>` : '<div class="po-subtitle" style="height:1rem"></div>'}
     <div class="po-stats">
@@ -3395,6 +3395,7 @@ function buildPlanOverview() {
   });
 
   html += `</div>`; // po-days-grid (single flat grid)
+  html += `</div>`; // po-inner
 
   el.innerHTML = html;
   if (typeof lucide !== 'undefined') lucide.createIcons();
