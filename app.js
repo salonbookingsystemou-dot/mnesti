@@ -7926,10 +7926,21 @@ async function _loadAccountPane() {
       if (manageEl)  manageEl.style.display  = 'block';
       const manageInfo = document.getElementById('acctPlanManageInfo');
       if (manageInfo) {
-        const expTxt = planData?.valid_until
-          ? `Attivo fino al <strong>${new Date(planData.valid_until).toLocaleDateString('it-IT')}</strong>`
-          : 'Abbonamento attivo';
-        manageInfo.innerHTML = expTxt;
+        const cancelAtEnd = planData?.cancel_at_period_end || false;
+        const cancelAt    = planData?.cancel_at ? new Date(planData.cancel_at).toLocaleDateString('it-IT') : null;
+        const validUntil  = planData?.valid_until ? new Date(planData.valid_until).toLocaleDateString('it-IT') : null;
+
+        if (cancelAtEnd) {
+          const endDate = cancelAt || validUntil || '—';
+          manageInfo.innerHTML =
+            `<span style="color:var(--accent);font-weight:600">⚠ Cancellazione programmata il ${endDate}</span><br>` +
+            `<span style="font-size:11px;color:var(--text-2)">Accesso attivo fino a quella data, poi il piano diventa gratuito.</span>`;
+        } else {
+          const expTxt = validUntil
+            ? `Attivo fino al <strong>${validUntil}</strong>`
+            : 'Abbonamento attivo';
+          manageInfo.innerHTML = expTxt;
+        }
       }
       // Nascondi il pulsante di cancellazione per il piano esame (one-time)
       const cancelBtn = document.querySelector('.acct-cancel-btn');
@@ -7987,11 +7998,13 @@ async function _loadUserPlan() {
   if (!_sb) return;
   try {
     const { data, error } = await _sb.from('user_plans')
-      .select('plan_type, valid_until')
+      .select('plan_type, valid_until, cancel_at_period_end, cancel_at')
       .maybeSingle();
     if (error) { console.warn('[paywall] user_plans fetch error:', error.message); return; }
-    window._userPlanType       = data?.plan_type      || 'free';
-    window._userPlanValidUntil = data?.valid_until     || null;
+    window._userPlanType            = data?.plan_type            || 'free';
+    window._userPlanValidUntil      = data?.valid_until          || null;
+    window._userPlanCancelAtEnd     = data?.cancel_at_period_end || false;
+    window._userPlanCancelAt        = data?.cancel_at            || null;
   } catch(e) { console.warn('[paywall] _loadUserPlan failed:', e.message); }
 }
 

@@ -98,6 +98,28 @@ Deno.serve(async (req: Request) => {
         break;
       }
 
+      // ── Abbonamento aggiornato (es. cancel_at_period_end = true/false) ──
+      case 'customer.subscription.updated': {
+        const sub    = event.data.object as Stripe.Subscription;
+        const userId = sub.metadata?.supabase_user_id;
+        if (!userId) { console.warn('[stripe-webhook] sub aggiornata senza user_id', sub.id); break; }
+
+        const cancelAtPeriodEnd = sub.cancel_at_period_end;
+        const cancelAt = sub.cancel_at ? new Date(sub.cancel_at * 1000).toISOString() : null;
+
+        const { error } = await sb.from('user_plans')
+          .update({
+            cancel_at_period_end: cancelAtPeriodEnd,
+            cancel_at:            cancelAt,
+            updated_at:           new Date().toISOString(),
+          })
+          .eq('user_id', userId);
+
+        if (error) console.error('[stripe-webhook] sub update error:', error);
+        else       console.log('[stripe-webhook] sub aggiornata per', userId, '- cancel_at_period_end:', cancelAtPeriodEnd);
+        break;
+      }
+
       // ── Abbonamento cancellato → downgrade a free ─────────────
       case 'customer.subscription.deleted': {
         const sub    = event.data.object as Stripe.Subscription;
