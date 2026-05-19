@@ -6361,3 +6361,205 @@
   display: flex; align-items: center; justify-content: center;
 }
 .cst-close:hover { color: var(--text); }
+
+/* ═══════════════════════════════════════════════════════════════
+   Plan Calendar Overview  (#planOverview)
+═══════════════════════════════════════════════════════════════ */
+.plan-overview {
+  display: none;
+  height: calc(100vh - 56px);
+  overflow-y: auto;
+  padding: 2rem 2.5rem 3rem;
+  background: var(--bg);
+}
+.plan-overview.visible { display: block; }
+
+/* ── Page header ── */
+.po-title {
+  font-size: 22px; font-weight: 800; letter-spacing: -0.02em;
+  color: var(--text); margin-bottom: 4px; line-height: 1.2;
+}
+.po-subtitle {
+  font-size: 13px; color: var(--text-3); margin-bottom: 1.5rem;
+}
+
+/* ── Stats strip ── */
+.po-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, auto));
+  gap: 10px;
+  margin-bottom: 2rem;
+  max-width: 420px;
+}
+.po-stat-card {
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.po-stat-val {
+  font-size: 20px; font-weight: 800; color: var(--text);
+  font-variant-numeric: tabular-nums; line-height: 1.1;
+}
+.po-stat-val.done-green { color: #3a9d6e; }
+.po-stat-label {
+  font-size: 10px; font-weight: 600; color: var(--text-3);
+  text-transform: uppercase; letter-spacing: 0.08em; margin-top: 3px;
+}
+
+/* ── Week section ── */
+.po-week { margin-bottom: 2rem; }
+.po-week-header {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 0.65rem;
+}
+.po-week-num {
+  font-size: 10px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 0.12em; color: var(--text-3); white-space: nowrap;
+}
+.po-week-vdiv { width: 1px; height: 11px; background: var(--border); flex-shrink: 0; }
+.po-week-desc { font-size: 12px; font-weight: 500; color: var(--text-3); }
+.po-week-count { margin-left: auto; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--text-3); }
+.po-week-count.complete { color: #3a9d6e; font-weight: 600; }
+
+/* ── Day cards grid ── */
+.po-days-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  grid-auto-rows: 120px;
+  gap: 8px;
+}
+
+/* ── Individual day card ── */
+.po-day-card {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  cursor: default;
+  transition: border-color 0.12s, opacity 0.12s;
+}
+.po-day-card.navigable { cursor: pointer; }
+.po-day-card.navigable:hover { border-color: var(--text-3); }
+.po-day-card.po-locked { opacity: 0.34; pointer-events: none; }
+
+/* State variants */
+.po-day-card.po-today {
+  border-color: rgba(217,119,87,0.38);
+  background: rgba(217,119,87,0.09);
+}
+.po-day-card.po-today.navigable:hover { border-color: var(--accent); }
+.po-day-card.po-done {
+  border-color: rgba(58,157,110,0.30);
+  background: rgba(58,157,110,0.09);
+}
+.po-day-card.po-done.navigable:hover { border-color: #3a9d6e; }
+.po-day-card.po-exam {
+  border-color: rgba(217,119,87,0.38);
+  background: rgba(217,119,87,0.09);
+}
+
+/* Today accent top bar */
+.po-today-bar { height: 3px; background: var(--accent); flex-shrink: 0; }
+
+/* Done left stripe */
+.po-done-stripe {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px; background: #3a9d6e; border-radius: 10px 0 0 10px;
+}
+
+/* Inner content */
+.po-card-inner {
+  flex: 1; display: flex; flex-direction: column;
+  padding: 9px 11px 10px; gap: 0; min-height: 0;
+}
+
+/* Row 1: date + badge */
+.po-card-top {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 5px; flex-shrink: 0;
+}
+.po-card-date { font-size: 10px; color: var(--text-3); letter-spacing: 0.01em; }
+.po-day-card.po-today .po-card-date { color: var(--accent); font-weight: 700; }
+.po-day-card.po-done  .po-card-date { color: #3a9d6e; font-weight: 600; }
+
+.po-type-badge {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--text-3);
+}
+.po-type-badge.rev  { color: #5a9bd5; }
+.po-type-badge.exam { color: var(--accent); }
+.po-today-pill {
+  font-size: 9px; font-weight: 800; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--accent);
+  background: rgba(217,119,87,0.16); padding: 2px 6px; border-radius: 4px;
+}
+
+/* Row 2: title — main content, flex-grow */
+.po-card-title {
+  flex: 1; font-size: 12px; font-weight: 400; color: var(--text-2);
+  line-height: 1.38;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; width: 100%; align-self: flex-start;
+}
+.po-day-card.po-today .po-card-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.po-day-card.po-done  .po-card-title { color: var(--text-3); }
+.po-day-card.po-rest  .po-card-title { color: var(--text-3); font-style: italic; }
+
+/* Row 3: bottom */
+.po-card-bottom { flex-shrink: 0; }
+.po-prep-bars { display: flex; gap: 2px; align-items: center; }
+.po-prep-bar  { width: 14px; height: 3px; border-radius: 2px; background: var(--border); }
+.po-prep-bar.lit   { background: var(--accent); }
+.po-prep-bar.lit-g { background: #3a9d6e; }
+.po-progress-row {
+  display: flex; justify-content: space-between; align-items: center; margin-top: 8px;
+}
+.po-count { font-size: 10px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.po-count.done { color: #3a9d6e; font-weight: 600; }
+.po-done-row { display: flex; align-items: center; gap: 4px; margin-top: 8px; }
+.po-done-label { font-size: 10px; color: #3a9d6e; font-weight: 600; }
+
+/* Today CTA */
+.po-cta-btn {
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  padding: 6px 0; background: var(--accent); border-radius: 6px;
+  border: none; width: 100%;
+  font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 700;
+  color: white; letter-spacing: 0.02em; margin-top: 6px; cursor: pointer;
+}
+.po-cta-btn:hover { opacity: 0.9; }
+
+/* Lock icon */
+.po-lock-icon {
+  position: absolute; bottom: 7px; right: 8px;
+  color: var(--text-3); opacity: 0.55; pointer-events: none;
+}
+
+/* ── Back-to-plan button (inside day headers) ── */
+.po-back-btn {
+  display: none;
+  align-items: center; gap: 5px;
+  padding: 4px 9px; border-radius: 6px;
+  border: 1px solid var(--border); background: none;
+  color: var(--text-3); font-family: 'Inter', sans-serif; font-size: 11px;
+  cursor: pointer; transition: color 0.15s, border-color 0.15s;
+  margin-bottom: 8px;
+}
+.po-back-btn:hover { color: var(--text-2); border-color: var(--text-3); }
+body.po-session-view .po-back-btn { display: inline-flex; }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  .plan-overview {
+    height: calc(100dvh - 48px);
+    padding: 1.25rem 1rem 2.5rem;
+  }
+  .po-days-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    grid-auto-rows: 110px;
+    gap: 6px;
+  }
+  .po-stats { grid-template-columns: repeat(3, 1fr); gap: 6px; max-width: 100%; }
+}

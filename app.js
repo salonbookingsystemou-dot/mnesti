@@ -629,10 +629,10 @@ window._reinitApp = function() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
   if (typeof _refreshNavLocks === 'function') _refreshNavLocks();
 
-  // Restore last worked day after data sync
-  if (typeof _resolveStartDay === 'function' && typeof showDay === 'function') {
-    const target = _resolveStartDay();
-    if (target) showDay(target.id);
+  // Show plan calendar overview (rebuilt with fresh synced data)
+  if (typeof buildPlanOverview === 'function' && typeof showPlanOverview === 'function') {
+    buildPlanOverview();
+    showPlanOverview();
   }
 };
 // ── End Supabase Auth ─────────────────────────────────────────
@@ -3224,8 +3224,202 @@ function buildNav() {
   lucide.createIcons();
 }
 
+// ── Plan Calendar Overview ──────────────────────────────────────────────────
+function buildPlanOverview() {
+  const el = document.getElementById('planOverview');
+  if (!el) return;
+  const activeDays = getActiveDays();
+
+  if (!activeDays.length) {
+    el.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 24px;text-align:center;gap:16px;min-height:300px;">
+        <i data-lucide="calendar-plus" style="width:40px;height:40px;color:var(--text-3);stroke-width:1.5"></i>
+        <div style="font-size:15px;font-weight:600;color:var(--text)">Nessun piano di studio</div>
+        <div style="font-size:13px;color:var(--text-2);max-width:320px;line-height:1.5">
+          Completa la configurazione iniziale per generare il tuo piano di studio personalizzato.
+        </div>
+        <button onclick="_showOnboarding()" style="margin-top:8px;padding:10px 22px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-family:inherit;font-weight:500">
+          Crea il mio piano →
+        </button>
+      </div>`;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    return;
+  }
+
+  // ── Stats ─────────────────────────────────────────────────────────────────
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const examInfo = (() => { try { return JSON.parse(localStorage.getItem('psico_exam_info') || '{}'); } catch(e) { return {}; } })();
+  let daysToExam = null;
+  if (examInfo.date) {
+    const examD = _examInfoParseYMD(examInfo.date);
+    if (examD) {
+      const nowD = new Date(); nowD.setHours(0, 0, 0, 0);
+      daysToExam = Math.ceil((examD - nowD) / 86400000);
+    }
+  }
+  const studyDays  = activeDays.filter(d => d.type !== 'rest' && d.type !== 'exam');
+  const doneDays   = studyDays.filter(d => (state[d.id] || {}).status === 'done').length;
+  const totalStudy = studyDays.length;
+  const totalSecs  = activeDays.reduce((s, d) => s + ((state[d.id] || {}).totalSeconds || 0), 0);
+  const totalHours = (totalSecs / 3600).toFixed(1);
+
+  // ── "Today" card: match by date, fallback to current working day ──────────
+  let todayDayId = (activeDays.find(d => d.date === todayStr) || _resolveStartDay() || activeDays[0]).id;
+
+  // ── Group days into weeks (mirrors buildNav logic) ────────────────────────
+  let curWeekKey  = null;
+  let curWeekMeta = null;
+  let curWeekDays = [];
+  const weeks = [];
+  activeDays.forEach(day => {
+    const wStart = day.phaseStart || (day.weekStart ? { num: day.weekStart, desc: '' } : null);
+    if (wStart && wStart.num !== curWeekKey) {
+      if (curWeekDays.length) weeks.push({ num: curWeekMeta.num, desc: curWeekMeta.desc || '', days: curWeekDays });
+      curWeekKey  = wStart.num;
+      curWeekMeta = wStart;
+      curWeekDays = [day];
+    } else {
+      curWeekDays.push(day);
+    }
+  });
+  if (curWeekDays.length) weeks.push({ num: curWeekMeta ? curWeekMeta.num : '', desc: curWeekMeta ? (curWeekMeta.desc || '') : '', days: curWeekDays });
+
+  // ── Build HTML ────────────────────────────────────────────────────────────
+  const daysLabel = daysToExam === null ? '—' : daysToExam <= 0 ? '0' : String(daysToExam);
+  let html = `
+    <div class="po-title">Piano di studio</div>
+    ${examInfo.subject ? `<div class="po-subtitle">${escHtml(examInfo.subject)}${examInfo.professor ? ' — ' + escHtml(examInfo.professor) : ''}</div>` : '<div class="po-subtitle" style="height:1rem"></div>'}
+    <div class="po-stats">
+      <div class="po-stat-card">
+        <div class="po-stat-val">${daysLabel}</div>
+        <div class="po-stat-label">Giorni all'esame</div>
+      </div>
+      <div class="po-stat-card">
+        <div class="po-stat-val${doneDays > 0 ? ' done-green' : ''}">${doneDays}/${totalStudy}</div>
+        <div class="po-stat-label">Sessioni completate</div>
+      </div>
+      <div class="po-stat-card">
+        <div class="po-stat-val">${totalHours}h</div>
+        <div class="po-stat-label">Ore studiate</div>
+      </div>
+    </div>`;
+
+  weeks.forEach(week => {
+    const wStudy = week.days.filter(d => d.type !== 'rest' && d.type !== 'exam');
+    const wDone  = wStudy.filter(d => (state[d.id] || {}).status === 'done').length;
+    const wTotal = wStudy.length;
+    const allDone = wDone === wTotal && wTotal > 0;
+
+    html += `<div class="po-week">
+      <div class="po-week-header">
+        <span class="po-week-num">${escHtml(week.num)}</span>`;
+    if (week.desc) html += `<span class="po-week-vdiv"></span><span class="po-week-desc">${escHtml(week.desc)}</span>`;
+    if (wTotal > 0) html += `<span class="po-week-count${allDone ? ' complete' : ''}">${wDone}/${wTotal}</span>`;
+    html += `</div><div class="po-days-grid">`;
+
+    week.days.forEach(day => {
+      const isToday    = day.id === todayDayId;
+      const dayState   = state[day.id] || {};
+      const isDone     = dayState.status === 'done';
+      const isLocked   = !isDayUnlocked(day.id);
+      const navigable  = isDayNavigable(day.id);
+      const isRest     = day.type === 'rest';
+      const isExam     = day.type === 'exam';
+      const isRev      = day.type === 'revisione';
+
+      const hasQ = (day.questions && day.questions.length > 0) || !!dayState.aiQuestions;
+      const r    = hasQ ? calcDayReadiness(day.id) : null;
+      const answered  = r ? r.answered  : 0;
+      const total     = r ? r.total     : 0;
+      const prepLevel = r ? r.prepLevel : 0;
+
+      let cardClass = 'po-day-card';
+      if (isToday)               cardClass += ' po-today';
+      else if (isDone)           cardClass += ' po-done';
+      else if (isExam)           cardClass += ' po-exam';
+      else if (isRest)           cardClass += ' po-rest';
+      if (isLocked && !isRest)   cardClass += ' po-locked';
+      if (navigable)             cardClass += ' navigable';
+
+      const TYPE_LABEL = { studio:'Studio', revisione:'Revisione', rest:'', exam:'Esame' };
+      const typeLbl    = TYPE_LABEL[day.type] || '';
+      const typeClass  = isRev ? 'po-type-badge rev' : isExam ? 'po-type-badge exam' : 'po-type-badge';
+      const bars       = [1,2,3,4].map(i => `<span class="po-prep-bar${i <= prepLevel ? (isDone ? ' lit-g' : ' lit') : ''}"></span>`).join('');
+      const clickAttr  = navigable ? `onclick="showDay('${day.id}')"` : '';
+
+      html += `<div class="${cardClass}" ${clickAttr}>`;
+      if (isToday)            html += `<div class="po-today-bar"></div>`;
+      if (isDone && !isToday) html += `<div class="po-done-stripe"></div>`;
+      html += `<div class="po-card-inner">`;
+
+      // Row 1: date + badge
+      html += `<div class="po-card-top"><span class="po-card-date">${escHtml(day.label)}</span>`;
+      if (isToday)          html += `<span class="po-today-pill">Oggi</span>`;
+      else if (typeLbl)     html += `<span class="${typeClass}">${typeLbl}</span>`;
+      html += `</div>`;
+
+      // Row 2: title
+      html += `<div class="po-card-title">${isRest ? 'Riposo' : escHtml(day.title)}</div>`;
+
+      // Row 3: bottom
+      html += `<div class="po-card-bottom">`;
+      if (isToday && !isDone) {
+        const ctaLbl = Object.keys(dayState.answers || {}).length > 0 ? 'Riprendi sessione' : 'Inizia sessione';
+        html += `<button class="po-cta-btn" onclick="event.stopPropagation();showDay('${day.id}')">
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="white" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          ${ctaLbl}
+        </button>`;
+      } else if (isDone) {
+        html += `<div class="po-done-row">
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#3a9d6e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <span class="po-done-label">Completata</span>
+        </div>`;
+      } else if (total > 0) {
+        html += `<div class="po-progress-row">
+          <div class="po-prep-bars">${bars}</div>
+          <span class="po-count">${answered}/${total}</span>
+        </div>`;
+      }
+      html += `</div>`; // po-card-bottom
+      html += `</div>`; // po-card-inner
+
+      if (isLocked && !isRest && !isExam) {
+        html += `<span class="po-lock-icon"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>`;
+      }
+      html += `</div>`; // po-day-card
+    });
+
+    html += `</div></div>`; // po-days-grid + po-week
+  });
+
+  el.innerHTML = html;
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function showPlanOverview() {
+  const ov = document.getElementById('planOverview');
+  const ly = document.querySelector('.layout');
+  if (!ov) return;
+  buildPlanOverview();
+  ov.classList.add('visible');
+  if (ly) ly.style.display = 'none';
+  document.body.classList.remove('po-session-view');
+  document.querySelectorAll('.day-nav-item').forEach(el => el.classList.remove('active'));
+}
+
+function hidePlanOverview() {
+  const ov = document.getElementById('planOverview');
+  const ly = document.querySelector('.layout');
+  if (!ov) return;
+  ov.classList.remove('visible');
+  if (ly) ly.style.display = '';
+  document.body.classList.add('po-session-view');
+}
+// ── End Plan Calendar Overview ──────────────────────────────────────────────
+
 function showDay(id) {
   if (!isDayNavigable(id)) return; // guard: only done/skip/rest + current working day
+  hidePlanOverview();
   document.querySelectorAll('.day-block').forEach(el => el.classList.remove('visible'));
   document.querySelectorAll('.day-nav-item').forEach(el => el.classList.remove('active'));
   document.getElementById('block-' + id)?.classList.add('visible');
@@ -3324,6 +3518,7 @@ function _buildDayCard(day) {
       // Fallback if template is missing (e.g. partial load)
       block.innerHTML = `
         <div class="day-header"><div>
+          <button class="po-back-btn" onclick="showPlanOverview()"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Piano</button>
           <div class="day-title">${escHtml(day.label)}</div>
           <div class="day-subtitle">${escHtml(day.title)}</div>
         </div></div>
@@ -3345,6 +3540,7 @@ function _buildDayCard(day) {
     } else {
       block.innerHTML = `
         <div class="day-header"><div>
+          <button class="po-back-btn" onclick="showPlanOverview()"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Piano</button>
           <div class="day-title">${escHtml(day.label)}</div>
           <div class="day-subtitle"><span style="color:var(--accent)">${escHtml(day.title)}</span></div>
         </div></div>
@@ -3373,6 +3569,10 @@ function _buildDayCard(day) {
     block.innerHTML = `
       <div class="day-header">
         <div>
+          <button class="po-back-btn" onclick="showPlanOverview()">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Piano
+          </button>
           <div class="day-title">${_eLbl}</div>
           <div class="day-subtitle">${_eSub}</div>
           <div class="day-name"><span>${_eTitle}</span></div>
@@ -7462,11 +7662,9 @@ renderReadinessPanel();
   });
   _refreshNavLocks();
 })();
-// Restore last worked day (or fall back to first)
-(function() {
-  const target = _resolveStartDay();
-  if (target) showDay(target.id);
-})();
+// Show plan calendar overview as default home view
+buildPlanOverview();
+showPlanOverview();
 // Initialize Lucide icons (after all DOM is set up)
 if (typeof lucide !== 'undefined') lucide.createIcons();
 
