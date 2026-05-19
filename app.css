@@ -728,6 +728,22 @@
   .ea-action-outcome:hover { background: var(--surface3); }
   .ea-action-delete  { background: none; color: #e57373; border: 1px solid rgba(229,115,115,0.25); }
   .ea-action-delete:hover { background: rgba(229,115,115,0.10); }
+  .ea-action-locked  { background: none; color: var(--text-3); border: 1px solid var(--border); cursor: pointer; }
+  .ea-action-locked:hover { background: var(--accent-bg); color: var(--accent); border-color: var(--accent-border); }
+  .ea-locked-banner {
+    display: flex; align-items: center; gap: 9px;
+    background: var(--accent-bg); border: 1px solid var(--accent-border);
+    border-radius: 10px; padding: 10px 14px; margin-bottom: 12px;
+    font-size: 12px; color: var(--text-2); line-height: 1.4;
+  }
+  .ea-locked-banner span { flex: 1; }
+  .ea-locked-banner-cta {
+    flex-shrink: 0; background: var(--accent); color: #fff;
+    border: none; border-radius: 6px; padding: 5px 12px;
+    font-size: 11px; font-weight: 600; font-family: inherit; cursor: pointer;
+    transition: opacity .15s;
+  }
+  .ea-locked-banner-cta:hover { opacity: .85; }
   .ea-current-badge {
     font-size: 11px; color: var(--accent); font-weight: 600; padding: 4px 0;
   }

@@ -9021,6 +9021,16 @@ function _resetStateInMemory(newData) {
 
 // Carica un esame archiviato come esame attivo
 async function _switchToExam(examId) {
+  // Utenti free non possono switchare a un esame archiviato (richiede multi-slot = piano a pagamento)
+  if (!_isPaidUser()) {
+    // Aggiorna il piano prima di giudicare (potrebbe essere stato appena acquistato)
+    await _loadUserPlan();
+    if (!_isPaidUser()) {
+      _showPaywallModal();
+      return;
+    }
+  }
+
   _archiveCurrentExam(); // salva quello corrente
 
   const archive = _getExamArchive();
@@ -9228,6 +9238,19 @@ function _renderExamsArchiveBody() {
     return;
   }
 
+  // Banner per utenti free con esami bloccati
+  const lockedCount = !_isPaidUser() ? archive.filter(e => e.id !== curId).length : 0;
+  if (lockedCount > 0) {
+    const banner = document.createElement('div');
+    banner.className = 'ea-locked-banner';
+    banner.innerHTML = `
+      <i data-lucide="lock" style="width:14px;height:14px;stroke-width:2;flex-shrink:0"></i>
+      <span>${lockedCount} esame${lockedCount > 1 ? 'i' : ''} bloccato${lockedCount > 1 ? 'i' : ''} — attiva un piano Pro per accedere a tutti i tuoi esami.</span>
+      <button class="ea-locked-banner-cta" onclick="_showPaywallModal()">Sblocca</button>`;
+    body.appendChild(banner);
+    if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [banner] });
+  }
+
   const months = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
   const _fmtDate = iso => {
     if (!iso) return '—';
@@ -9256,12 +9279,18 @@ function _renderExamsArchiveBody() {
     const isCurrent = entry.id === curId;
     const past = entry.examDate && new Date(entry.examDate + 'T12:00:00') < new Date();
     const canUpdateOutcome = !entry.outcome || true; // sempre aggiornabile
-    const switchBtn = !isCurrent
-      ? `<button class="ea-action-btn ea-action-open" onclick="_switchToExam('${entry.id}')">
-           <i data-lucide="folder-open" style="width:12px;height:12px;stroke-width:2"></i>
-           Apri piano
-         </button>`
-      : `<span class="ea-current-badge">Esame attivo</span>`;
+    const isLocked = !isCurrent && !_isPaidUser();
+    const switchBtn = isCurrent
+      ? `<span class="ea-current-badge">Esame attivo</span>`
+      : isLocked
+        ? `<button class="ea-action-btn ea-action-locked" onclick="_showPaywallModal()" title="Richiede piano Pro">
+             <i data-lucide="lock" style="width:12px;height:12px;stroke-width:2"></i>
+             Bloccato
+           </button>`
+        : `<button class="ea-action-btn ea-action-open" onclick="_switchToExam('${entry.id}')">
+             <i data-lucide="folder-open" style="width:12px;height:12px;stroke-width:2"></i>
+             Apri piano
+           </button>`;
     const deleteBtn = `<button class="ea-action-btn ea-action-delete" onclick="_deleteExam('${entry.id}')">
            <i data-lucide="trash-2" style="width:12px;height:12px;stroke-width:2"></i>
            Elimina
