@@ -3407,10 +3407,12 @@ function buildPlanOverview() {
       html += `<div class="po-card-inner">`;
 
       // Row 1: date + badge
+      // "Oggi" pill = only on the actual calendar date (isTodayDate).
+      // The active day just shows its type label (Studio/Revisione/…).
       html += `<div class="po-card-top"><span class="po-card-date">${escHtml(day.label)}</span>`;
-      if (isActiveDay)      html += `<span class="po-today-pill">Oggi</span>`;
-      else if (isTodayDate) html += `<span class="po-today-pill po-today-pill--muted">Oggi</span>`;
-      else if (typeLbl)     html += `<span class="${typeClass}">${typeLbl}</span>`;
+      if (isTodayDate && isActiveDay)  html += `<span class="po-today-pill">Oggi</span>`;
+      else if (isTodayDate)            html += `<span class="po-today-pill po-today-pill--muted">Oggi</span>`;
+      else if (typeLbl)                html += `<span class="${typeClass}">${typeLbl}</span>`;
       html += `</div>`;
 
       // Row 2: title
