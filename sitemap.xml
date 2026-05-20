@@ -23,7 +23,7 @@
   <!-- Blog index -->
   <url>
     <loc>https://mnesti.it/blog.html</loc>
-    <lastmod>2026-05-12</lastmod>
+    <lastmod>2026-05-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -58,7 +58,7 @@
   <!-- Spaced Repetition: cos'è e come usarla per gli esami universitari -->
   <url>
     <loc>https://mnesti.it/blog-spaced-repetition.html</loc>
-    <lastmod>2026-05-12</lastmod>
+    <lastmod>2026-05-13</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -122,6 +122,14 @@
   <url>
     <loc>https://mnesti.it/blog-come-studiare-psicologia.html</loc>
     <lastmod>2026-05-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Migliori università telematiche italiane: classifica 2026 -->
+  <url>
+    <loc>https://mnesti.it/blog-migliori-universita-telematiche.html</loc>
+    <lastmod>2026-05-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
