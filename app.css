@@ -1708,8 +1708,10 @@
     box-shadow: 0 -6px 24px rgba(0,0,0,0.22);
   }
   .pwa-banner.visible { transform: translateY(0); }
-  /* Hide PWA banner when calendar overview is active (no session view) */
-  body:not(.po-session-view) .pwa-banner { display: none !important; }
+  /* Calendar view: hide all floating/fixed elements that belong to session view only */
+  body:not(.po-session-view) .pwa-banner         { display: none !important; }
+  body:not(.po-session-view) .mobile-exam-banner { display: none !important; }
+  body:not(.po-session-view) .tutor-fab          { display: none !important; }
   .pwa-banner-icon {
     width: 44px; height: 44px; flex-shrink: 0; border-radius: 10px;
     overflow: hidden; background: var(--bg);
@@ -5914,7 +5916,8 @@
     /* ── Welcome modal stats: single column on very small screens ── */
     /* (stays 2-col on 390px, only 1-col on 360px and below) */
 
-    /* ── Mobile bottom day nav bar — only visible in session view ── */
+    /* ── Mobile bottom day nav bar + exam banner — only in session view ── */
+    body.po-session-view .mobile-exam-banner { display: flex; }
     body.po-session-view .mobile-day-nav {
       display: flex;
       position: fixed; bottom: 0; left: 0; right: 0;
