@@ -211,9 +211,9 @@
     "icon": "📈",
     "ctaTitle": "Piano di studio per gli esami di economia",
     "ctaText": "Carica le dispense di economia e Mnesti costruisce un piano giorno per giorno con domande su grafici, modelli e definizioni. Primo esame gratis.",
-    "status": "pending",
-    "date": null,
-    "publishedAt": null
+    "status": "published",
+    "date": "2026-05-20",
+    "publishedAt": "2026-05-20T09:00:00+02:00"
   },
   {
     "slug": "blog-piano-di-studio",

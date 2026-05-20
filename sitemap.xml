@@ -134,4 +134,13 @@
     <priority>0.7</priority>
   </url>
 
+
+  <!-- Come studiare economia e management all'università -->
+  <url>
+    <loc>https://mnesti.it/blog-come-studiare-economia.html</loc>
+    <lastmod>2026-05-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
 </urlset>
