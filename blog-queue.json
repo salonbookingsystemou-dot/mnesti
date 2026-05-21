@@ -235,9 +235,9 @@
     "icon": "📅",
     "ctaTitle": "Il tuo piano di studio generato in 3 minuti",
     "ctaText": "Inserisci la data dell'esame, carica le dispense, e Mnesti costruisce il piano automaticamente. Primo esame gratis.",
-    "status": "pending",
-    "date": null,
-    "publishedAt": null
+    "status": "published",
+    "date": "2026-05-21",
+    "publishedAt": "2026-05-21T09:00:00+02:00"
   },
   {
     "slug": "blog-quante-ore-studiare",
