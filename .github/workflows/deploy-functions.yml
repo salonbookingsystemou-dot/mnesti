@@ -16,12 +16,39 @@ on:
         default: ''
 
 jobs:
+  # Job di guardia: gira sempre e determina se c'è qualcosa da deployare.
+  # Serve a evitare che GitHub marchi il run come "No jobs were run" (= failed).
+  check:
+    name: Verifica modifiche
+    runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.check.outputs.should_deploy }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - id: check
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only HEAD~1 HEAD -- 'supabase/functions/' | grep -q .; then
+            echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_deploy=false" >> "$GITHUB_OUTPUT"
+            echo "Nessuna funzione modificata in questo commit — deploy saltato."
+          fi
+
   deploy-functions:
     name: Deploy Edge Functions
+    needs: check
+    if: needs.check.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
@@ -35,21 +62,26 @@ jobs:
           PROJECT_REF="olagntawajefdjrkkvcc"
 
           # Dispatch manuale: deploya funzione specifica o tutte
-          if [ -n "${{ github.event.inputs.function }}" ]; then
-            echo "→ Deploy manuale: ${{ github.event.inputs.function }}"
-            supabase functions deploy "${{ github.event.inputs.function }}" \
-              --project-ref "$PROJECT_REF" --no-verify-jwt
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ -n "${{ github.event.inputs.function }}" ]; then
+              echo "→ Deploy manuale: ${{ github.event.inputs.function }}"
+              supabase functions deploy "${{ github.event.inputs.function }}" \
+                --project-ref "$PROJECT_REF" --no-verify-jwt
+            else
+              echo "→ Deploy manuale: tutte le funzioni"
+              for fn in supabase/functions/*/; do
+                fn="${fn%/}"; fn="${fn##*/}"
+                echo "→ $fn"
+                supabase functions deploy "$fn" \
+                  --project-ref "$PROJECT_REF" --no-verify-jwt
+              done
+            fi
             exit 0
           fi
 
           # Push automatico: deploya solo le funzioni cambiate nell'ultimo commit
           CHANGED=$(git diff --name-only HEAD~1 HEAD -- 'supabase/functions/' \
             | grep -oP 'supabase/functions/\K[^/]+' | sort -u)
-
-          if [ -z "$CHANGED" ]; then
-            echo "Nessuna funzione modificata in questo commit."
-            exit 0
-          fi
 
           for fn in $CHANGED; do
             echo "→ Deploy: $fn"
@@ -58,5 +90,4 @@ jobs:
           done
 
       - name: Riepilogo deploy
-        if: always()
-        run: echo "Deploy completato. Verifica: https://supabase.com/dashboard/project/olagntawajefdjrkkvcc/functions"
+        run: echo "✓ Deploy completato — https://supabase.com/dashboard/project/olagntawajefdjrkkvcc/functions"
