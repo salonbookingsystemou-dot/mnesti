@@ -10139,7 +10139,8 @@ async function generateStudyPlan(fromOnboarding = false) {
 
   // primaryOnly: il piano di studio deve strutturarsi sulle dispense caricate,
   // non sul programma del manuale che Claude già conosce.
-  const { context: sourceCtx, rule: sourceRule } = _buildWeightedSourceContext({ primaryMax: 12000, secondaryMax: 2000, totalMax: 22000, primaryOnly: true });
+  // Source context ridotto rispetto al default: meno input token = generazione più veloce.
+  const { context: sourceCtx, rule: sourceRule } = _buildWeightedSourceContext({ primaryMax: 8000, secondaryMax: 1500, totalMax: 12000, primaryOnly: true });
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -10159,14 +10160,10 @@ async function generateStudyPlan(fromOnboarding = false) {
     sourceCtx ? 'Lettura fonti…' : 'Analisi materia…'
   );
 
-  // Build a date skeleton so Claude knows which dates to assign
+  // Build a compact date skeleton (ISO only, no labels) so Claude knows which
+  // dates to assign. Labels are computed client-side after generation.
   const allDates = _dateRange(today, examDate);
-  const skeleton = allDates.map((d, i) => {
-    const dow = d.getDay(); // 0=Sun,6=Sat
-    const isLast = i === allDates.length - 1;
-    const defaultType = isLast ? 'exam' : (dow === 0 ? 'rest' : 'studio');
-    return { idx: i, date: _isoDate(d), dow, label: _formatDateLabel(d) };
-  });
+  const skeleton = allDates.map(d => _isoDate(d));
 
   const sourcePart = sourceCtx
     ? `${sourceRule}\n\nFONTI DEL CORSO (usa queste per costruire i contenuti delle giornate — priorità assoluta alle fonti primarie):\n--- INIZIO FONTI ---\n${sourceCtx}\n--- FINE FONTI ---\n\nIMPORTANTE — struttura implicita: se le fonti non contengono un programma o indice esplicito (solo dispense, slide o capitoli di libro), ricava tu stesso la struttura degli argomenti dai titoli di sezione, capitoli, intestazioni e contenuti. Usa questa struttura implicita per organizzare le giornate in ordine progressivo (dalle basi agli approfondimenti).\n\n`
@@ -10183,30 +10180,27 @@ ${sourcePart}ISTRUZIONI PER LA PIANIFICAZIONE:
 2. Inserisci almeno 1 giorno di riposo ogni 6 giorni di studio (preferibilmente la domenica)
 3. Gli ultimi 2-3 giorni prima dell'esame devono essere di revisione + simulazione
 4. Il giorno prima dell'esame deve essere riposo
-5. Ogni giornata di studio deve avere 4-6 domande a risposta aperta pertinenti al materiale
+5. Ogni giornata di studio deve avere ESATTAMENTE 3 domande a risposta aperta
 
-DISTRIBUZIONE DOMANDE (Tassonomia di Bloom per ogni giornata di studio):
-- 1-2 "definizione" (ricordo): definizioni, autori, concetti-chiave
-- 1-2 "meccanismo" (comprensione): processi, meccanismi, distinzioni  
+DISTRIBUZIONE DOMANDE (Tassonomia di Bloom, 3 per giornata di studio):
+- 1 "definizione" (ricordo): definizioni, autori, concetti-chiave
+- 1 "meccanismo" (comprensione): processi, meccanismi, distinzioni  
 - 1 "connessione" (analisi): collegamenti, confronti tra teorie
-- Se è giornata di revisione: preferisci "simulazione" (livello esame)
+- Se è giornata di revisione: 3 domande di tipo "simulazione" (livello esame)
 
-SCHEMA DATE DISPONIBILI:
-${skeleton.map(d => `${d.date} (${d.label})`).join(', ')}
+DATE DISPONIBILI (ISO, ${allDates.length} giorni):
+${skeleton.join(',')}
 
 Rispondi ESCLUSIVAMENTE con un array JSON valido che inizia con "[" e finisce con "]" (nessun altro testo, nessun markdown, nessun code fence).
 La risposta deve essere SOLO: [ {...}, {...}, ... ]
 Ogni oggetto "day" deve avere ESATTAMENTE questi campi:
 
 {
-  "date": "YYYY-MM-DD",           // data ISO dalla lista sopra
-  "label": "Sab 25 apr",          // es. "Sab 25 apr"  
-  "shortLabel": "25/4",           // es. "25/4"
-  "type": "studio|rest|revisione|exam", // tipo giornata
-  "title": "Titolo giornata",     // es. "Lezioni 1-3 — Fondamenti"
-  "subtitle": "Sottotitolo",      // breve descrizione
-  "weekStart": null,              // null oppure "Settimana N · descrizione" per la prima giornata di ogni settimana
-  "questions": [                  // solo per studio/revisione, array vuoto per rest/exam
+  "date": "YYYY-MM-DD",                        // data ISO dalla lista sopra
+  "type": "studio|rest|revisione|exam",         // tipo giornata
+  "title": "Titolo breve (max 8 parole)",       // es. "Lezioni 1-3 — Fondamenti"
+  "subtitle": "Sottotitolo (max 6 parole)",     // breve descrizione
+  "questions": [                                // 3 elementi per studio/revisione, array vuoto per rest/exam
     {"text": "testo domanda", "type": "definizione|meccanismo|connessione|simulazione"}
   ]
 }
@@ -10233,10 +10227,9 @@ REGOLE ASSOLUTE (non derogabili):
         await new Promise(r => setTimeout(r, 1500));
       }
       const data = await _callClaudeStream({
-        model: 'claude-sonnet-4-5',
-        // ~120 tokens per day (JSON object + questions) — capped at 12 000 so
-        // long plans don't push generation time past the Edge Function timeout.
-        max_tokens: Math.min(12000, Math.max(4000, Math.ceil(totalDays * 120))),
+        model: 'claude-haiku-4-5',
+        // ~70 tokens per day with the lean schema (no label/shortLabel/weekStart, 3 questions)
+        max_tokens: Math.min(8000, Math.max(3000, Math.ceil(totalDays * 70))),
         temperature: 0.7,
         system: systemPrompt,
         messages: [{ role: 'user', content: _apiMsg }]
@@ -10290,13 +10283,33 @@ REGOLE ASSOLUTE (non derogabili):
       if (dayBefore.type !== 'rest') { dayBefore.type = 'rest'; dayBefore.questions = []; }
     }
 
-    // Normalize and add id fields
-    const normalizedDays = planDays.map((d, i) => ({
-      ...d,
-      id: 'ai-' + (d.date || i).toString().replace(/-/g, ''),
-      questions: d.questions || [],
-      notes: d.type !== 'rest' && d.type !== 'exam'
-    }));
+    // Normalize and add id fields.
+    // label, shortLabel, weekStart are no longer in the AI output — compute them here.
+    let _weekNum = 0;
+    let _lastWeekKey = '';
+    const normalizedDays = planDays.map((d, i) => {
+      const dateObj = new Date(d.date + 'T00:00:00');
+      // ISO week: week starts on Monday
+      const dow = dateObj.getDay() || 7; // Sun=0 → 7
+      const mon = new Date(dateObj);
+      mon.setDate(dateObj.getDate() - (dow - 1));
+      const weekKey = _isoDate(mon);
+      let weekStart = null;
+      if (weekKey !== _lastWeekKey) {
+        _lastWeekKey = weekKey;
+        _weekNum++;
+        weekStart = `Settimana ${_weekNum}`;
+      }
+      return {
+        ...d,
+        id:         'ai-' + (d.date || i).toString().replace(/-/g, ''),
+        label:      _formatDateLabel(dateObj),
+        shortLabel: _shortLabel(dateObj),
+        weekStart,
+        questions:  d.questions || [],
+        notes: d.type !== 'rest' && d.type !== 'exam'
+      };
+    });
 
     const plan = {
       subject,
