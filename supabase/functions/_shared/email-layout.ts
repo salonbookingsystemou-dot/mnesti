@@ -3,9 +3,9 @@
 // Single source of truth for all user-facing email styling.
 // Import with:   import { baseLayout, sendViaResend, FROM_EMAIL, APP_URL } from '../_shared/email-layout.ts'
 //
-// Logo note: logo-login.png is the white-on-transparent version intended for
-// dark backgrounds — used here directly without any CSS filter, ensuring correct
-// rendering across Outlook, Gmail, and Apple Mail.
+// Logo note: logo-white.png is the official white wordmark for dark backgrounds.
+// Used here directly without any CSS filter, ensuring correct rendering across
+// Outlook, Gmail, and Apple Mail.
 
 export const FROM_EMAIL = 'Mnesti <noreply@mnesti.it>'
 export const APP_URL    = 'https://mnesti.it/app.html'
