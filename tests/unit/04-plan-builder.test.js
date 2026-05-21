@@ -41,6 +41,16 @@ describe('_formatDateLabel', () => {
   });
 });
 
+describe('_shortLabel', () => {
+  test('formato D/M', () => {
+    assert.equal(_shortLabel(new Date(2026, 4, 5)), '5/5');
+  });
+
+  test('mese doppia cifra', () => {
+    assert.equal(_shortLabel(new Date(2026, 11, 31)), '31/12');
+  });
+});
+
 describe('_dateRange', () => {
   // _isoDate now uses local getters — standard new Date(y, m, d) works fine.
   test('include sia start che end', () => {
@@ -124,5 +134,82 @@ describe('Regole hard-validation del piano (post-processing)', () => {
     ];
     const result = hardValidate(plan, '2026-06-10');
     assert.equal(result[0].type, 'rest');
+  });
+});
+
+describe('Arricchimento client-side: label/shortLabel/weekStart', () => {
+  // Replica la logica di normalizedDays in generateStudyPlan dopo le ottimizzazioni
+  function enrichDays(planDays) {
+    let weekNum = 0;
+    let lastWeekKey = '';
+    return planDays.map((d) => {
+      const dateObj = new Date(d.date + 'T00:00:00');
+      const dow = dateObj.getDay() || 7;
+      const mon = new Date(dateObj);
+      mon.setDate(dateObj.getDate() - (dow - 1));
+      const weekKey = _isoDate(mon);
+      let weekStart = null;
+      if (weekKey !== lastWeekKey) {
+        lastWeekKey = weekKey;
+        weekNum++;
+        weekStart = `Settimana ${weekNum}`;
+      }
+      return {
+        ...d,
+        id:         'ai-' + d.date.replace(/-/g, ''),
+        label:      _formatDateLabel(dateObj),
+        shortLabel: _shortLabel(dateObj),
+        weekStart,
+        questions:  d.questions || [],
+      };
+    });
+  }
+
+  test('label e shortLabel vengono popolati correttamente', () => {
+    const days = enrichDays([
+      { date: '2026-05-21', type: 'studio', questions: [] },
+      { date: '2026-05-22', type: 'studio', questions: [] },
+    ]);
+    // 21 maggio 2026 = giovedì
+    assert.equal(days[0].label, 'Gio 21 mag');
+    assert.equal(days[0].shortLabel, '21/5');
+    assert.equal(days[1].label, 'Ven 22 mag');
+    assert.equal(days[1].shortLabel, '22/5');
+  });
+
+  test('id generato correttamente dal campo date', () => {
+    const days = enrichDays([{ date: '2026-06-10', type: 'exam', questions: [] }]);
+    assert.equal(days[0].id, 'ai-20260610');
+  });
+
+  test('weekStart = "Settimana 1" sul primo giorno, null sugli stessi giorni', () => {
+    // Lunedì 18 maggio + martedì 19 maggio: stessa settimana ISO
+    const days = enrichDays([
+      { date: '2026-05-18', type: 'studio', questions: [] }, // lunedì
+      { date: '2026-05-19', type: 'studio', questions: [] }, // martedì
+    ]);
+    assert.equal(days[0].weekStart, 'Settimana 1');
+    assert.equal(days[1].weekStart, null);
+  });
+
+  test('weekStart avanza a "Settimana 2" al cambio settimana ISO', () => {
+    // Venerdì 22 maggio → domenica 24 maggio (fine sett ISO) → lunedì 25 maggio (nuova sett)
+    const days = enrichDays([
+      { date: '2026-05-22', type: 'studio',  questions: [] }, // venerdì, sett 1
+      { date: '2026-05-23', type: 'rest',    questions: [] }, // sabato,  sett 1
+      { date: '2026-05-25', type: 'studio',  questions: [] }, // lunedì,  sett 2
+      { date: '2026-05-26', type: 'studio',  questions: [] }, // martedì, sett 2
+    ]);
+    assert.equal(days[0].weekStart, 'Settimana 1');
+    assert.equal(days[1].weekStart, null);
+    assert.equal(days[2].weekStart, 'Settimana 2');
+    assert.equal(days[3].weekStart, null);
+  });
+
+  test('questions mancanti nell\'output AI → normalizzate ad array vuoto', () => {
+    const days = enrichDays([
+      { date: '2026-06-01', type: 'rest' }, // nessun campo questions
+    ]);
+    assert.deepEqual(days[0].questions, []);
   });
 });
