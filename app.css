@@ -6398,7 +6398,49 @@
   padding: 2rem 2.5rem 3rem;
 }
 
-/* ── Page header ── */
+/* ── Page header row (title+stats left, CTAs right) ── */
+.po-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+.po-header-left { flex: 1 1 auto; min-width: 0; }
+.po-header-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+  padding-top: 4px;
+}
+.po-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity .15s, background .15s;
+  border: none;
+  line-height: 1;
+}
+.po-action-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.po-action-ghost:hover { background: var(--surface3); }
+.po-action-accent {
+  background: var(--accent);
+  color: #fff;
+}
+.po-action-accent:hover { opacity: .88; }
+
+/* ── Page header text ── */
 .po-title {
   font-size: 22px; font-weight: 800; letter-spacing: -0.02em;
   color: var(--text); margin-bottom: 4px; line-height: 1.2;
@@ -6412,7 +6454,6 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, auto));
   gap: 10px;
-  margin-bottom: 2rem;
   max-width: 420px;
 }
 .po-stat-card {
@@ -6681,6 +6722,9 @@ body.po-session-view .po-back-btn { display: inline-flex; }
     max-width: 100%;
     box-sizing: border-box;
   }
+  .po-header { flex-direction: column; gap: 1rem; }
+  .po-header-actions { flex-direction: row; flex-wrap: wrap; }
+  .po-action-btn { flex: 1 1 auto; justify-content: center; }
   .po-days-grid {
     grid-template-columns: repeat(3, 1fr);
     gap: 6px;

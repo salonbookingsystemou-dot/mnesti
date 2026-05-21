@@ -3311,20 +3311,34 @@ function buildPlanOverview() {
   // ── Build HTML ────────────────────────────────────────────────────────────
   const daysLabel = daysToExam === null ? '—' : daysToExam <= 0 ? '0' : String(daysToExam);
   let html = `<div class="po-inner">
-    <div class="po-title">Piano di studio</div>
-    ${examInfo.subject ? `<div class="po-subtitle">${escHtml(examInfo.subject)}${examInfo.professor ? ' — ' + escHtml(examInfo.professor) : ''}</div>` : '<div class="po-subtitle" style="height:1rem"></div>'}
-    <div class="po-stats">
-      <div class="po-stat-card">
-        <div class="po-stat-val">${daysLabel}</div>
-        <div class="po-stat-label">Giorni all'esame</div>
+    <div class="po-header">
+      <div class="po-header-left">
+        <div class="po-title">Piano di studio</div>
+        ${examInfo.subject ? `<div class="po-subtitle">${escHtml(examInfo.subject)}${examInfo.professor ? ' — ' + escHtml(examInfo.professor) : ''}</div>` : '<div class="po-subtitle" style="height:1rem"></div>'}
+        <div class="po-stats">
+          <div class="po-stat-card">
+            <div class="po-stat-val">${daysLabel}</div>
+            <div class="po-stat-label">Giorni all'esame</div>
+          </div>
+          <div class="po-stat-card">
+            <div class="po-stat-val${doneDays > 0 ? ' done-green' : ''}">${doneDays}/${totalStudy}</div>
+            <div class="po-stat-label">Sessioni completate</div>
+          </div>
+          <div class="po-stat-card">
+            <div class="po-stat-val">${totalHours}h</div>
+            <div class="po-stat-label">Ore studiate</div>
+          </div>
+        </div>
       </div>
-      <div class="po-stat-card">
-        <div class="po-stat-val${doneDays > 0 ? ' done-green' : ''}">${doneDays}/${totalStudy}</div>
-        <div class="po-stat-label">Sessioni completate</div>
-      </div>
-      <div class="po-stat-card">
-        <div class="po-stat-val">${totalHours}h</div>
-        <div class="po-stat-label">Ore studiate</div>
+      <div class="po-header-actions">
+        <button class="po-action-btn po-action-ghost" onclick="_openExamsArchive()">
+          <i data-lucide="archive" style="width:13px;height:13px;stroke-width:2"></i>
+          I miei esami
+        </button>
+        <button class="po-action-btn po-action-accent" onclick="_createNewExam()">
+          <i data-lucide="plus" style="width:13px;height:13px;stroke-width:2.5"></i>
+          Crea nuovo esame
+        </button>
       </div>
     </div>`;
 
