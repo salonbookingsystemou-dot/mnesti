@@ -1,22 +1,93 @@
 ---
-description: Dopo implementazioni, eseguire commit e push su GitHub (deploy Pages)
+description: Strategia di branching e deploy per Mnesti — GitHub Flow
 alwaysApply: true
 ---
 
-# Deploy su GitHub dopo le implementazioni
+# Strategia di branching e deploy — GitHub Flow
 
-Quando completi un’implementazione che modifica file versionati in questo repo (codice, `app.html`, `sw.js`, asset del sito, ecc.):
+## Rami principali
 
-1. **Verifica lo stato** con `git status` e includi nel commit solo i file pertinenti al task (niente file sensibili o rumore non richiesto).
-2. **Esegui il deploy** nello stesso turno, salvo che l’utente abbia chiesto esplicitamente di non pushare:
-   - `git add` sui path modificati per il task
-   - `git commit -m "..."` con messaggio chiaro in italiano o inglese coerente con il progetto
-   - `git push origin main` (o il branch di default attivo se diverso: controlla con `git branch --show-current`).
+| Branch | Scopo | Chi può pushare direttamente |
+|---|---|---|
+| `main` | Produzione — GitHub Pages (`mnesti.it`) | Solo hotfix urgenti. Per tutto il resto: PR. |
 
-3. **Permessi**: per `git push` richiedi `git_write` e `network` nell’esecuzione del comando.
+## Ciclo di vita di una modifica
 
-4. **Se il push fallisce** (401, autenticazione, permesso negato): spiega in una frase che le credenziali GitHub sul Mac non sono configurate o sono scadute, e che serve un push manuale o `gh auth login` / PAT nel portachiavi — **non** reinserire token o password nella chat o nel remote URL.
+```
+main
+ └── feature/nome-breve     ← git checkout -b feature/…
+      ↓ (lavoro + commit)
+     PR verso main
+      ↓ (CI verde — npm test)
+     merge → main
+      ↓
+     GitHub Actions deploya automaticamente (se cambiano Edge Functions)
+```
 
-5. **Eccezioni**: non fare commit/push se l’utente chiede solo analisi, lettura, o dice esplicitamente di non voler pubblicare ancora.
+### Convenzione nomi branch
 
-Obiettivo: il sito su **GitHub Pages** resti allineato al codice locale senza lasciare modifiche solo sulla macchina dell’utente.
+| Prefisso | Quando usarlo |
+|---|---|
+| `feature/` | Nuova funzionalità |
+| `fix/` | Correzione bug non urgente |
+| `perf/` | Ottimizzazione performance |
+| `hotfix/` | Fix urgente in produzione (può andare dritto su main) |
+| `test/` | Solo modifiche ai test |
+| `chore/` | Dipendenze, config, CI |
+
+**Esempio:** `git checkout -b fix/piano-timeout`
+
+## Commit messages
+
+Formato: `tipo: descrizione breve in italiano o inglese`
+
+Tipi validi: `feat`, `fix`, `perf`, `test`, `chore`, `blog`, `style`, `refactor`
+
+## Regole di deploy per l'agente AI
+
+### Caso 1 — Lavoro su branch di feature (non main)
+```bash
+git add <file>
+git commit -m "tipo: descrizione"
+# NON fare push a main — il deploy avviene via PR
+git push origin HEAD   # push al branch corrente
+```
+
+### Caso 2 — Hotfix urgente o modifica minore (già su main)
+```bash
+git add <file>
+git commit -m "tipo: descrizione"
+git push origin main   # deploy immediato su Pages
+# Se cambiano supabase/functions/**: GitHub Actions deploya automaticamente
+```
+
+### Come capire su quale branch sei
+```bash
+git branch --show-current
+```
+- Se il branch è `main`: push diretto consentito per fix minori e hotfix.
+- Se il branch è qualsiasi altra cosa: **non fare push a main**, usa `git push origin HEAD`.
+
+## CI automatica (GitHub Actions)
+
+- `.github/workflows/ci.yml` — gira `npm test` su ogni PR e push a `main`
+- `.github/workflows/deploy-functions.yml` — deploya le Edge Functions modificate automaticamente a ogni push su `main` che tocca `supabase/functions/**`
+- `.github/workflows/publish-daily.yml` — blog publisher giornaliero (invariato)
+
+## Secret GitHub necessari
+
+| Secret | Usato da | Valore |
+|---|---|---|
+| `SUPABASE_ACCESS_TOKEN` | deploy-functions.yml | Token personale Supabase |
+| `PUBLISHER_SECRET` | publish-daily.yml | Già configurato |
+| `TEST_USER_TOKEN` | ci.yml (opzionale) | JWT utente per integration test |
+
+## Permessi git push
+
+Per `git push` da agente AI: richiedi `git_write` e `network` nell'esecuzione del comando.
+
+Se il push fallisce (401, non-fast-forward): esegui `git pull --rebase origin main` poi riprova. Non reinserire mai token o password nella chat.
+
+## Eccezioni
+
+Non fare commit/push se l'utente chiede solo analisi, lettura, o dice esplicitamente di non voler pubblicare ancora.

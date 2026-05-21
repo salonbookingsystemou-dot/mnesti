@@ -1,0 +1,47 @@
+name: CI — Test
+
+on:
+  # Gira su ogni PR verso main: blocca il merge se i test falliscono
+  pull_request:
+    branches: [main]
+
+  # Gira anche su ogni push diretto a main (hotfix, merge PR)
+  push:
+    branches: [main]
+    # Non girare per push di soli file blog/sitemap (troppo frequenti)
+    paths-ignore:
+      - 'blog-*.html'
+      - 'sitemap.xml'
+      - 'blog-queue.json'
+
+jobs:
+  test:
+    name: Unit + Integration tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Installa dipendenze
+        run: npm ci --ignore-scripts
+
+      - name: Unit test (offline, veloci)
+        run: npm run test:unit
+
+      - name: Integration test (rete — proxy Supabase)
+        # I test di integrazione live girano solo se è configurato il token.
+        # Sul branch del PR potrebbero mancare i secret → saltiamo silenziosamente.
+        env:
+          TEST_USER_TOKEN: ${{ secrets.TEST_USER_TOKEN }}
+        run: |
+          if [ -n "$TEST_USER_TOKEN" ]; then
+            npm run test:int
+          else
+            echo "⚠️  TEST_USER_TOKEN non configurato — integration test saltati."
+            echo "   Aggiungi il secret su GitHub: Settings → Secrets → Actions"
+          fi

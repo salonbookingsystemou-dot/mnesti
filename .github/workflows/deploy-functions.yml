@@ -1,0 +1,62 @@
+name: Deploy — Supabase Edge Functions
+
+on:
+  push:
+    branches: [main]
+    # Gira solo quando cambiano le Edge Functions o la loro configurazione
+    paths:
+      - 'supabase/functions/**'
+
+  # Trigger manuale per forzare un re-deploy (es. dopo rotazione API key)
+  workflow_dispatch:
+    inputs:
+      function:
+        description: 'Nome funzione da deployare (vuoto = tutte)'
+        required: false
+        default: ''
+
+jobs:
+  deploy-functions:
+    name: Deploy Edge Functions
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Deploy Edge Functions modificate
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          PROJECT_REF="olagntawajefdjrkkvcc"
+
+          # Dispatch manuale: deploya funzione specifica o tutte
+          if [ -n "${{ github.event.inputs.function }}" ]; then
+            echo "→ Deploy manuale: ${{ github.event.inputs.function }}"
+            supabase functions deploy "${{ github.event.inputs.function }}" \
+              --project-ref "$PROJECT_REF" --no-verify-jwt
+            exit 0
+          fi
+
+          # Push automatico: deploya solo le funzioni cambiate nell'ultimo commit
+          CHANGED=$(git diff --name-only HEAD~1 HEAD -- 'supabase/functions/' \
+            | grep -oP 'supabase/functions/\K[^/]+' | sort -u)
+
+          if [ -z "$CHANGED" ]; then
+            echo "Nessuna funzione modificata in questo commit."
+            exit 0
+          fi
+
+          for fn in $CHANGED; do
+            echo "→ Deploy: $fn"
+            supabase functions deploy "$fn" \
+              --project-ref "$PROJECT_REF" --no-verify-jwt
+          done
+
+      - name: Riepilogo deploy
+        if: always()
+        run: echo "Deploy completato. Verifica: https://supabase.com/dashboard/project/olagntawajefdjrkkvcc/functions"
