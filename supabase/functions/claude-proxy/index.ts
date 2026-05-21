@@ -110,7 +110,10 @@ Deno.serve(async (req) => {
     // so there is a single source of truth between what we send and what we expect back.
     const anthropicPayload = { ...p, stream: wantsStream }
 
-    const anthropicCall = () => fetch('https://api.anthropic.com/v1/messages', {
+    // 145 s: gives a 5-second buffer before Supabase kills the function at ~150 s
+    // (free tier). On paid tier the limit is higher, but we keep a sane cap.
+    const ANTHROPIC_TIMEOUT_MS = 145_000
+    const anthropicCall = (signal?: AbortSignal) => fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -118,16 +121,17 @@ Deno.serve(async (req) => {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify(anthropicPayload),
+      ...(signal ? { signal } : {}),
     })
 
     // Retry up to 3 times with exponential backoff on 529 Overloaded
     const RETRY_DELAYS = [2000, 5000, 10000]
-    let anthropicRes = await anthropicCall()
+    let anthropicRes = await anthropicCall(AbortSignal.timeout(ANTHROPIC_TIMEOUT_MS))
     for (const delay of RETRY_DELAYS) {
       if (anthropicRes.status !== 529) break
       console.warn(`[claude-proxy] Anthropic 529 — retrying in ${delay}ms`)
       await new Promise(r => setTimeout(r, delay))
-      anthropicRes = await anthropicCall()
+      anthropicRes = await anthropicCall(AbortSignal.timeout(ANTHROPIC_TIMEOUT_MS))
     }
 
     // ── 4b. Streaming passthrough ─────────────────────────────────
@@ -179,7 +183,10 @@ Deno.serve(async (req) => {
         },
       })
 
-      anthropicRes.body!.pipeTo(transform.writable)
+      // Avoid unhandled rejection if the stream is aborted mid-pipe
+      anthropicRes.body!.pipeTo(transform.writable).catch(pipeErr => {
+        console.error('[claude-proxy] Stream pipe error:', (pipeErr as Error)?.name, (pipeErr as Error)?.message)
+      })
       return new Response(transform.readable, {
         headers: {
           ...CORS,
@@ -235,6 +242,14 @@ Deno.serve(async (req) => {
     })
 
   } catch (err) {
+    const errName = (err as DOMException)?.name
+    if (errName === 'TimeoutError' || errName === 'AbortError') {
+      console.error('[claude-proxy] Anthropic request timed out after 145 s')
+      return json({
+        error: 'La generazione ha impiegato troppo tempo. Prova con un periodo di studio più breve oppure riprova tra qualche minuto.',
+        code: 'TIMEOUT',
+      }, 504)
+    }
     console.error('[claude-proxy] Unhandled error:', err)
     return json({ error: `Errore interno: ${(err as Error)?.message ?? 'sconosciuto'}`, code: 'SERVER_ERROR' }, 500)
   }

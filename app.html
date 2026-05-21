@@ -1167,6 +1167,13 @@
     <!-- Backward-compat hidden elements used by _setPlanGenUI -->
     <div id="planGenTitle" style="display:none"></div>
     <div id="planGenMsg"   style="display:none"></div>
+
+    <!-- Error state shown when plan generation fails -->
+    <div id="planGenError" style="display:none;margin-top:18px;text-align:center">
+      <div style="font-size:22px;margin-bottom:10px">⚠️</div>
+      <div id="planGenErrorMsg" style="font-size:14px;color:var(--text-2);line-height:1.55;max-width:320px;margin:0 auto 18px"></div>
+      <button onclick="generateStudyPlan()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 22px;font-size:14px;font-weight:600;cursor:pointer">Riprova</button>
+    </div>
   </div>
 </div>
 

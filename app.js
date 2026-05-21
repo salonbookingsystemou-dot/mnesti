@@ -2694,6 +2694,11 @@ async function _callClaudeStream(payload) {
       e.name = 'OverloadedError';
       throw e;
     }
+    if (data?.code === 'TIMEOUT' || res.status === 504) {
+      const e = new Error('La generazione ha impiegato troppo tempo. Prova con un esame più vicino o con meno fonti caricate, poi riprova.');
+      e.name = 'TimeoutError';
+      throw e;
+    }
     throw new Error(msg);
   }
 
@@ -2702,6 +2707,8 @@ async function _callClaudeStream(payload) {
   let fullText = '';
   let inputTokens = 0, outputTokens = 0;
   let buffer = '';
+
+  try {
 
   while (true) {
     const { done, value } = await reader.read();
@@ -2724,6 +2731,16 @@ async function _callClaudeStream(payload) {
         if (ev.type === 'message_delta') outputTokens = ev.usage?.output_tokens ?? 0;
       } catch { /* ignore malformed SSE lines */ }
     }
+  }
+
+  } catch (streamErr) {
+    const n = streamErr?.name;
+    if (n === 'TimeoutError' || n === 'AbortError') {
+      const e = new Error('La generazione ha impiegato troppo tempo. Prova con un esame più vicino o con meno fonti caricate, poi riprova.');
+      e.name = 'TimeoutError';
+      throw e;
+    }
+    throw new Error(`Errore durante la ricezione della risposta AI. Riprova. (${streamErr?.message ?? 'sconosciuto'})`);
   }
 
   if (!fullText) throw new Error('Risposta AI vuota — riprova.');
@@ -10011,6 +10028,15 @@ function _setPlanGenUI(title, msg, pct, step) {
   const m = document.getElementById('planGenMsg');
   if (t) t.textContent = title;
   if (m) m.textContent = msg;
+  // Reset error state if the overlay is being reused for a new attempt
+  const errEl = document.getElementById('planGenError');
+  if (errEl) errEl.style.display = 'none';
+  const card = document.querySelector('.plan-gen-card');
+  if (card) card.style.display = '';
+  const stats = document.querySelector('.plan-gen-stats');
+  if (stats) stats.style.display = '';
+  const headline = document.querySelector('.plan-gen-headline');
+  if (headline) headline.textContent = 'Stiamo preparando il tuo piano di studio';
 }
 
 function _hidePlanGenUI() {
@@ -10018,6 +10044,24 @@ function _hidePlanGenUI() {
   _planAnim.resetStats();
   const overlay = document.getElementById('planGenOverlay');
   if (overlay) overlay.classList.remove('active');
+  // Always hide the error panel when closing
+  const errEl = document.getElementById('planGenError');
+  if (errEl) errEl.style.display = 'none';
+}
+
+function _showPlanGenError(msg) {
+  // Hide the animated card, show the error panel inside the overlay
+  const card = document.querySelector('.plan-gen-card');
+  if (card) card.style.display = 'none';
+  const stats = document.querySelector('.plan-gen-stats');
+  if (stats) stats.style.display = 'none';
+  const headline = document.querySelector('.plan-gen-headline');
+  if (headline) headline.textContent = 'Errore nella generazione';
+  const errEl  = document.getElementById('planGenError');
+  const msgEl  = document.getElementById('planGenErrorMsg');
+  if (msgEl) msgEl.textContent = msg;
+  if (errEl) errEl.style.display = 'block';
+  // Keep the overlay open so the user can read the message and retry
 }
 
 function _dateRange(startDate, endDate) {
@@ -10052,6 +10096,7 @@ function _isoDate(d) {
 async function generateStudyPlan(fromOnboarding = false) {
 
   const info = getExamInfo();
+  let _planGenHadError = false;
 
   // ── Pre-flight validation ──────────────────────────────────────────────────
   // Only subject and date are strictly required. Sources improve quality but
@@ -10189,7 +10234,9 @@ REGOLE ASSOLUTE (non derogabili):
       }
       const data = await _callClaudeStream({
         model: 'claude-sonnet-4-5',
-        max_tokens: 16000,
+        // ~120 tokens per day (JSON object + questions) — capped at 12 000 so
+        // long plans don't push generation time past the Edge Function timeout.
+        max_tokens: Math.min(12000, Math.max(4000, Math.ceil(totalDays * 120))),
         temperature: 0.7,
         system: systemPrompt,
         messages: [{ role: 'user', content: _apiMsg }]
@@ -10297,9 +10344,16 @@ REGOLE ASSOLUTE (non derogabili):
     }
 
   } catch(e) {
-    alert('Errore nella generazione del piano:\n' + e.message);
+    const isTimeout = e?.name === 'TimeoutError' || (e?.message || '').toLowerCase().includes('troppo tempo');
+    const userMsg = isTimeout
+      ? 'La generazione ha impiegato troppo tempo.\n\nSe l\'esame è lontano (>60 giorni) o hai molte fonti caricate, il piano richiede più tempo. Riprova tra qualche momento — di solito basta un secondo tentativo.'
+      : (e?.message || 'Errore sconosciuto. Riprova.');
+    _planAnim.stop();
+    _showPlanGenError(userMsg);
+    // overlay stays open; _hidePlanGenUI skipped via flag below
+    _planGenHadError = true;
   } finally {
-    _hidePlanGenUI();
+    if (!_planGenHadError) _hidePlanGenUI();
   }
 }
 
