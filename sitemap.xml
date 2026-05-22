@@ -152,4 +152,13 @@
     <priority>0.7</priority>
   </url>
 
+
+  <!-- Quante ore bisogna studiare al giorno per un esame universitario? -->
+  <url>
+    <loc>https://mnesti.it/blog-quante-ore-studiare.html</loc>
+    <lastmod>2026-05-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
 </urlset>

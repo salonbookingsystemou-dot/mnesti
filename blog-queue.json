@@ -259,9 +259,9 @@
     "icon": "⏰",
     "ctaTitle": "Studia meno, ricorda di più",
     "ctaText": "Mnesti ottimizza ogni ora di studio con domande attive e feedback istantaneo. Niente ripasso passivo, niente ore sprecate. Primo esame gratis.",
-    "status": "pending",
-    "date": null,
-    "publishedAt": null
+    "status": "published",
+    "date": "2026-05-22",
+    "publishedAt": "2026-05-22T09:00:00+02:00"
   },
   {
     "slug": "blog-motivazione-studio",
