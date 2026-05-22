@@ -9,18 +9,24 @@ alwaysApply: true
 
 I file logo si trovano nella root del progetto:
 
-| File | Uso |
-|------|-----|
-| `logo-white.png` (284×152 px) | Wordmark bianco — header, splash, email (su sfondo scuro) |
-| `logo-mark.png` (284×152 px) | Identico al wordmark — alias usato in contesti specifici |
-| `logo-full.png` | Versione estesa |
-| `logo-login.png` | Variante per la schermata di login |
-| `apple-touch-icon.png` / `icon-192.png` / `icon-512.png` | Icone app PWA |
+| File | Dimensioni reali | Uso |
+|------|-----------------|-----|
+| `logo-white.png` | 783×152 px | Wordmark bianco — header, splash, **email** (su sfondo scuro) |
+| `logo-mark.png` | 284×152 px | Marca compatta (icona + testo impilati) — contesti ridotti |
+| `logo-full.png` | 783×152 px | Versione estesa (file separato da logo-white) |
+| `logo-login.png` | 509×306 px | Variante per la schermata di login |
+| `apple-touch-icon.png` / `icon-192.png` / `icon-512.png` | — | Icone app PWA |
 
 **Come incorporare il logo in HTML/CSS:**
 ```html
 <img src="logo-white.png" alt="Mnesti" height="32">
 ```
+
+**In email HTML** (entrambe le dimensioni obbligatorie per client come Gmail/Outlook):
+```html
+<img src="https://mnesti.it/logo-white.png" alt="Mnesti" height="32" width="165" style="display:block;">
+```
+Width 165 = round(783/152 × 32) — proporzionale al file reale 783×152 px.
 
 **Regola assoluta: usare SEMPRE il logo PNG ufficiale, mai SVG generato o testo stilizzato.**
 
