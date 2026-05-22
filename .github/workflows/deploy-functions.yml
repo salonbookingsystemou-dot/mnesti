@@ -61,33 +61,51 @@ jobs:
         run: |
           PROJECT_REF="olagntawajefdjrkkvcc"
 
+          # Helper: deploya una singola funzione (skip directory interne _*)
+          deploy_fn() {
+            local fn="$1"
+            [[ "$fn" == _* ]] && return 0
+            echo "→ Deploy: $fn"
+            supabase functions deploy "$fn" \
+              --project-ref "$PROJECT_REF" --no-verify-jwt
+          }
+
           # Dispatch manuale: deploya funzione specifica o tutte
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             if [ -n "${{ github.event.inputs.function }}" ]; then
-              echo "→ Deploy manuale: ${{ github.event.inputs.function }}"
-              supabase functions deploy "${{ github.event.inputs.function }}" \
-                --project-ref "$PROJECT_REF" --no-verify-jwt
+              deploy_fn "${{ github.event.inputs.function }}"
             else
               echo "→ Deploy manuale: tutte le funzioni"
               for fn in supabase/functions/*/; do
                 fn="${fn%/}"; fn="${fn##*/}"
-                echo "→ $fn"
-                supabase functions deploy "$fn" \
-                  --project-ref "$PROJECT_REF" --no-verify-jwt
+                deploy_fn "$fn"
               done
             fi
             exit 0
           fi
 
-          # Push automatico: deploya solo le funzioni cambiate nell'ultimo commit
+          # Push automatico: rileva le directory cambiate nell'ultimo commit
           CHANGED=$(git diff --name-only HEAD~1 HEAD -- 'supabase/functions/' \
             | grep -oP 'supabase/functions/\K[^/]+' | sort -u)
 
-          for fn in $CHANGED; do
-            echo "→ Deploy: $fn"
-            supabase functions deploy "$fn" \
-              --project-ref "$PROJECT_REF" --no-verify-jwt
+          DEPLOY_ALL=false
+          for item in $CHANGED; do
+            # Se cambia _shared (o altra dir interna), bisogna deployare
+            # tutte le funzioni consumer che la importano.
+            [[ "$item" == _* ]] && DEPLOY_ALL=true && break
           done
+
+          if [ "$DEPLOY_ALL" = "true" ]; then
+            echo "→ _shared modificata — ri-deploy di tutte le funzioni consumer"
+            for fn in supabase/functions/*/; do
+              fn="${fn%/}"; fn="${fn##*/}"
+              deploy_fn "$fn"
+            done
+          else
+            for fn in $CHANGED; do
+              deploy_fn "$fn"
+            done
+          fi
 
       - name: Riepilogo deploy
         run: echo "✓ Deploy completato — https://supabase.com/dashboard/project/olagntawajefdjrkkvcc/functions"
