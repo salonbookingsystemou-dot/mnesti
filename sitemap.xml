@@ -161,4 +161,13 @@
     <priority>0.7</priority>
   </url>
 
+
+  <!-- Come ritrovare la motivazione per studiare quando non riesci ad aprire il libro -->
+  <url>
+    <loc>https://mnesti.it/blog-motivazione-studio.html</loc>
+    <lastmod>2026-05-23</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
 </urlset>

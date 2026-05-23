@@ -283,9 +283,9 @@
     "icon": "🔥",
     "ctaTitle": "Il primo passo è il piano. Il resto viene da solo.",
     "ctaText": "Un piano di studio concreto elimina la paralisi da scelta. Mnesti lo costruisce per te in 3 minuti. Primo esame gratis.",
-    "status": "pending",
-    "date": null,
-    "publishedAt": null
+    "status": "published",
+    "date": "2026-05-23",
+    "publishedAt": "2026-05-23T09:00:00+02:00"
   },
   {
     "slug": "blog-come-studiare-matematica",
