@@ -170,4 +170,13 @@
     <priority>0.7</priority>
   </url>
 
+
+  <!-- Come studiare matematica all'università senza impazzire -->
+  <url>
+    <loc>https://mnesti.it/blog-come-studiare-matematica.html</loc>
+    <lastmod>2026-05-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
 </urlset>

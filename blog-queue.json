@@ -307,9 +307,9 @@
     "icon": "∫",
     "ctaTitle": "Mnesti per esami di matematica",
     "ctaText": "Carica i tuoi appunti di matematica e Mnesti genera domande sui teoremi, le dimostrazioni e i metodi risolutivi. Primo esame gratis.",
-    "status": "pending",
-    "date": null,
-    "publishedAt": null
+    "status": "published",
+    "date": "2026-05-24",
+    "publishedAt": "2026-05-24T09:00:00+02:00"
   },
   {
     "slug": "blog-studente-fuori-corso",
