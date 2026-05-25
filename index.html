@@ -1126,10 +1126,85 @@
     }
     @media (max-width: 600px) {
       section { padding: 72px 0; }
-      .hero-cta-group { flex-direction: column; align-items: flex-start; }
+      .hero-cta-group { flex-direction: column; align-items: stretch; gap: 14px; }
+      .btn-primary {
+        width: 100%;
+        justify-content: center;
+        white-space: nowrap;
+        font-size: 0.9rem;
+        padding: 16px 20px;
+        border-radius: 14px;
+      }
       .footer-inner { flex-direction: column; text-align: center; }
       .footer-links { justify-content: center; }
       .nav-free-badge { display: none; }
+      .hero-social-proof { justify-content: flex-start; }
+      /* Final CTA section */
+      #cta-finale { padding: 80px 0 100px; }
+      #cta-finale .btn-primary {
+        font-size: 0.9rem !important;
+        padding: 16px 20px !important;
+        white-space: nowrap !important;
+      }
+      /* Nav CTA — prevent text wrapping */
+      .nav-cta {
+        white-space: nowrap;
+        font-size: 0.82rem;
+        padding: 9px 16px;
+        gap: 5px;
+      }
+      /* Hide blog link in nav on small screens to avoid crowding */
+      nav#main-nav .nav-link { display: none; }
+    }
+
+    /* ─── STICKY MOBILE CTA BAR ─── */
+    #mobile-cta-bar {
+      display: none;
+    }
+    @media (max-width: 600px) {
+      #mobile-cta-bar {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        z-index: 90;
+        background: rgba(17,17,17,0.96);
+        border-top: 1px solid var(--border);
+        padding: 12px 20px;
+        padding-bottom: calc(12px + env(safe-area-inset-bottom));
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        transform: translateY(110%);
+        transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+        box-shadow: 0 -8px 40px rgba(0,0,0,0.5);
+      }
+      #mobile-cta-bar.visible {
+        transform: translateY(0);
+      }
+    }
+    .mobile-cta-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: var(--accent);
+      color: #fff;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 1rem;
+      padding: 15px 24px;
+      border-radius: 14px;
+      white-space: nowrap;
+      transition: background 0.2s, transform 0.15s;
+      box-shadow: 0 4px 24px rgba(217,119,87,0.35);
+    }
+    .mobile-cta-btn:active { background: var(--accent2); transform: scale(0.98); }
+    .mobile-cta-note {
+      text-align: center;
+      font-size: 0.7rem;
+      color: var(--grey2);
+      letter-spacing: 0.02em;
     }
   </style>
 </head>
@@ -1578,6 +1653,15 @@
   </div>
 </section>
 
+<!-- ─── MOBILE STICKY CTA BAR ─── -->
+<div id="mobile-cta-bar" role="complementary" aria-label="Azione rapida">
+  <a href="./app.html" class="mobile-cta-btn">
+    Inizia gratis — 1° esame incluso
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M8 3l5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </a>
+  <p class="mobile-cta-note">Nessuna carta richiesta</p>
+</div>
+
 <!-- ─── FOOTER ─── -->
 <footer role="contentinfo">
   <div class="container footer-inner">
@@ -1606,6 +1690,22 @@ const nav = document.getElementById('main-nav');
 window.addEventListener('scroll', () => {
   nav.classList.toggle('scrolled', window.scrollY > 40);
 }, { passive: true });
+
+/* ─── MOBILE STICKY CTA BAR ─── */
+const mobileCtaBar = document.getElementById('mobile-cta-bar');
+if (mobileCtaBar) {
+  const heroEl = document.getElementById('hero');
+  const ctaFinaleEl = document.getElementById('cta-finale');
+  function updateMobileBar() {
+    if (!heroEl) return;
+    const heroBottom = heroEl.getBoundingClientRect().bottom;
+    const ctaTop = ctaFinaleEl ? ctaFinaleEl.getBoundingClientRect().top : Infinity;
+    const atBottom = (window.innerHeight + window.scrollY) >= document.body.offsetHeight - 80;
+    mobileCtaBar.classList.toggle('visible', heroBottom < 0 && ctaTop > window.innerHeight && !atBottom);
+  }
+  window.addEventListener('scroll', updateMobileBar, { passive: true });
+  window.addEventListener('resize', updateMobileBar, { passive: true });
+}
 
 /* ─── FADE IN ON SCROLL ─── */
 const fadeEls = document.querySelectorAll('.fade-in');
