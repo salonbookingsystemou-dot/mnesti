@@ -18,12 +18,14 @@ export function baseLayout(innerHtml: string): string {
   return `<!DOCTYPE html>
 <html lang="it">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#0d0d0d;">
+<body style="margin:0;padding:0;background:#0d0d0d;" bgcolor="#0d0d0d">
 <div style="background:#0d0d0d;padding:48px 20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
-  <table cellpadding="0" cellspacing="0" style="max-width:500px;width:100%;">
+  <table width="100%" cellpadding="0" cellspacing="0" bgcolor="#0d0d0d"><tr><td align="center" bgcolor="#0d0d0d" style="background-color:#0d0d0d;">
+  <table cellpadding="0" cellspacing="0" style="max-width:500px;width:100%;" bgcolor="#0d0d0d">
 
-    <tr><td align="center" style="padding-bottom:28px;">
+    <!-- Logo: bgcolor + background-color on the td guarantee a dark cell in every email client,
+         preventing the white wordmark from disappearing against a white background. -->
+    <tr><td align="center" bgcolor="#0d0d0d" style="padding-bottom:28px;background-color:#0d0d0d;">
       <img src="${LOGO_URL}" alt="Mnesti" height="32" width="165" style="display:block;" />
     </td></tr>
 
@@ -31,7 +33,7 @@ export function baseLayout(innerHtml: string): string {
       ${innerHtml}
     </td></tr>
 
-    <tr><td style="padding-top:24px;text-align:center;">
+    <tr><td bgcolor="#0d0d0d" style="padding-top:24px;text-align:center;background-color:#0d0d0d;">
       <p style="margin:0;font-size:11px;color:#444444;line-height:1.6;">
         Hai ricevuto questa email perché sei iscritto a Mnesti.<br>
         Per disiscriverti rispondi a questa email con oggetto "Unsubscribe".
