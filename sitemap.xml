@@ -179,4 +179,13 @@
     <priority>0.7</priority>
   </url>
 
+
+  <!-- Studente fuori corso: perché succede e come uscirne prima che costi ancora di più -->
+  <url>
+    <loc>https://mnesti.it/blog-studente-fuori-corso.html</loc>
+    <lastmod>2026-05-25</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
 </urlset>
