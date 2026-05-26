@@ -3,13 +3,14 @@
 // Single source of truth for all user-facing email styling.
 // Import with:   import { baseLayout, sendViaResend, FROM_EMAIL, APP_URL } from '../_shared/email-layout.ts'
 //
-// Logo note: logo-white.png is the official white wordmark for dark backgrounds.
-// Used here directly without any CSS filter, ensuring correct rendering across
-// Outlook, Gmail, and Apple Mail.
+// Logo note: logo-email.png is logo-white.png with the #0d0d0d background baked in (RGB, no alpha).
+// This prevents Gmail dark-mode from applying filter:invert() to transparent PNG images,
+// which was turning the white logo black on dark backgrounds. logo-white.png (RGBA, transparent
+// background) was the root cause of the persistent logo rendering issue across repeated fixes.
 
 export const FROM_EMAIL = 'Mnesti <noreply@mnesti.it>'
 export const APP_URL    = 'https://mnesti.it/app.html'
-export const LOGO_URL   = 'https://mnesti.it/logo-white.png'  // white wordmark for dark bg
+export const LOGO_URL   = 'https://mnesti.it/logo-email.png'  // dark bg baked in — immune to Gmail invert
 
 // ── Base layout ───────────────────────────────────────────────────────────────
 // Dark-themed email shell matching the Mnesti brand.
