@@ -90,7 +90,13 @@ function noExamNudgeHtml(): string {
   `)
 }
 
-function dailyReminderHtml(examName: string, daysRemaining: number): string {
+function dailyReminderHtml(
+  examName: string,
+  daysRemaining: number,
+  weekTopics: string[] | null,
+  nextQuestion: string | null,
+  nextDayTitle: string | null,
+): string {
   const urgencyMsg =
     daysRemaining > 30 ? 'Stai costruendo le basi. Costanza prima di tutto.' :
     daysRemaining > 14 ? 'È il momento di intensificare il ritmo.' :
@@ -105,6 +111,48 @@ function dailyReminderHtml(examName: string, daysRemaining: number): string {
 
   const dayLabel = daysRemaining === 1 ? 'giorno' : 'giorni'
 
+  // Argomenti della settimana — massimo 5 pill per non appesantire l'email
+  const topics = (weekTopics ?? []).slice(0, 5)
+  const weekTopicsHtml = topics.length > 0 ? `
+    <hr style="border:none;border-top:1px solid #2a2a2a;margin:0 0 20px;">
+    <p style="text-align:center;font-size:11px;color:#555555;margin:0 0 14px;text-transform:uppercase;letter-spacing:0.12em;">
+      Questa settimana
+    </p>
+    <p style="text-align:center;margin:0 0 24px;line-height:1.9;">
+      ${topics.map(t =>
+        `<span style="display:inline-block;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:20px;padding:4px 14px;font-size:12px;color:#a8a099;margin:0 4px 4px 0;white-space:nowrap;">${t}</span>`
+      ).join('')}
+    </p>` : ''
+
+  // Sezione domanda — mostrata solo se c'è una domanda disponibile non risposta
+  const questionHtml = nextQuestion ? `
+    <hr style="border:none;border-top:1px solid #2a2a2a;margin:0 0 20px;">
+    <h2 style="margin:0 0 6px;font-size:15px;font-weight:700;color:#f0ebe6;text-align:center;letter-spacing:-0.01em;line-height:1.4;">
+      Verifica ora la tua preparazione
+    </h2>
+    ${nextDayTitle ? `<p style="text-align:center;font-size:12px;color:#555555;margin:0 0 18px;">${nextDayTitle}</p>` : ''}
+    <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;padding:20px 24px;margin:0 0 28px;">
+      <p style="font-size:14px;color:#e7e0d8;line-height:1.75;margin:0;font-style:italic;">
+        &ldquo;${nextQuestion}&rdquo;
+      </p>
+    </div>
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr><td align="center">
+        <a href="${APP_URL}"
+           style="display:inline-block;background:#d97757;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:10px;letter-spacing:-0.01em;">
+          Rispondi a questa domanda →
+        </a>
+      </td></tr>
+    </table>` : `
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr><td align="center">
+        <a href="${APP_URL}"
+           style="display:inline-block;background:#d97757;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:10px;letter-spacing:-0.01em;">
+          Continua il piano di studio →
+        </a>
+      </td></tr>
+    </table>`
+
   return baseLayout(`
     <p style="text-align:center;margin:0 0 8px;">
       <span style="font-size:52px;font-weight:800;color:${countdownColor};letter-spacing:-0.04em;line-height:1;">${daysRemaining}</span>
@@ -118,18 +166,12 @@ function dailyReminderHtml(examName: string, daysRemaining: number): string {
     <h1 style="margin:0 0 8px;font-size:18px;font-weight:700;color:#f0ebe6;text-align:center;letter-spacing:-0.02em;line-height:1.3;">
       ${examName}
     </h1>
-    <p style="margin:0 0 28px;font-size:14px;color:#777777;text-align:center;line-height:1.6;">
+    <p style="margin:0 0 24px;font-size:14px;color:#777777;text-align:center;line-height:1.6;">
       ${urgencyMsg}
     </p>
 
-    <table width="100%" cellpadding="0" cellspacing="0">
-      <tr><td align="center">
-        <a href="${APP_URL}"
-           style="display:inline-block;background:#d97757;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:10px;letter-spacing:-0.01em;">
-          Continua il piano di studio →
-        </a>
-      </td></tr>
-    </table>
+    ${weekTopicsHtml}
+    ${questionHtml}
   `)
 }
 
@@ -139,6 +181,9 @@ type NudgeTarget = { user_id: string; email: string }
 type ReminderTarget = {
   user_id: string; email: string
   exam_name: string; exam_date: string; days_remaining: number
+  week_topics: string[] | null
+  next_question: string | null
+  next_day_title: string | null
 }
 
 async function handleNoExamNudge(): Promise<{ sent: number; errors: number }> {
@@ -174,7 +219,7 @@ async function handleDailyReminder(): Promise<{ sent: number; errors: number }> 
       await sendEmail(
         t.email,
         `${days} ${days === 1 ? 'giorno' : 'giorni'} all'esame di ${t.exam_name} — studia con Mnesti`,
-        dailyReminderHtml(t.exam_name, days),
+        dailyReminderHtml(t.exam_name, days, t.week_topics, t.next_question, t.next_day_title),
       )
       await logEmail(t.user_id, 'daily_reminder')
       sent++

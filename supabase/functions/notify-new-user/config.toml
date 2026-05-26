@@ -1,0 +1,6 @@
+[functions.notify-new-user]
+# JWT verification is disabled: the gateway lets requests through without a
+# Supabase JWT. Authentication is handled internally via the x-webhook-secret
+# header checked in the function code — so only the pg_net trigger (which
+# knows the shared secret) can invoke this notifier.
+verify_jwt = false
