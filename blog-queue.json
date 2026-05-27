@@ -355,9 +355,9 @@
     "icon": "🃏",
     "ctaTitle": "Memory Cards automatiche senza ore di setup",
     "ctaText": "Mnesti genera Memory Cards per teorie e autori direttamente dalle tue dispense. Zero setup, zero tempo perso. Primo esame gratis.",
-    "status": "pending",
-    "date": null,
-    "publishedAt": null
+    "status": "published",
+    "date": "2026-05-27",
+    "publishedAt": "2026-05-27T09:00:00+02:00"
   },
   {
     "slug": "blog-riprendere-a-studiare",
