@@ -254,11 +254,26 @@ Deno.serve(async (req) => {
     return new Response('Unauthorized', { status: 401 })
   }
 
-  let body: { type?: string } = {}
+  let body: { type?: string; test_email?: string } = {}
   try { body = await req.json() } catch { /* empty body = run both */ }
 
   const type = body.type ?? 'all'
   const results: Record<string, unknown> = {}
+
+  // ── Test mode: invia un reminder di esempio all'indirizzo specificato ─────
+  if (type === 'test_reminder' && body.test_email) {
+    const html = dailyReminderHtml(
+      'Psicologia dello sviluppo',
+      55,
+      ['Piaget e lo sviluppo cognitivo', 'Vygotskij e la ZSP', 'Teorie dell\'attaccamento'],
+      'Descrivi le fasi dello sviluppo cognitivo secondo Piaget e fornisci un esempio per ciascuna.',
+      'Cap. 4 — Adolescenza',
+    )
+    await sendEmail(body.test_email, '55 giorni all\'esame di Psicologia dello sviluppo — studia con Mnesti', html)
+    return new Response(JSON.stringify({ ok: true, sent_to: body.test_email }), {
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
 
   if (type === 'no_exam_nudge' || type === 'all') {
     results.no_exam_nudge = await handleNoExamNudge()
