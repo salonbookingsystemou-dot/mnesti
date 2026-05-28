@@ -379,9 +379,9 @@
     "icon": "🔁",
     "ctaTitle": "Riprendere è più facile con un piano concreto",
     "ctaText": "Mnesti costruisce un piano giorno per giorno dal materiale che hai. Parti da dove sei, non da dove pensi di dover essere. Primo esame gratis.",
-    "status": "pending",
-    "date": null,
-    "publishedAt": null
+    "status": "published",
+    "date": "2026-05-28",
+    "publishedAt": "2026-05-28T09:00:00+02:00"
   },
   {
     "slug": "blog-tecnica-pomodoro",

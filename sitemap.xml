@@ -197,4 +197,13 @@
     <priority>0.7</priority>
   </url>
 
+
+  <!-- Come tornare a studiare dopo una lunga pausa (senza sentirsi persi) -->
+  <url>
+    <loc>https://mnesti.it/blog-riprendere-a-studiare.html</loc>
+    <lastmod>2026-05-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
 </urlset>
