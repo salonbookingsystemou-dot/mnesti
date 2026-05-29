@@ -206,4 +206,13 @@
     <priority>0.7</priority>
   </url>
 
+
+  <!-- Tecnica Pomodoro per studiare all'università: come usarla bene -->
+  <url>
+    <loc>https://mnesti.it/blog-tecnica-pomodoro.html</loc>
+    <lastmod>2026-05-29</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
 </urlset>

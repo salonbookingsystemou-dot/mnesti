@@ -403,9 +403,9 @@
     "icon": "🍅",
     "ctaTitle": "Sessioni Pomodoro con obiettivi chiari",
     "ctaText": "Mnesti pianifica cosa studiare in ogni sessione così ogni Pomodoro ha uno scopo preciso. Primo esame gratis.",
-    "status": "pending",
-    "date": null,
-    "publishedAt": null
+    "status": "published",
+    "date": "2026-05-29",
+    "publishedAt": "2026-05-29T09:00:00+02:00"
   },
   {
     "slug": "blog-come-studiare-storia",
