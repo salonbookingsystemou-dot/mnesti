@@ -427,9 +427,9 @@
     "icon": "📜",
     "ctaTitle": "Dal manuale alle domande di esame in automatico",
     "ctaText": "Mnesti trasforma i tuoi appunti di storia in domande aperte che esercitano il ragionamento, non la memorizzazione. Primo esame gratis.",
-    "status": "pending",
-    "date": null,
-    "publishedAt": null
+    "status": "published",
+    "date": "2026-05-30",
+    "publishedAt": "2026-05-30T09:00:00+02:00"
   },
   {
     "slug": "blog-mappe-mentali",
