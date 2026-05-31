@@ -451,9 +451,9 @@
     "icon": "🗺️",
     "ctaTitle": "Dalle mappe alle domande in automatico",
     "ctaText": "Mnesti usa le tue dispense per costruire la struttura del piano, non devi creare mappe a mano. Primo esame gratis.",
-    "status": "pending",
-    "date": null,
-    "publishedAt": null
+    "status": "published",
+    "date": "2026-05-31",
+    "publishedAt": "2026-05-31T09:00:00+02:00"
   },
   {
     "slug": "blog-gestire-stanchezza",

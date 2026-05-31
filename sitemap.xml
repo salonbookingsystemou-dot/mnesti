@@ -224,4 +224,13 @@
     <priority>0.7</priority>
   </url>
 
+
+  <!-- Mappe mentali per studiare all'università: quando funzionano e quando no -->
+  <url>
+    <loc>https://mnesti.it/blog-mappe-mentali.html</loc>
+    <lastmod>2026-05-31</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
 </urlset>
