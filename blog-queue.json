@@ -475,9 +475,9 @@
     "icon": "😴",
     "ctaTitle": "Sessioni brevi e attive battono ore passive",
     "ctaText": "Mnesti struttura sessioni di 20-40 minuti con domande attive: più efficaci di 2 ore di rilettura stanca. Primo esame gratis.",
-    "status": "pending",
-    "date": null,
-    "publishedAt": null
+    "status": "published",
+    "date": "2026-06-01",
+    "publishedAt": "2026-06-01T09:00:00+02:00"
   },
   {
     "slug": "blog-come-studiare-sociologia",

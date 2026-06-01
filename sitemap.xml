@@ -233,4 +233,13 @@
     <priority>0.7</priority>
   </url>
 
+
+  <!-- Come studiare quando sei stanco: strategie validate dalla scienza -->
+  <url>
+    <loc>https://mnesti.it/blog-gestire-stanchezza.html</loc>
+    <lastmod>2026-06-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
 </urlset>
