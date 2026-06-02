@@ -242,4 +242,13 @@
     <priority>0.7</priority>
   </url>
 
+
+  <!-- Come studiare sociologia all'università: teorie, autori e concetti chiave -->
+  <url>
+    <loc>https://mnesti.it/blog-come-studiare-sociologia.html</loc>
+    <lastmod>2026-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
 </urlset>
