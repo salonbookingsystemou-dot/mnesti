@@ -251,4 +251,13 @@
     <priority>0.7</priority>
   </url>
 
+
+  <!-- Blocco dello studente: cos'è, perché arriva e come uscirne -->
+  <url>
+    <loc>https://mnesti.it/blog-blocco-studente.html</loc>
+    <lastmod>2026-06-03</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
 </urlset>

@@ -523,9 +523,9 @@
     "icon": "🔓",
     "ctaTitle": "Il blocco si rompe con un primo passo concreto",
     "ctaText": "Mnesti ti dice esattamente cosa studiare oggi. Un'azione concreta è più efficace di qualsiasi tecnica di motivazione. Primo esame gratis.",
-    "status": "pending",
-    "date": null,
-    "publishedAt": null
+    "status": "published",
+    "date": "2026-06-03",
+    "publishedAt": "2026-06-03T09:00:00+02:00"
   },
   {
     "slug": "blog-programmare-sessione-esami",
