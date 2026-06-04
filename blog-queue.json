@@ -547,9 +547,9 @@
     "icon": "🗓️",
     "ctaTitle": "Un piano separato per ogni esame della sessione",
     "ctaText": "Mnesti gestisce più esami in parallelo con piani indipendenti. Piano Per esame da 30€ o Abbonamento mensile da 15€/mese. Primo esame gratis.",
-    "status": "pending",
-    "date": null,
-    "publishedAt": null
+    "status": "published",
+    "date": "2026-06-04",
+    "publishedAt": "2026-06-04T09:00:00+02:00"
   },
   {
     "slug": "blog-memoria-lungo-termine",
