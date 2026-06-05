@@ -269,4 +269,13 @@
     <priority>0.7</priority>
   </url>
 
+
+  <!-- Come far passare le informazioni dalla memoria a breve alla memoria a lungo termine -->
+  <url>
+    <loc>https://mnesti.it/blog-memoria-lungo-termine.html</loc>
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
 </urlset>

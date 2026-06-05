@@ -571,9 +571,9 @@
     "icon": "🧬",
     "ctaTitle": "Studia una volta, ricorda all'esame",
     "ctaText": "Il piano di Mnesti è progettato per il consolidamento a lungo termine: revisioni attive ai momenti giusti. Primo esame gratis.",
-    "status": "pending",
-    "date": null,
-    "publishedAt": null
+    "status": "published",
+    "date": "2026-06-05",
+    "publishedAt": "2026-06-05T09:00:00+02:00"
   },
   {
     "slug": "blog-notion-per-studiare",
