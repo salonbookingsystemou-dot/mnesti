@@ -595,9 +595,9 @@
     "icon": "🗃️",
     "ctaTitle": "Dall'organizzazione allo studio attivo",
     "ctaText": "Notion organizza, Mnesti ti fa studiare davvero. Carica le dispense e ricevi domande aperte. Primo esame gratis.",
-    "status": "pending",
-    "date": null,
-    "publishedAt": null
+    "status": "published",
+    "date": "2026-06-06",
+    "publishedAt": "2026-06-06T09:00:00+02:00"
   },
   {
     "slug": "blog-studiare-musica",
