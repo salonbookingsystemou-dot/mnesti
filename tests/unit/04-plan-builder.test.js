@@ -6,9 +6,14 @@ const { test, describe } = require('node:test');
 const assert = require('node:assert/strict');
 const { loadUtils } = require('../helpers/extract');
 
-const { _isoDate, _dateRange, _formatDateLabel, _shortLabel } = loadUtils(
-  '_isoDate', '_dateRange', '_formatDateLabel', '_shortLabel'
+const { _isoDate, _dateRange, _formatDateLabel, _shortLabel, _fillPlanGaps } = loadUtils(
+  '_isoDate', '_dateRange', '_formatDateLabel', '_shortLabel', '_fillPlanGaps'
 );
+
+function skeletonRange(startIso, endIso) {
+  const range = _dateRange(new Date(startIso + 'T00:00:00'), new Date(endIso + 'T00:00:00'));
+  return range.map(_isoDate);
+}
 
 describe('_isoDate', () => {
   // _isoDate now uses local-time getters (getFullYear/getMonth/getDate)
@@ -134,6 +139,59 @@ describe('Regole hard-validation del piano (post-processing)', () => {
     ];
     const result = hardValidate(plan, '2026-06-10');
     assert.equal(result[0].type, 'rest');
+  });
+});
+
+describe('_fillPlanGaps — safety net contro la troncatura AI', () => {
+  test('AI tronca a metà: riempie le date mancanti fino all\'esame (no buco)', () => {
+    // Esame il 21/07, piano creato il 07/06 → 45 date attese.
+    // L'AI restituisce solo le prime 2 settimane (07→19 giu): il resto va riempito.
+    const skeleton = skeletonRange('2026-06-07', '2026-07-21');
+    const aiDays = skeletonRange('2026-06-07', '2026-06-19').map(d => ({
+      date: d, type: 'studio', title: 'Lezione', questions: [{ text: 'Q' }]
+    }));
+
+    const filled = _fillPlanGaps(aiDays, skeleton, '2026-07-21');
+
+    // Copre TUTTE le date, in ordine, senza salti.
+    assert.equal(filled.length, skeleton.length);
+    assert.equal(filled[0].date, '2026-06-07');
+    assert.equal(filled[filled.length - 1].date, '2026-07-21');
+    filled.forEach((d, i) => assert.equal(d.date, skeleton[i]));
+
+    // Le date originali dell'AI sono conservate (non sovrascritte).
+    assert.equal(filled[0].title, 'Lezione');
+    // Le date mancanti diventano segnaposto di studio.
+    const giu25 = filled.find(d => d.date === '2026-06-25');
+    assert.equal(giu25.type, 'studio');
+    assert.deepEqual(giu25.questions, []);
+  });
+
+  test('la data esame mancante viene aggiunta come type=exam', () => {
+    const skeleton = skeletonRange('2026-06-07', '2026-06-10');
+    const aiDays = [{ date: '2026-06-07', type: 'studio', questions: [] }];
+    const filled = _fillPlanGaps(aiDays, skeleton, '2026-06-10');
+    const exam = filled.find(d => d.date === '2026-06-10');
+    assert.equal(exam.type, 'exam');
+  });
+
+  test('scarta le date fuori intervallo restituite dall\'AI', () => {
+    const skeleton = skeletonRange('2026-06-07', '2026-06-09');
+    const aiDays = [
+      { date: '2026-06-07', type: 'studio', questions: [] },
+      { date: '2026-08-01', type: 'studio', questions: [] }, // fuori intervallo
+    ];
+    const filled = _fillPlanGaps(aiDays, skeleton, '2026-06-09');
+    assert.equal(filled.length, 3);
+    assert.ok(!filled.some(d => d.date === '2026-08-01'));
+  });
+
+  test('piano completo → invariato (idempotente sulle date presenti)', () => {
+    const skeleton = skeletonRange('2026-06-07', '2026-06-09');
+    const aiDays = skeleton.map(d => ({ date: d, type: 'studio', questions: [] }));
+    const filled = _fillPlanGaps(aiDays, skeleton, '2026-06-09');
+    assert.equal(filled.length, 3);
+    filled.forEach((d, i) => assert.equal(d.date, skeleton[i]));
   });
 });
 

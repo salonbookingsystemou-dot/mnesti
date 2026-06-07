@@ -11,40 +11,38 @@ I file logo si trovano nella root del progetto:
 
 | File | Dimensioni reali | Uso |
 |------|-----------------|-----|
-| `logo-white.png` | 783×152 px | Wordmark bianco — header, splash, **email** (su sfondo scuro) |
-| `logo-mark.png` | 284×152 px | Marca compatta (icona + testo impilati) — contesti ridotti |
-| `logo-full.png` | 783×152 px | Versione estesa (file separato da logo-white) |
+| `logo-white.png` | 726×512 px | Logo flat bianco (icona + testo impilati) — **email**, canvas, splash (su sfondo scuro) |
+| `logo-mark.png` | 284×152 px | Marca compatta — contesti ridotti |
+| `logo-full.png` | 783×152 px | Wordmark orizzontale esteso |
 | `logo-login.png` | 509×306 px | Variante per la schermata di login |
 | `apple-touch-icon.png` / `icon-192.png` / `icon-512.png` | — | Icone app PWA |
 
 **Come incorporare il logo in HTML/CSS:**
 ```html
-<img src="logo-white.png" alt="Mnesti" height="32">
+<img src="logo-white.png" alt="Mnesti" height="72">
 ```
 
-**In email HTML** (entrambe le dimensioni obbligatorie per client come Gmail/Outlook):
-```html
-<img src="https://mnesti.it/logo-white.png" alt="Mnesti" height="32" width="165" style="display:block;">
-```
-Width 165 = round(783/152 × 32) — proporzionale al file reale 783×152 px.
-
-**Regola assoluta: usare SEMPRE il logo PNG ufficiale, mai SVG generato o testo stilizzato.**
-
-`logo-white.png` è versionato nella root del repo ed è servito da GitHub Pages.
-
-In HTML/app:
-```html
-<img src="logo-white.png" alt="Mnesti" height="32">
-```
-
-In canvas `.canvas.tsx` (il canvas non supporta network calls per policy):
+**In email HTML — usare SEMPRE il base64 inline** (non URL esterno: Gmail proxy e dark-mode possono alterare immagini esterne):
 ```bash
 # Generare il data URI dal file già esistente nel repo:
 B64=$(base64 -i logo-white.png | tr -d '\n')
 ```
+```html
+<!-- height=72 width=102 — proporzionale a 726×512 px -->
+<img src="data:image/png;base64,${B64}" alt="Mnesti" height="72" width="102" style="display:block;">
+```
+
+**Regola assoluta: usare SEMPRE il logo PNG ufficiale, mai SVG generato o testo stilizzato.**
+
+`logo-white.png` è versionato nella root del repo ed è servito da GitHub Pages (`https://mnesti.it/logo-white.png`).
+
+In canvas `.canvas.tsx` (il canvas non supporta network calls per policy):
+```bash
+B64=$(base64 -i logo-white.png | tr -d '\n')
+```
 ```tsx
 const LOGO_SRC = `data:image/png;base64,${B64}`;  // incollare il valore del comando shell
-<img src={LOGO_SRC} alt="Mnesti" style={{ height: 28, width: 'auto', display: 'block' }} />
+<img src={LOGO_SRC} alt="Mnesti" style={{ height: 72, width: 'auto', display: 'block' }} />
 ```
 
 Non generare SVG, non inventare colori — il file sorgente è sempre `logo-white.png` nella root del repo.

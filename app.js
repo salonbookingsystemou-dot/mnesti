@@ -7240,9 +7240,20 @@ function _extractJson(raw) {
   // 2. Rimuovi code fences (incluse varianti con spazi o newline extra)
   s = s.replace(/```\s*json\s*/gi, '').replace(/```/g, '');
 
+  // Parser tollerante: prova JSON.parse e, se fallisce, riprova dopo aver
+  // rimosso le virgole finali (errore JSON comune nelle risposte LLM, es.
+  // [{...},] oppure {"a":1,}). Le virgole dentro le stringhe non sono mai
+  // immediatamente seguite da ] o } quindi la sostituzione è sicura.
+  const _tryParse = (txt) => {
+    try { return JSON.parse(txt); } catch { /* retry below */ }
+    // \u007d = '}' scritto come escape per non confondere il parser di test
+    // che conta le graffe nel sorgente (vedi tests/helpers/extract.js).
+    return JSON.parse(txt.replace(/,(\s*[\]\u007d])/g, '$1'));
+  };
+
   // 3. Prova direttamente
   try {
-    const parsed = JSON.parse(s.trim());
+    const parsed = _tryParse(s.trim());
     // Se il modello ha restituito un singolo oggetto "day" invece di un array,
     // avvolgilo automaticamente così il chiamante riceve sempre un array.
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.date) {
@@ -7266,7 +7277,7 @@ function _extractJson(raw) {
 
   if (start !== -1 && end > start) {
     try {
-      const parsed = JSON.parse(s.slice(start, end + 1));
+      const parsed = _tryParse(s.slice(start, end + 1));
       if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.date) {
         return [parsed];
       }
@@ -7280,11 +7291,11 @@ function _extractJson(raw) {
     const chunk = s.slice(start);
     const lastCommaObj = chunk.lastIndexOf('},');
     if (lastCommaObj !== -1) {
-      try { return JSON.parse(chunk.slice(0, lastCommaObj + 1) + ']'); } catch { /* fall through */ }
+      try { return _tryParse(chunk.slice(0, lastCommaObj + 1) + ']'); } catch { /* fall through */ }
     }
     const lastBrace = chunk.lastIndexOf('}');
     if (lastBrace !== -1) {
-      try { return JSON.parse(chunk.slice(0, lastBrace + 1) + ']'); } catch { /* fall through */ }
+      try { return _tryParse(chunk.slice(0, lastBrace + 1) + ']'); } catch { /* fall through */ }
     }
   }
 
@@ -7294,7 +7305,7 @@ function _extractJson(raw) {
     const lastBrace = chunk.lastIndexOf('}');
     if (lastBrace !== -1) {
       try {
-        const parsed = JSON.parse(chunk.slice(0, lastBrace + 1));
+        const parsed = _tryParse(chunk.slice(0, lastBrace + 1));
         if (parsed && parsed.date) return [parsed];
       } catch { /* fall through */ }
     }
@@ -10093,6 +10104,37 @@ function _isoDate(d) {
   return `${y}-${m}-${day}`;
 }
 
+/**
+ * Safety net contro la troncatura dell'output AI.
+ * Garantisce che il piano copra OGNI data da oggi all'esame (incluso),
+ * senza buchi nel calendario. Le date assenti dall'output AI vengono
+ * riempite con giornate di studio segnaposto (le domande vengono generate
+ * on-demand all'avvio del quiz). Le date fuori intervallo vengono scartate.
+ *
+ * @param {Array} planDays   giornate restituite dall'AI (oggetti con .date ISO)
+ * @param {Array<string>} skeletonIso  tutte le date ISO attese, ordinate, oggi→esame
+ * @param {string} examIso   data ISO dell'esame
+ * @returns {Array} piano contiguo e ordinato che copre tutte le date dello skeleton
+ */
+function _fillPlanGaps(planDays, skeletonIso, examIso) {
+  const byDate = new Map();
+  (planDays || []).forEach(d => { if (d && d.date) byDate.set(d.date, d); });
+
+  return skeletonIso.map(iso => {
+    if (byDate.has(iso)) return byDate.get(iso);
+    if (iso === examIso) {
+      return { date: iso, type: 'exam', title: 'Giorno dell\'esame', subtitle: 'In bocca al lupo!', questions: [] };
+    }
+    return {
+      date: iso,
+      type: 'studio',
+      title: 'Sessione di studio',
+      subtitle: 'Ripasso e approfondimento',
+      questions: []
+    };
+  });
+}
+
 async function generateStudyPlan(fromOnboarding = false) {
 
   const info = getExamInfo();
@@ -10220,61 +10262,68 @@ REGOLE ASSOLUTE (non derogabili):
   try {
 
     // ── Chiamata API con retry automatico ────────────────────────
+    // L'AI a volte restituisce JSON malformato (virgolette non escapate,
+    // troncature, virgole finali). _extractJson può quindi LANCIARE: il retry
+    // deve catturare sia le eccezioni sia i risultati non-array, altrimenti una
+    // singola risposta sbagliata fa fallire l'intera generazione.
     let planDays = null;
-    for (let attempt = 0; attempt < 2; attempt++) {
+    let lastErr  = null;
+    const MAX_ATTEMPTS = 3;
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       if (attempt > 0) {
-        _setPlanGenUI('Nuovo tentativo…', 'Il primo tentativo ha restituito un formato non valido, riprovo…', 35, 'Richiesta API…');
-        await new Promise(r => setTimeout(r, 1500));
+        _setPlanGenUI('Nuovo tentativo…', `Risposta non valida, riprovo (${attempt + 1}/${MAX_ATTEMPTS})…`, 35, 'Richiesta API…');
+        await new Promise(r => setTimeout(r, 1200));
       }
       const data = await _callClaudeStream({
         model: 'claude-haiku-4-5',
-        // ~70 tokens per day with the lean schema (no label/shortLabel/weekStart, 3 questions)
-        max_tokens: Math.min(8000, Math.max(3000, Math.ceil(totalDays * 70))),
-        temperature: 0.7,
+        // ~150 tokens per giornata con 3 domande in italiano. Una stima troppo
+        // bassa tronca l'output a metà piano: _extractJson recupera l'array
+        // parziale e il calendario perde le settimane finali (buco fino all'esame).
+        // Il tetto a 16000 copre piani lunghi (~100 giorni) e resta nel timeout proxy (145s).
+        max_tokens: Math.min(16000, Math.max(3000, Math.ceil(totalDays * 150))),
+        // Temperatura più bassa ai retry → output più deterministico e meno malformato.
+        temperature: attempt === 0 ? 0.6 : 0.3,
         system: systemPrompt,
         messages: [{ role: 'user', content: _apiMsg }]
       });
-      const parsed = _extractJson(data.content[0].text.trim());
+      let parsed;
+      try {
+        parsed = _extractJson(data.content[0].text.trim());
+      } catch (parseErr) {
+        lastErr = parseErr;
+        console.warn(`[generateStudyPlan] tentativo ${attempt + 1}: parsing fallito —`, parseErr.message);
+        continue;
+      }
       if (!Array.isArray(parsed) || parsed.length === 0) {
-        if (attempt === 1) throw new Error('Piano non valido ricevuto dall\'AI dopo 2 tentativi');
-        console.warn('[generateStudyPlan] attempt 1: non-array result, retrying');
+        lastErr = new Error('Risposta AI non in formato array');
+        console.warn(`[generateStudyPlan] tentativo ${attempt + 1}: risultato non-array, riprovo`);
         continue;
       }
       planDays = parsed;
       break;
     }
-    if (!planDays) throw new Error('Impossibile generare il piano — riprova.');
+    if (!planDays) {
+      throw new Error(`Impossibile generare un piano valido dopo ${MAX_ATTEMPTS} tentativi. Riprova tra poco.${lastErr ? ` (${lastErr.message})` : ''}`);
+    }
 
     _setPlanGenUI('Salvataggio…', 'Costruzione del calendario…', 90, 'Quasi pronto…');
 
-    // ── Hard-validate exam date placement ──────────────────────
-    // Ensure the day matching info.date is type "exam". If the AI
-    // placed the exam on a different date, correct it in place.
+    // ── Fill gaps + hard-validate ──────────────────────────────
+    // L'AI può troncare l'output su piani lunghi e saltare le settimane finali,
+    // lasciando un buco nel calendario fino all'esame. _fillPlanGaps garantisce
+    // che ogni data oggi→esame sia presente (segnaposto di studio dove manca) e
+    // scarta eventuali date fuori intervallo. Lo skeleton è già ordinato.
     const examIso = info.date; // e.g. "2026-05-12"
+    const filledDays = _fillPlanGaps(planDays, skeleton, examIso);
+    planDays.length = 0; filledDays.forEach(d => planDays.push(d));
+
+    // Force the exam date to type "exam" regardless of what the AI returned,
+    // and demote any stray "exam" placed on a different date.
     const examInPlan = planDays.find(d => d.date === examIso);
     if (examInPlan) {
-      // Force exam day to type "exam" regardless of what AI returned
       examInPlan.type = 'exam';
       examInPlan.questions = [];
-      // If there's a stray extra "exam" on another date, demote it to rest
       planDays.forEach(d => { if (d.date !== examIso && d.type === 'exam') d.type = 'rest'; });
-    } else {
-      // Exam date not present — strip any AI-added extra days beyond info.date
-      // and push the correct exam day at the end
-      const lastAllowed = new Date(examIso);
-      const filtered = planDays.filter(d => !d.date || new Date(d.date) <= lastAllowed);
-      if (filtered.length > 0) {
-        // Ensure last day IS the exam date
-        const lastDay = filtered[filtered.length - 1];
-        if (lastDay.date !== examIso) {
-          filtered.push({ date: examIso, label: _formatDateLabel(new Date(examIso)),
-            shortLabel: '', type: 'exam', title: 'Giorno dell\'esame',
-            subtitle: 'In bocca al lupo!', weekStart: null, questions: [] });
-        } else {
-          lastDay.type = 'exam'; lastDay.questions = [];
-        }
-      }
-      planDays.length = 0; filtered.forEach(d => planDays.push(d));
     }
     // Also ensure the day immediately before the exam is "rest" (if it exists and isn't already rest)
     const examIdx = planDays.findIndex(d => d.date === examIso);
