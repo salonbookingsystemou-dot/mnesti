@@ -10222,13 +10222,6 @@ ${sourcePart}ISTRUZIONI PER LA PIANIFICAZIONE:
 2. Inserisci almeno 1 giorno di riposo ogni 6 giorni di studio (preferibilmente la domenica)
 3. Gli ultimi 2-3 giorni prima dell'esame devono essere di revisione + simulazione
 4. Il giorno prima dell'esame deve essere riposo
-5. Ogni giornata di studio deve avere ESATTAMENTE 3 domande a risposta aperta
-
-DISTRIBUZIONE DOMANDE (Tassonomia di Bloom, 3 per giornata di studio):
-- 1 "definizione" (ricordo): definizioni, autori, concetti-chiave
-- 1 "meccanismo" (comprensione): processi, meccanismi, distinzioni  
-- 1 "connessione" (analisi): collegamenti, confronti tra teorie
-- Se è giornata di revisione: 3 domande di tipo "simulazione" (livello esame)
 
 DATE DISPONIBILI (ISO, ${allDates.length} giorni):
 ${skeleton.join(',')}
@@ -10241,21 +10234,22 @@ Ogni oggetto "day" deve avere ESATTAMENTE questi campi:
   "date": "YYYY-MM-DD",                        // data ISO dalla lista sopra
   "type": "studio|rest|revisione|exam",         // tipo giornata
   "title": "Titolo breve (max 8 parole)",       // es. "Lezioni 1-3 — Fondamenti"
-  "subtitle": "Sottotitolo (max 6 parole)",     // breve descrizione
-  "questions": [                                // 3 elementi per studio/revisione, array vuoto per rest/exam
-    {"text": "testo domanda", "type": "definizione|meccanismo|connessione|simulazione"}
-  ]
+  "subtitle": "Sottotitolo (max 6 parole)"      // breve descrizione
 }
+
+REGOLE SUI TESTI (per garantire JSON valido):
+- NON usare mai virgolette doppie (") dentro "title" o "subtitle". Se devi citare un termine, usa gli apici singoli (') o nessuna virgoletta.
+- Niente a capo dentro le stringhe. Niente campo "questions": le domande vengono generate altrove.
 
 REGOLE ASSOLUTE (non derogabili):
 - Includi TUTTE le date da ${_isoDate(today)} a ${info.date} inclusa, senza aggiungere date successive
 - La data ESATTA ${info.date} DEVE avere type "exam" — non un giorno prima, non un giorno dopo
 - Il giorno prima dell'esame (${_isoDate(new Date(new Date(info.date).getTime() - 86400000))}) deve avere type "rest"
 - Non includere MAI date successive al ${info.date}
-- ${sourceCtx ? 'Basa le domande ESCLUSIVAMENTE sul materiale delle fonti fornite' : 'Genera domande specifiche e pertinenti alla materia, coprendo i topic principali della disciplina universitaria'}
-- Genera domande di qualità universitaria, specifiche, non generiche`;
+- ${sourceCtx ? 'Basa i titoli ESCLUSIVAMENTE sul materiale delle fonti fornite' : 'Usa titoli specifici e pertinenti alla materia, coprendo i topic principali della disciplina universitaria'}
+- Titoli e sottotitoli specifici e di livello universitario, non generici`;
 
-  _setPlanGenUI('Generazione piano…', 'Claude sta costruendo il calendario e le domande…', 30, 'Chiamata API…');
+  _setPlanGenUI('Generazione piano…', 'Claude sta costruendo il calendario…', 30, 'Chiamata API…');
 
   const _apiMsg = `Genera il piano di studio completo per ${subject}, da oggi (${_isoDate(today)}) al giorno dell'esame (${info.date}). Rispondi SOLO con l'array JSON — nessun testo, nessun markdown. Formato: [{...},{...},...]`;
 
@@ -10276,11 +10270,10 @@ REGOLE ASSOLUTE (non derogabili):
       }
       const data = await _callClaudeStream({
         model: 'claude-haiku-4-5',
-        // ~150 tokens per giornata con 3 domande in italiano. Una stima troppo
-        // bassa tronca l'output a metà piano: _extractJson recupera l'array
-        // parziale e il calendario perde le settimane finali (buco fino all'esame).
-        // Il tetto a 16000 copre piani lunghi (~100 giorni) e resta nel timeout proxy (145s).
-        max_tokens: Math.min(16000, Math.max(3000, Math.ceil(totalDays * 150))),
+        // Schema snello senza "questions": ~60 token/giorno (date+type+title+subtitle).
+        // Stima bassa = troncatura → buco nel calendario; per questo teniamo margine
+        // e un floor generoso. Le domande vere si generano on-demand all'avvio del quiz.
+        max_tokens: Math.min(12000, Math.max(2500, Math.ceil(totalDays * 80))),
         // Temperatura più bassa ai retry → output più deterministico e meno malformato.
         temperature: attempt === 0 ? 0.6 : 0.3,
         system: systemPrompt,
