@@ -2847,9 +2847,19 @@
     text-align: center; border: 1px solid var(--border);
   }
   .plan-gen-logo {
-    height: 22px; width: auto; display: block;
+    height: 40px; width: auto; display: block;
     margin: 0 auto 18px;
-    filter: brightness(0) invert(1);
+    /* logo-white.png è un logo bianco su sfondo NERO opaco (no trasparenza).
+       'screen' fa sparire il nero sullo sfondo scuro del loader e mantiene
+       il logo bianco. Niente filtri invertenti (rendevano l'intero PNG un
+       quadrato bianco). */
+    mix-blend-mode: screen;
+  }
+  /* In tema chiaro lo sfondo del box è chiaro: 'screen' renderebbe il logo
+     bianco invisibile. Lo mostriamo come tassello nero arrotondato. */
+  [data-theme="light"] .plan-gen-logo {
+    mix-blend-mode: normal;
+    border-radius: 8px;
   }
   .plan-gen-headline {
     font-size: 14px; font-weight: 500; color: var(--text-1);

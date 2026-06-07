@@ -86,6 +86,27 @@ describe('_extractJson — partial recovery (streaming truncation)', () => {
   });
 });
 
+describe('_extractJson — tolleranza virgole finali (errore LLM comune)', () => {
+  test('virgola finale prima di ] → array valido', () => {
+    const raw = '[{"date":"2026-06-01"},{"date":"2026-06-02"},]';
+    const result = _extractJson(raw);
+    assert.ok(Array.isArray(result));
+    assert.equal(result.length, 2);
+  });
+
+  test('virgola finale dentro un oggetto → oggetto valido', () => {
+    const raw = '[{"date":"2026-06-01","type":"studio",}]';
+    const result = _extractJson(raw);
+    assert.equal(result[0].type, 'studio');
+  });
+
+  test('virgola finale con code fence e newline', () => {
+    const raw = '```json\n[\n  {"a":1},\n  {"b":2},\n]\n```';
+    const result = _extractJson(raw);
+    assert.equal(result.length, 2);
+  });
+});
+
 describe('_extractJson — edge cases', () => {
   test('array multiriga con oggetti complessi', () => {
     const raw = JSON.stringify([
