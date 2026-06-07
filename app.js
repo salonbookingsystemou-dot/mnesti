@@ -580,6 +580,41 @@ function _healPlanExamDate() {
   } catch(e) { console.warn('[heal] Failed to heal plan exam date', e); }
 }
 
+// Self-healing: ricostruisce psico_exam_info dal piano quando è vuoto/parziale.
+// Il piano salva sempre subject/professor/examDate, quindi se il form "Dati esame"
+// risulta vuoto ma un piano esiste, possiamo ripristinare i dati senza perdita.
+// Difensivo: copre qualsiasi causa (sync race, switch esame, storage parziale).
+function _healExamInfoFromPlan() {
+  try {
+    const planRaw = localStorage.getItem('psico_ai_plan');
+    if (!planRaw) return;
+    const plan = JSON.parse(planRaw);
+    if (!plan || !plan.subject) return;
+
+    let info = {};
+    try { info = JSON.parse(localStorage.getItem('psico_exam_info') || '{}'); } catch { info = {}; }
+
+    const planDate = plan.examDate
+      || (Array.isArray(plan.days) ? (plan.days.find(d => d.type === 'exam') || {}).date : '')
+      || '';
+
+    if (info.subject && info.date) return; // niente da riparare
+
+    const healed = {
+      ...info,
+      subject:   info.subject   || plan.subject   || '',
+      professor: info.professor || plan.professor || '',
+      date:      info.date      || planDate       || ''
+    };
+
+    if (healed.subject &&
+        (healed.subject !== info.subject || healed.date !== info.date || healed.professor !== info.professor)) {
+      console.info('[heal] Ricostruito psico_exam_info dal piano');
+      _safeLSSet('psico_exam_info', JSON.stringify(healed));
+    }
+  } catch(e) { console.warn('[heal] _healExamInfoFromPlan failed', e); }
+}
+
 window._reinitApp = function() {
   // If user has an answer edit in progress, skip full DOM rebuild to avoid data loss.
   // Only do the lightweight state + progress updates; schedule a deferred full reinit.
@@ -600,6 +635,8 @@ window._reinitApp = function() {
 
   // Fix plan exam date if mismatched (self-heal)
   _healPlanExamDate();
+  // Ripristina i dati esame dal piano se il form risulta vuoto (self-heal)
+  _healExamInfoFromPlan();
   // Apply saved accent color
   if (typeof _loadAccentColor === 'function') _loadAccentColor();
 
@@ -9735,6 +9772,8 @@ function saveExamInfo() {
   }, 500);
 }
 function loadExamInfoUI() {
+  // Difesa: se il form è vuoto ma un piano esiste, ripristina i dati dal piano
+  if (typeof _healExamInfoFromPlan === 'function') _healExamInfoFromPlan();
   const info = getExamInfo();
   const s = document.getElementById('examSubject');
   const p = document.getElementById('examProfessor');
@@ -10299,7 +10338,7 @@ REGOLE ASSOLUTE (non derogabili):
       throw new Error(`Impossibile generare un piano valido dopo ${MAX_ATTEMPTS} tentativi. Riprova tra poco.${lastErr ? ` (${lastErr.message})` : ''}`);
     }
 
-    _setPlanGenUI('Salvataggio…', 'Costruzione del calendario…', 90, 'Quasi pronto…');
+    _setPlanGenUI('Struttura pronta…', 'Costruzione del calendario…', 55, 'Quasi pronto…');
 
     // ── Fill gaps + hard-validate ──────────────────────────────
     // L'AI può troncare l'output su piani lunghi e saltare le settimane finali,
@@ -10373,6 +10412,16 @@ REGOLE ASSOLUTE (non derogabili):
       window._syncExamInfoToSupabase(window._currentUserId);
     }
 
+    // ── Fase 2: domande pre-caricate (non fatale) ──────────────
+    // La struttura è già salvata e sincronizzata sopra: se questa fase fallisce,
+    // il piano resta valido e le domande si generano on-demand all'avvio sessione.
+    // Generate a lotti piccoli → JSON robusto. Salva e aggiorna il calendario man mano.
+    try {
+      await _populatePlanQuestions(plan, { sourceCtx, sourceRule, subject });
+    } catch (e) {
+      console.warn('[generateStudyPlan] popolamento domande non riuscito (non fatale):', e);
+    }
+
     _setPlanGenUI('Piano completato ✓', `${normalizedDays.length} giorni pianificati fino all\'esame.`, 100, 'Caricamento…');
     const _studyDays = normalizedDays.filter(d => d.type === 'studio' || d.type === 'revision').length;
     const _topicCount = normalizedDays.filter(d => d.type === 'studio').length;
@@ -10410,6 +10459,122 @@ REGOLE ASSOLUTE (non derogabili):
   } finally {
     if (!_planGenHadError) _hidePlanGenUI();
   }
+}
+
+/**
+ * Fase 2 della generazione: popola le domande pre-caricate del piano a lotti
+ * piccoli (JSON piccolo = robusto), salvando e aggiornando il calendario man mano.
+ * Non fatale: se un lotto fallisce, quelle giornate restano senza domande e
+ * useranno la generazione on-demand. Riempie SOLO le giornate studio/revisione
+ * ancora prive di domande → retrocompatibile coi piani che le hanno già.
+ */
+async function _populatePlanQuestions(plan, { sourceCtx = '', sourceRule = '', subject = '' } = {}) {
+  if (!plan || !Array.isArray(plan.days)) return;
+  const targets = plan.days.filter(d =>
+    (d.type === 'studio' || d.type === 'revisione') &&
+    !(Array.isArray(d.questions) && d.questions.length > 0)
+  );
+  if (!targets.length) return;
+
+  const BATCH = 8;
+  const totalBatches = Math.ceil(targets.length / BATCH);
+
+  for (let b = 0; b < totalBatches; b++) {
+    const batch = targets.slice(b * BATCH, b * BATCH + BATCH);
+    const pct = 60 + Math.round((b / totalBatches) * 35); // 60→95%
+    _setPlanGenUI('Generazione domande…', `Preparo le domande delle giornate (${b + 1}/${totalBatches})…`, pct, 'Domande…');
+
+    let byDate = null;
+    try {
+      byDate = await _genPlanQuestionBatch(batch, { subject, sourceCtx, sourceRule });
+    } catch (e) {
+      console.warn(`[populatePlanQuestions] lotto ${b + 1} fallito (non fatale):`, e?.message || e);
+    }
+    if (!byDate) continue;
+
+    // Merge nel piano più recente in localStorage (evita di sovrascrivere altri write)
+    let latest = plan;
+    try {
+      const raw = localStorage.getItem('psico_ai_plan');
+      if (raw) latest = JSON.parse(raw);
+    } catch { latest = plan; }
+    let changed = false;
+    latest.days.forEach(d => {
+      if (byDate[d.date] && byDate[d.date].length) { d.questions = byDate[d.date]; changed = true; }
+    });
+    // Mantieni allineato anche l'oggetto in memoria
+    plan.days.forEach(d => { if (byDate[d.date] && byDate[d.date].length) d.questions = byDate[d.date]; });
+
+    if (changed) {
+      _safeLSSet('psico_ai_plan', JSON.stringify(latest));
+      window._lastLocalWrite = Date.now();
+      try { if (typeof buildPlanOverview === 'function') buildPlanOverview(); } catch {}
+    }
+  }
+
+  if (typeof window._syncToSupabase === 'function') window._syncToSupabase();
+}
+
+/**
+ * Genera le domande per un lotto di giornate in una sola chiamata.
+ * Ritorna una mappa { "YYYY-MM-DD": [{text,type}, …] } oppure null se non parsabile.
+ */
+async function _genPlanQuestionBatch(days, { subject = '', sourceCtx = '', sourceRule = '' } = {}) {
+  const list = days.map(d =>
+    `${d.date} | ${d.type} | ${(d.title || '').replace(/"/g, "'")}${d.subtitle ? ' — ' + d.subtitle.replace(/"/g, "'") : ''}`
+  ).join('\n');
+
+  const fontiBlock = sourceCtx
+    ? `${sourceRule}\n--- INIZIO FONTI ---\n${sourceCtx}\n--- FINE FONTI ---\nBasa le domande ESCLUSIVAMENTE sulle fonti fornite.`
+    : `Basa le domande sulla tua conoscenza universitaria della materia "${subject}".`;
+
+  const systemPrompt = `Sei un professore universitario di ${subject || 'questa materia'} che prepara uno studente a un esame scritto.
+
+${fontiBlock}
+
+Per OGNI giornata elencata genera ESATTAMENTE 3 domande a risposta aperta, specifiche per il titolo della giornata e di livello universitario.
+
+DISTRIBUZIONE (Tassonomia di Bloom, 3 per giornata di studio):
+- 1 "definizione" (ricordo)
+- 1 "meccanismo" (comprensione)
+- 1 "connessione" (analisi)
+- Per le giornate di tipo "revisione" usa invece 3 domande di tipo "simulazione" (livello esame).
+
+REGOLE JSON (tassative, pena risposta inutilizzabile):
+- NON usare MAI virgolette doppie (") dentro il testo delle domande: per citare un termine usa gli apici singoli (').
+- Niente a capo dentro le stringhe.
+- Rispondi SOLO con un array JSON valido: nessun testo, nessun markdown, nessun code fence.
+
+Formato ESATTO (una voce per OGNI data elencata):
+[{"date":"YYYY-MM-DD","questions":[{"text":"testo","type":"definizione|meccanismo|connessione|simulazione"}]}]`;
+
+  const userMsg = `Giornate:\n${list}\n\nGenera le domande per tutte le date elencate. Rispondi SOLO con l'array JSON.`;
+
+  let parsed = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const data = await _callClaudeStream({
+      model: 'claude-haiku-4-5',
+      max_tokens: Math.min(8000, Math.max(2000, days.length * 240)),
+      temperature: attempt === 0 ? 0.6 : 0.3,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userMsg }]
+    });
+    try { parsed = _extractJson(data.content[0].text.trim()); }
+    catch { parsed = null; }
+    if (Array.isArray(parsed) && parsed.length) break;
+    parsed = null;
+  }
+  if (!parsed) return null;
+
+  const byDate = {};
+  parsed.forEach(p => {
+    if (!p || !p.date || !Array.isArray(p.questions)) return;
+    const qs = p.questions
+      .filter(q => q && typeof q.text === 'string' && q.text.trim())
+      .map(q => ({ text: q.text.trim(), type: q.type || 'definizione' }));
+    if (qs.length) byDate[p.date] = qs;
+  });
+  return Object.keys(byDate).length ? byDate : null;
 }
 
 // ── Patch: getActiveDays helper ──────────────────────────────
@@ -10534,6 +10699,9 @@ function mobileNavDay(dir) {
 
 // Self-heal plan exam date on startup (in case of AI off-by-one)
 _healPlanExamDate();
+// Self-heal: ripristina i dati esame dal piano se mancano (form/header vuoti)
+_healExamInfoFromPlan();
+if (typeof updateHeaderTitle === 'function') updateHeaderTitle();
 
 // Apply saved accent color
 _loadAccentColor();
