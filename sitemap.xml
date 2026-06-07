@@ -287,4 +287,13 @@
     <priority>0.7</priority>
   </url>
 
+
+  <!-- Studiare con la musica funziona davvero? La ricerca dice un'altra cosa -->
+  <url>
+    <loc>https://mnesti.it/blog-studiare-musica.html</loc>
+    <lastmod>2026-06-07</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
 </urlset>
