@@ -181,7 +181,7 @@
   }
   .header-brand {
     display: flex; align-items: center; gap: 0;
-    flex-shrink: 0; margin-right: auto;
+    flex: 0 1 auto; margin-right: auto;
     min-width: 0;
   }
   .header h1 {
@@ -191,6 +191,9 @@
     letter-spacing: 0.06em;
     text-transform: uppercase;
     white-space: nowrap;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .header-exam-date {
     font-family: 'Inter', sans-serif;
@@ -3967,7 +3970,7 @@
     width: 7px; height: 7px; border-radius: 50%;
     background: var(--accent); flex-shrink: 0;
   }
-  body.focus-mode .focus-indicator { display: flex; }
+  body.focus-mode.po-session-view .focus-indicator { display: flex; }
 
   @keyframes focus-pulse {
     0%, 100% { opacity: 1; }
