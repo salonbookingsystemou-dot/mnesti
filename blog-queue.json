@@ -643,9 +643,9 @@
     "icon": "🦉",
     "ctaTitle": "Domande aperte su Kant, Hegel e gli altri",
     "ctaText": "Mnesti genera domande filosofiche dalle tue dispense che simulano le argomentazioni richieste al professore. Primo esame gratis.",
-    "status": "pending",
-    "date": null,
-    "publishedAt": null
+    "status": "published",
+    "date": "2026-06-08",
+    "publishedAt": "2026-06-08T09:00:00+02:00"
   },
   {
     "slug": "blog-laurea-triennale",
