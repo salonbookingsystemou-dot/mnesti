@@ -305,4 +305,13 @@
     <priority>0.7</priority>
   </url>
 
+
+  <!-- Laurea triennale o magistrale: cosa conviene davvero nel mercato del lavoro italiano -->
+  <url>
+    <loc>https://mnesti.it/blog-laurea-triennale.html</loc>
+    <lastmod>2026-06-09</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
 </urlset>

@@ -667,9 +667,9 @@
     "icon": "💼",
     "ctaTitle": "Qualunque percorso scegli, finiscilo in tempo",
     "ctaText": "Ogni anno fuori corso erode il vantaggio della laurea. Mnesti ti aiuta a laurearti nei tempi previsti. Primo esame gratis.",
-    "status": "pending",
-    "date": null,
-    "publishedAt": null
+    "status": "published",
+    "date": "2026-06-09",
+    "publishedAt": "2026-06-09T09:00:00+02:00"
   },
   {
     "slug": "blog-come-scegliere-libri",
