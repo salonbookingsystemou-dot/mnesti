@@ -691,9 +691,9 @@
     "icon": "📚",
     "ctaTitle": "Carica quello che hai, Mnesti fa il resto",
     "ctaText": "Bastano le tue dispense o i capitoli rilevanti: Mnesti analizza il materiale e costruisce il piano. Primo esame gratis.",
-    "status": "pending",
-    "date": null,
-    "publishedAt": null
+    "status": "published",
+    "date": "2026-06-10",
+    "publishedAt": "2026-06-10T09:00:00+02:00"
   },
   {
     "slug": "blog-conciliare-lavoro-studio",

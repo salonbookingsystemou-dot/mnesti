@@ -314,4 +314,13 @@
     <priority>0.7</priority>
   </url>
 
+
+  <!-- Come scegliere i libri giusti per un esame universitario -->
+  <url>
+    <loc>https://mnesti.it/blog-come-scegliere-libri.html</loc>
+    <lastmod>2026-06-10</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
 </urlset>
