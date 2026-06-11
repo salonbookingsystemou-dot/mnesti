@@ -715,8 +715,8 @@
     "icon": "🏋️",
     "ctaTitle": "Progettato per chi ha poco tempo",
     "ctaText": "Mnesti costruisce piani realistici per chi studia 1-2 ore al giorno. Nessuna sessione da 8 ore richiesta. Primo esame gratis.",
-    "status": "pending",
-    "date": null,
-    "publishedAt": null
+    "status": "published",
+    "date": "2026-06-11",
+    "publishedAt": "2026-06-11T09:00:00+02:00"
   }
 ]

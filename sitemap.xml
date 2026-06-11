@@ -323,4 +323,13 @@
     <priority>0.7</priority>
   </url>
 
+
+  <!-- Conciliare lavoro full-time e università: il sistema in 5 principi -->
+  <url>
+    <loc>https://mnesti.it/blog-conciliare-lavoro-studio.html</loc>
+    <lastmod>2026-06-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
 </urlset>
